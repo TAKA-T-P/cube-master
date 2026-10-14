@@ -1,0 +1,194 @@
+/* ===== デザイントークン ===== */
+:root {
+  --color-bg: #f3f7fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #eaf2fa;
+  --color-border: #d3e1ef;
+  --color-text: #1b2a41;
+  --color-text-sub: #52627a;
+  --color-primary: #1f6fd1;
+  --color-primary-strong: #1f4e9c;
+  --color-primary-soft: #dcebfb;
+  --color-accent: #ff8c1a;
+  --color-success: #22b14c;
+  --color-danger: #d64545;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 2px rgb(27 42 65 / 8%);
+  --shadow-md: 0 6px 20px rgb(31 78 156 / 12%);
+
+  --tap-size: 44px; /* タッチ操作で押しやすい最小サイズ */
+  --gutter: 16px;
+
+  --font-sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'BIZ UDPGothic', 'Yu Gothic UI', 'Meiryo', system-ui, sans-serif;
+
+  color-scheme: light;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ===== ボタン ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--tap-size);
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition:
+    background-color 0.15s,
+    transform 0.1s,
+    border-color 0.15s;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-strong);
+  border-color: var(--color-primary-strong);
+}
+
+.btn--ghost {
+  background: transparent;
+  box-shadow: none;
+  border-color: transparent;
+}
+
+.btn--ghost:hover:not(:disabled) {
+  border-color: var(--color-border);
+}
+
+/* ===== バッジ ===== */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-surface-2);
+  color: var(--color-text-sub);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.badge--info {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* ===== トースト ===== */
+.toast-root {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(92vw, 480px);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.toast {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-text);
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  font-size: 14px;
+}
+
+.toast--error {
+  background: var(--color-danger);
+}
+
+/* ===== エラー表示 ===== */
+.error-panel {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  max-width: 480px;
+  margin: 48px auto;
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+
+.error-panel--overlay {
+  position: absolute;
+  inset: 16px;
+  margin: auto;
+  height: fit-content;
+}

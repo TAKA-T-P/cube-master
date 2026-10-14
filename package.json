@@ -1,0 +1,25 @@
+{
+  "name": "cube-master",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CUBE MASTER（仮）- 立方体をテーマにした空間図形の学習Webアプリ",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
+}
