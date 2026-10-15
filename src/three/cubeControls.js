@@ -150,6 +150,16 @@ export function createCubeControls(sceneManager, { boundingRadius, inputLock = n
     isZoomEnabled: () => settings.zoom,
 
     /**
+     * 視点リセットで戻る向きを変える（問題ごとの見やすい視点）
+     * @param {number[]|'default'} direction カメラを置く方向（原点から見た向き）
+     */
+    setHomeDirection(direction = 'default') {
+      const dir = direction === 'default' ? DEFAULT_VIEW_DIRECTION : direction;
+      if (!Array.isArray(dir) || dir.length !== 3 || dir.every((v) => v === 0)) throw new Error('無効なカメラの向きです');
+      homeDirection.set(dir[0], dir[1], dir[2]).normalize();
+    },
+
+    /**
      * 初期のカメラ位置・注視点・ズームに戻す
      * @param {{ animate?: boolean }} [options]
      */

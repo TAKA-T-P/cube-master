@@ -1,0 +1,552 @@
+/* ===== トレーニング関連の画面 ===== */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.btn--large {
+  min-height: 52px;
+  font-size: 18px;
+  padding-inline: 24px;
+}
+
+.btn--small {
+  min-height: 40px;
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+.help-actions {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding-bottom: 32px;
+}
+
+.page--narrow {
+  max-width: 560px;
+}
+
+.page-lead {
+  padding: 0 var(--gutter) 16px;
+  color: var(--color-text-sub);
+}
+
+/* ----- カテゴリ選択 ----- */
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+  padding: 0 var(--gutter);
+}
+
+.category-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-height: 120px;
+  padding: 16px;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.1s,
+    background-color 0.15s;
+}
+
+.category-card:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+}
+
+.category-card:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.category-card--disabled {
+  border-color: var(--color-border);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.category-card__name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-primary-strong);
+}
+
+.category-card__desc {
+  font-size: 15px;
+}
+
+.category-card__grades {
+  font-size: 13px;
+  color: var(--color-text-sub);
+}
+
+/* ----- 設定 ----- */
+.setup-card,
+.result-card {
+  display: grid;
+  gap: 14px;
+  margin: 0 var(--gutter);
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.setup-card__desc {
+  font-weight: 700;
+}
+
+.setup-card__grades,
+.setup-note {
+  color: var(--color-text-sub);
+  font-size: 14px;
+}
+
+ul.setup-note {
+  margin: -6px 0 0;
+  padding-left: 1.2em;
+}
+
+/* ----- 結果 ----- */
+.result-card {
+  text-align: center;
+}
+
+.result-card__praise {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-primary-strong);
+}
+
+.result-card__score {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.result-card__big {
+  font-size: 56px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--color-success);
+}
+
+.result-card__rate {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.result-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.result-meta dt {
+  color: var(--color-text-sub);
+}
+
+.result-meta dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.result-history {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result-history__item {
+  display: grid;
+  justify-items: center;
+  min-width: 52px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  font-size: 12px;
+}
+
+.result-history__mark {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.result-history__item--correct .result-history__mark {
+  color: var(--color-success);
+}
+
+.result-history__item--partial .result-history__mark {
+  color: var(--color-accent);
+}
+
+.result-history__item--incorrect .result-history__mark {
+  color: var(--color-danger);
+}
+
+.result-actions {
+  display: grid;
+  gap: 10px;
+  margin: 16px var(--gutter) 0;
+}
+
+/* ----- 確認ダイアログ ----- */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter);
+  background: rgb(27 42 65 / 45%);
+}
+
+.dialog {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 400px);
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.dialog__title {
+  font-size: 18px;
+}
+
+.dialog__message {
+  color: var(--color-text-sub);
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ----- 問題画面 ----- */
+.quiz {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.quiz-header {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  padding: 6px var(--gutter);
+}
+
+.quiz-progress {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-primary-strong);
+}
+
+.quiz-score {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+/* スマホ（既定）：問題文 → 3D → 選択肢 → 回答ボタン */
+.quiz-body {
+  display: grid;
+  grid-template-areas:
+    'question'
+    'view'
+    'answer';
+  gap: 12px;
+  padding: 0 var(--gutter) var(--gutter);
+}
+
+.quiz-question {
+  grid-area: question;
+}
+
+.quiz-view {
+  grid-area: view;
+  position: relative;
+  display: grid;
+  gap: 6px;
+}
+
+.quiz-answer {
+  grid-area: answer;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.quiz-type {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-sub);
+}
+
+.quiz-text {
+  font-size: clamp(18px, 4.6vw, 22px);
+  line-height: 1.5;
+}
+
+.quiz-text:focus {
+  outline: none;
+}
+
+.viewport--quiz {
+  height: clamp(240px, min(100vw - 2 * var(--gutter), 46dvh), 560px);
+}
+
+.quiz-view__tools {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.quiz-legend {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 88%);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.legend::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend--reference::before {
+  background: #f06a00;
+}
+
+.legend--correct::before {
+  background: var(--color-success);
+}
+
+.legend--wrong::before {
+  background: #e53935;
+}
+
+/* 選択肢：原則2列。長い文章の選択肢は1列 */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.choices--single {
+  grid-template-columns: 1fr;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 17px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s;
+}
+
+.choice__mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #9fb3c8;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.choice[role='radio'] .choice__mark {
+  border-radius: 50%;
+}
+
+.choice:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.choice--selected {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.choice--selected .choice__mark {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.choice:disabled {
+  cursor: default;
+  color: var(--color-text-sub);
+}
+
+.choice--correct,
+.choice--correct:disabled {
+  border-color: var(--color-success);
+  background: #e3f6e8;
+  color: #146c2e;
+}
+
+.choice--missed,
+.choice--missed:disabled {
+  border-color: var(--color-success);
+  border-style: dashed;
+  color: #146c2e;
+}
+
+.choice--wrong,
+.choice--wrong:disabled {
+  border-color: var(--color-danger);
+  background: #fdeaea;
+  color: #a12626;
+}
+
+.choice--correct .choice__mark,
+.choice--missed .choice__mark {
+  border-color: var(--color-success);
+  background: #fff;
+  color: var(--color-success);
+}
+
+.choice--wrong .choice__mark {
+  border-color: var(--color-danger);
+  background: #fff;
+  color: var(--color-danger);
+}
+
+.feedback {
+  display: grid;
+  gap: 10px;
+}
+
+.feedback[hidden] {
+  display: none;
+}
+
+.feedback__title {
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.feedback__title--correct {
+  color: var(--color-success);
+}
+
+.feedback__title--partial {
+  color: #c06800;
+}
+
+.feedback__title--incorrect {
+  color: var(--color-danger);
+}
+
+.feedback__box {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.feedback__box h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-sub);
+}
+
+.feedback__tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* PC・タブレット横：3D を左、問題文と回答を右に */
+@media (min-width: 900px), (orientation: landscape) and (min-width: 640px) {
+  .quiz {
+    height: 100dvh;
+    min-height: 0;
+  }
+
+  .quiz-body {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 38vw, 460px);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'view question'
+      'view answer';
+  }
+
+  .quiz-view {
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .viewport--quiz {
+    height: 100%;
+  }
+
+  .quiz-answer {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 2px;
+  }
+}

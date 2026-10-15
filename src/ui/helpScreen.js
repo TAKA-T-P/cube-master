@@ -39,6 +39,27 @@ function section(key, current) {
   );
 }
 
+const TRAINING_STEPS = [
+  ['はじめ方', 'トップの「トレーニング」→ カテゴリ（いまは「位置関係」）→ 難易度と問題数を選んで「スタート」。'],
+  ['答え方', '問題文を読んで、下の選択肢から答えを選び「回答する」。「すべて選ぼう」の問題は、あてはまるものを全部選びます。'],
+  ['3Dのヒント', 'オレンジ色の辺・面が問題の基準です。立方体を回して、いろいろな向きから確かめよう。'],
+  ['答え合わせ', '正解は緑、まちがえたところは赤で光ります。「もう一度見る」で何度でも見直せます。'],
+  ['結果', '決めた問題数を解くと結果が出ます。エンドレスは「終了する」で結果を見られます。'],
+];
+
+function trainingSection() {
+  return h(
+    'section',
+    { class: 'help-section' },
+    h('h2', {}, 'トレーニングのあそびかた'),
+    h(
+      'dl',
+      { class: 'help-list' },
+      TRAINING_STEPS.map(([term, desc]) => [h('dt', {}, term), h('dd', {}, desc)]),
+    ),
+  );
+}
+
 export function mountHelpScreen(container, { navigate }) {
   const touch = isTouchPrimary();
   const order = touch ? ['touch', 'pc'] : ['pc', 'touch'];
@@ -59,10 +80,12 @@ export function mountHelpScreen(container, { navigate }) {
         '立方体の「頂点」「辺」「面」を自由に動かして観察しよう。',
       ),
       order.map((key, i) => section(key, i === 0)),
+      trainingSection(),
       h(
         'div',
         { class: 'help-actions' },
-        h('button', { class: 'btn btn--primary', type: 'button', onClick: () => navigate('preview') }, '3D立方体をためす'),
+        h('button', { class: 'btn btn--primary', type: 'button', onClick: () => navigate('categories') }, 'トレーニングをはじめる'),
+        h('button', { class: 'btn', type: 'button', onClick: () => navigate('preview') }, '3D立方体をためす'),
       ),
     ),
   );

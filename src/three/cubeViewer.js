@@ -7,7 +7,7 @@
  *
  * イベント：
  *   'selection:change' { selected, added, removed }
- *   'highlight:change' { highlighted }
+ *   'highlight:change' { highlighted }   （すべてのレイヤーの強調中 ID）
  *   'camera:change'    { position, target, distance, zoom }
  *   'animation:state'  { playing, paused }
  *   'input-lock:change' { locked }
@@ -21,7 +21,7 @@ import { createCubeControls } from './cubeControls.js';
 import { createCubeSelection } from './cubeSelection.js';
 import { createHighlightManager } from './cubeHighlight.js';
 import { AnimationManager } from './animationManager.js';
-import { createRotationDemo, createFaceFlash } from './cubeAnimations.js';
+import { createRotationDemo, createFaceFlash, createAnswerReveal } from './cubeAnimations.js';
 
 /**
  * @param {HTMLElement} container 3D 表示領域
@@ -88,6 +88,12 @@ export function createCubeViewer(container) {
     isRotationEnabled: cameraControls.isRotationEnabled,
     isZoomEnabled: cameraControls.isZoomEnabled,
     resetCamera: cameraControls.resetCamera,
+    setHomeDirection: cameraControls.setHomeDirection,
+    /** 視点リセットで戻る向きを変えて、その向きに移動する（問題ごとの初期視点） */
+    setCameraPreset(direction = 'default', { animate = true } = {}) {
+      cameraControls.setHomeDirection(direction);
+      cameraControls.resetCamera({ animate });
+    },
     getCameraState: cameraControls.getCameraState,
 
     // ----- 選択 -----
@@ -111,6 +117,8 @@ export function createCubeViewer(container) {
     highlightFace: highlights.highlightFace,
     highlightElements: highlights.highlightElements,
     clearHighlights: highlights.clearHighlights,
+    clearHighlightLayer: highlights.clearLayer,
+    getVisibleHighlightLayer: highlights.getVisibleLayer,
     getHighlighted: highlights.getHighlighted,
 
     // ----- 表示 -----
@@ -131,6 +139,12 @@ export function createCubeViewer(container) {
     /** 指定面の色を変化させるデモ */
     playFaceFlashDemo: (faceId = 'ABFE', options) =>
       animations.play(createFaceFlash(highlights, faceId, { ...options, onUpdate: render })),
+
+    /**
+     * 回答後の正解演出（誤選択を赤 → 正解を1つずつ緑）。完了時に { status } で解決
+     * @param {{ wrong?: string[], correct?: string[] }} params 立方体の要素 ID
+     */
+    playAnswerReveal: (params) => animations.play(createAnswerReveal(highlights, { ...params, onUpdate: render })),
 
     dispose() {
       if (disposed) return;

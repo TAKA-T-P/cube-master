@@ -3,8 +3,11 @@
 立方体をテーマにした算数・数学の学習 Web アプリです（対象：小学4年生〜中学3年生）。
 立方体の展開図・切断・位置関係・サイコロの回転・体積などの空間図形問題を扱う予定です。
 
-**現在は Phase 0（Ver.0.1.0）**：3D 立方体の表示・操作・選択・強調表示と、Web アプリの共通基盤を実装しています。
-問題の出題・正誤判定・スコア・段位認定はまだありません。
+公開ページ：https://taka-t-p.github.io/cube-master/
+
+**現在は Phase 1（Ver.0.2.0）**：Phase 0 の 3D 立方体ビューアに加えて、
+「位置関係」カテゴリのトレーニング（15 種類の問題テンプレート）と、カテゴリ共通の問題エンジンを実装しています。
+段位認定・タイマー・成績の保存・効果音はまだありません。
 
 - 技術：HTML / CSS / JavaScript（ES Modules）、Vite、Three.js（OrbitControls・Raycaster・CSS2DRenderer）、Vitest
 - サーバー・データベース不要の静的サイト（GitHub Pages で公開）
@@ -14,6 +17,7 @@
 
 - Node.js 22.12 以上（推奨：24 LTS。`.nvmrc` 参照）
 - WebGL2 に対応したブラウザ（Chrome / Edge / Safari / Firefox の最新版）
+  - WebGL2 が使えない端末でも、トレーニングは問題文と選択肢だけで回答できます
 
 ## 起動方法
 
@@ -25,43 +29,96 @@ npm run build      # 本番ビルド（dist/ に出力。base は /cube-master/�
 npm run preview    # ビルド結果の確認 → http://localhost:4173/cube-master/
 ```
 
-## 操作方法
+## 画面と操作
+
+```text
+トップ ─┬─ 3D立方体をためす（Phase 0 のプレビュー）
+        ├─ トレーニング → カテゴリ選択 → 設定（難易度・問題数）→ 問題 ⇄ 解答・解説 → 結果
+        ├─ 段位認定（準備中）
+        └─ あそびかた
+```
+
+### トレーニング
+
+1. **カテゴリ選択**：10 カテゴリを表示。Phase 1 で遊べるのは「位置関係」だけ（ほかは準備中）
+2. **設定**：難易度（★1 きほん／★2 標準／★3 チャレンジ／すべて）と問題数（5／10／20／エンドレス）
+3. **問題**：問題文を読み、選択肢から答えて「回答する」
+   - 問題の基準になる辺・面は **オレンジ** で表示され、正解表示中も消えません
+   - 立方体は自由に回せます（面は半透明で表示。「面を不透明に」で切り替え）。回答は選択肢ボタンで行います
+   - 「すべて選ぼう」の問題はチェック形式、「1つ選ぼう」の問題はラジオ形式
+4. **解答・解説**：「正解！」「おしい！」「不正解」と解説を表示
+   - 3D では、誤って選んだ要素が **赤**、正解の要素が **緑** で1つずつ光ります
+   - 「もう一度見る」でリプレイ、「スキップ」で演出を飛ばせます
+   - 「おしい！」は正解・不正解のちがいが1つだけのとき。正答率には完全正解だけを数えます
+5. **結果**：正解数・出題数・正答率・難易度。「もう一度挑戦」「設定を変更」「カテゴリ選択に戻る」
+   - 「やめる」（エンドレスは「終了する」）は確認のうえ、回答済みの分の結果を表示します
+
+### 3D 立方体の操作
 
 | 操作 | パソコン | スマホ・タブレット |
 |---|---|---|
 | 回転（カメラが立方体のまわりを回る） | ドラッグ | 1本指でなぞる |
 | 拡大・縮小 | マウスホイール | ピンチ |
-| 頂点・辺・面をえらぶ | クリック（もう一度で解除） | タップ（もう一度で解除） |
+| 頂点・辺・面をえらぶ（3D プレビューのみ） | クリック（もう一度で解除） | タップ（もう一度で解除） |
 | はじめの向きに戻す | 「視点リセット」 | 「視点リセット」 |
 
-3D プレビュー画面の操作パネル：
+3D プレビュー画面の操作パネル：選択（頂点／辺／面、1つだけ／複数、クリア）、表示（不透明／半透明／ワイヤー、
+頂点ラベル、自由回転、視点リセット）、デモ（90°回転・面の色変化・強調表示）、開発者向け情報。
 
-- **選択**：頂点／辺／面の切り替え、1つだけ／複数、選択をクリア
-- **表示**：不透明／半透明／ワイヤー、頂点ラベル ON/OFF、自由回転 ON/OFF、視点リセット
-- **デモ**：90°回転デモ、面の色変化デモ、強調表示デモ、強調を解除、演出をスキップ
-- **開発者向け情報**：選択中 ID・強調中 ID・カメラ位置・アニメーション状態など
-
-補足：
-
-- 面が「不透明」のときは、裏に隠れた頂点・辺は選べません（見えているものだけ選べる）。「半透明」なら選べます。
+- 面が「不透明」のときは、裏に隠れた頂点・辺は選べません。「半透明」なら選べます。
 - 「ワイヤー」のときは面が非表示になり、面は選べません（選択中の面だけは表示されます）。
-- パン（平行移動）は無効です。立方体は常に画面中央にあります。
 
 ### ブラウザのコンソールから API を試す
 
-3D プレビュー画面を開いている間は `window.cubeMaster.viewer` からビューア API を呼べます。
+3D プレビュー画面・問題画面を開いている間は `window.cubeMaster.viewer` からビューア API を呼べます
+（問題画面では `window.cubeMaster.session` で進行状態も見られます）。
 
 ```js
 const v = window.cubeMaster.viewer;
-v.highlightEdge('AB');                                   // 辺 AB を緑で強調
-v.highlightFace('BCGF', { color: '#ff8c1a', opacity: 0.4, duration: 3000 });
-v.highlightElements(['A', 'CG', 'EFGH']);                // 種類の混在も可
-v.clearHighlights();
-v.setMultipleSelection(true); v.select('A'); v.select('GH');
-v.getSelected();                                          // → ['A', 'GH']
-v.disableRotation(); v.resetCamera();
-await v.playRotationDemo();                               // → { status: 'completed' }
+v.highlightEdge('AB');                                    // 辺 AB を緑で強調
+v.highlightElements(['AB'], { layer: 'reference' });     // 基準要素としてオレンジで強調
+await v.playAnswerReveal({ wrong: ['AE'], correct: ['CD', 'EF', 'GH'] });
+v.clearHighlightLayer('correct');
+v.setCameraPreset([-4, 3, -5]);                           // 視点を変えて、その向きを「視点リセット」の戻り先にする
 ```
+
+## 位置関係の問題テンプレート
+
+正解は手で書かず、座標とベクトルから計算します（`src/core/cubeRelations.js`）。基準の辺・面は毎回ランダムに変わります。
+
+| ID | 難易度 | 内容 | 例 | 正解数 | 選択肢 |
+|---|---|---|---|---|---|
+| P01 | ★1 | 辺と平行な辺 | 辺ABと平行な辺をすべて | 3 | 5 |
+| P02 | ★1 | 辺と交わる辺 | 辺ABと交わる辺をすべて | 4 | 6 |
+| P03 | ★1 | 面と平行な面 | 面ABCDと平行な面は？ | 1 | 4 |
+| P04 | ★1 | 面と垂直な面 | 面ABCDと垂直な面をすべて | 4 | 5 |
+| P05 | ★1 | 辺を含む面 | 辺ABを含む面をすべて | 2 | 4 |
+| P06 | ★2 | 辺と平行な面 | 辺ABと平行な面をすべて | 2 | 4 |
+| P07 | ★2 | 辺と垂直な面 | 辺ABと垂直な面をすべて | 2 | 4 |
+| P08 | ★2 | ねじれの位置にある辺 | 辺ABとねじれの位置にある辺をすべて | 4 | 6 |
+| P09 | ★2 | 面に垂直な辺 | 面ABCDに垂直な辺をすべて | 4 | 6 |
+| P10 | ★2 | 2本の辺の位置関係 | 辺ABと辺CGの位置関係は？ | 1 | 3（平行／交わる／ねじれの位置） |
+| P11 | ★3 | 2面に共通して垂直な辺 | 面ABCDと面ABFEの両方に垂直な辺はある？ | 1 | 2（ある／ない） |
+| P12 | ★3 | 2本の辺の両方と平行な面 | 辺ABと辺CDの両方に平行な面をすべて | 1 | 5（「あてはまる面はない」を含む） |
+| P13 | ★3 | 交わらず平行でもない辺 | 辺ABと交わらず、平行でもない辺をすべて | 4 | 6 |
+| P14 | ★3 | 2つの条件を満たす辺 | 面ABCDに垂直で、辺EFと交わる辺をすべて | 2 | 6 |
+| P15 | ★3 | 辺と面の関係の説明 | 辺ABと面EFGHの位置関係で正しい説明は？ | 1 | 4（文章） |
+
+用語の定義（`cubeRelations.js` の冒頭にも記載）：
+
+- 辺と辺が「平行」：自分自身は含めない。「交わる」：線分として共有点をもつ（立方体では共通の頂点）。
+  `doEdgesIntersect(a, b, { as: 'line' })` で、延長した直線としての交わりも判定できる
+- 「垂直」（辺と辺）：交わって直角。ねじれの位置で直角の組は含めない
+- 「ねじれの位置」：同じ平面上にない2直線
+- 辺と面が「平行」：辺を含む面は平行に数えない
+- 内積・外積の比較には許容誤差 `EPSILON = 1e-9` を使う
+
+出題のバランス：
+
+- 「すべて」では ★1〜★3 を均等に出題。出題回数の少ないテンプレートを優先し、同じテンプレートは3問以上連続しない
+- 重複判定は「テンプレート ID + 基準要素」（例 `P01:AB`）。直前の問題と同じ基準要素は避ける
+- 答えの種類が偏りやすいテンプレート（P10・P11・P12・P15）は、答えの種類ごとに均等に出題
+- 有限のパターンを一巡したら再出題を許可（エンドレス）
 
 ## フォルダ構成
 
@@ -71,31 +128,39 @@ cube-master/
 ├── public/favicon.svg
 ├── src/
 │   ├── main.js                    エントリー（ハッシュルーティング・グローバルエラー処理）
-│   ├── styles/                    base.css（トークン・部品） / layout.css（画面・レスポンシブ）
-│   ├── core/                      ★ Three.js 非依存（数学データ・状態管理）
+│   ├── styles/                    base.css / layout.css / training.css
+│   ├── core/                      ★ Three.js・DOM 非依存（数学・状態・問題エンジン）
 │   │   ├── cubeConstants.js       頂点・辺・面の定義（唯一のデータソース）、色
-│   │   ├── cubeGeometry.js        ID 正規化・位置関係・座標計算
-│   │   ├── selectionState.js      選択状態（Set、複数選択、順序非依存）
+│   │   ├── cubeGeometry.js        ID 正規化・座標計算
+│   │   ├── cubeRelations.js       平行・垂直・交わる・ねじれ・包含の判定と一覧
+│   │   ├── questionSchema.js      問題データの共通スキーマとバリデーション
+│   │   ├── questionEngine.js      QuestionPicker（抽出・重複管理・シャッフル）/ TrainingSession（進行）
+│   │   ├── answerValidator.js     正誤判定（集合比較・差分）
+│   │   ├── answerSelection.js     回答の選択状態（UI から独立）
+│   │   ├── selectionState.js      3D の頂点・辺・面の選択状態
 │   │   ├── inputLock.js           操作ロック（理由キーごと）
 │   │   └── eventBus.js            イベントバス
+│   ├── questions/                 問題データ（カテゴリごと）
+│   │   ├── questionRegistry.js    カテゴリ一覧（10）・難易度・問題数の定義
+│   │   ├── questionUtils.js       表示名・選択肢生成・初期視点の計算
+│   │   └── position/              位置関係：positionGenerators（P01〜P15）/ positionRelations / positionExplanations
 │   ├── three/                     3D 描画・操作
 │   │   ├── cubeViewer.js          3D 機能の窓口（UI はこの API だけを使う）
-│   │   ├── sceneManager.js        シーン・カメラ・レンダラー・オンデマンド描画・リサイズ
-│   │   ├── cubeModel.js           数学データから 3D オブジェクトを生成（各グループに分離）
-│   │   ├── cubeControls.js        OrbitControls ラッパー（回転・ズームの可否、視点リセット）
-│   │   ├── cubeSelection.js       Raycaster によるポインター選択
-│   │   ├── cubeHighlight.js       解説用の強調表示（選択とは別管理）
-│   │   ├── animationManager.js    アニメーション共通基盤（Three.js 非依存）
-│   │   └── cubeAnimations.js      演出（90°回転・面の色変化）
-│   ├── ui/                        画面（homeScreen / previewScreen / helpScreen）
-│   └── utils/                     DOM ヘルパー・イージング
+│   │   ├── sceneManager.js / cubeModel.js / cubeControls.js / cubeSelection.js
+│   │   ├── cubeHighlight.js       強調表示（レイヤー：reference / default / wrong / correct）
+│   │   ├── animationManager.js    アニメーション共通基盤
+│   │   └── cubeAnimations.js      演出（90°回転・面の色変化・正解演出）
+│   ├── ui/                        画面
+│   │   ├── homeScreen / previewScreen / helpScreen
+│   │   ├── categoryScreen / trainingSetupScreen / questionScreen / trainingResultScreen
+│   │   ├── trainingStore.js       トレーニングの進行状態（メモリのみ）
+│   │   └── components.js          ボタン・切替・確認ダイアログ
+│   └── utils/                     DOM ヘルパー・イージング・乱数（シード指定可）
 ├── tests/                         Vitest
-├── index.html
-├── vite.config.js
-└── package.json
+└── index.html / vite.config.js / package.json
 ```
 
-依存の向き：`ui → three/cubeViewer → three/* → core`。`core` は Three.js にも DOM にも依存しません。
+依存の向き：`ui → (questions, three/cubeViewer) → core`。`core` と `questions` は Three.js にも DOM にも依存しません。
 
 ## 座標系と立方体の定義
 
@@ -116,35 +181,34 @@ ID は表記ゆれを正規化して扱います（`"BA"` → 辺 `AB`、`"FGCB"
 
 ## 自動テスト
 
-`npm run test` で以下を検証します（6 ファイル / 55 テスト）。
+`npm run test` で 11 ファイル / 219 テストを実行します（Phase 0 の 55 テストを含む）。
 
 | ファイル | 内容 |
 |---|---|
-| `cubeGeometry.test.js` | 頂点8・辺12・面6、辺が異なる2頂点を結ぶ、辺の長さ2、面が4頂点、各頂点に3辺、各辺に2面、法線、向かい合う面、ID 正規化と無効 ID |
-| `selectionState.test.js` | 選択・複数選択・解除・順序非依存・無効 ID |
-| `cubeHighlight.test.js` | 3D モデルの ID 付与・表示モード、強調表示の指定・解除・自動解除・無効 ID |
-| `animationManager.test.js` | 再生・一時停止・スキップ・キャンセル・エラー時に操作ロックが残らないこと、90°回転デモ |
-| `cubeInteraction.test.js` | Raycaster 選択（隠れた要素の除外・判定領域・回転後）、カメラ初期位置・視点リセット・操作ロック |
-| `ui.test.js` | 画面の結線（ボタン → API、選択表示、演出中のボタン無効化、WebGL 非対応時の表示） |
+| `cubeGeometry.test.js` | 頂点8・辺12・面6、辺の長さ、法線、向かい合う面、ID 正規化 |
+| `cubeRelations.test.js` | 全12辺の平行3・交わる4・ねじれ4、全6面の平行1・垂直4、辺と面の包含2・平行2・垂直2、面に垂直な辺4、対称性、自分自身、線分と直線の区別、無効 ID |
+| `positionQuestions.test.js` | P01〜P15 の全基準で生成・スキーマ適合、正解がすべて選択肢に含まれる、重複なし、正解数、問題文と基準要素の一致、正解が数学的関係と一致 |
+| `questionEngine.test.js` | 難易度別抽出、「すべて」の均等出題、同じテンプレートが3連続しない、一巡後の再出題、選択肢シャッフル、進行・集計・エンドレス・途中終了 |
+| `answerValidator.test.js` | 単一・複数・順序違い・回答不足・誤答混入・未選択・重複回答、回答の選択状態とロック |
+| `selectionState.test.js` | 3D の選択・複数選択・解除・無効 ID |
+| `cubeHighlight.test.js` | 強調表示の指定・解除、レイヤーと優先順位、正解演出（リプレイ・スキップ・操作ロック解除） |
+| `animationManager.test.js` | 再生・一時停止・スキップ・キャンセル・エラー時に操作ロックが残らない、90°回転デモ |
+| `cubeInteraction.test.js` | Raycaster 選択、カメラ初期位置・視点リセット・操作ロック |
+| `ui.test.js` | トップ・ヘルプ・3D プレビュー画面の結線 |
+| `trainingUi.test.js` | カテゴリ選択・設定・問題表示・回答確定とロック・正誤表示・リプレイ・次の問題・結果・途中終了・エンドレス・画面の開き直し |
 
 ### 手動確認項目（自動テストが難しいもの）
 
 実機ブラウザで以下を確認してください。
 
-- [ ] 立方体が表示され、前面・右側面・上面が見える初期角度になっている
-- [ ] 頂点ラベル A〜H が正しい頂点の近くに表示される（A は手前左下、G は奥右上）
-- [ ] マウスドラッグ／1本指ドラッグで回転し、離すと慣性で少し回って止まる
-- [ ] ホイール／ピンチで拡大縮小でき、極端に近づく・遠ざかることはない
-- [ ] 「視点リセット」でなめらかに初期の向きに戻る
-- [ ] 頂点・辺・面をクリック／タップで選択するとオレンジになり、「選択中：辺 AB」のように表示される
-- [ ] 回転のためのドラッグでは選択されない。ピンチ中も選択されない
-- [ ] 半透明・ワイヤー表示で辺と頂点ラベルが識別できる
-- [ ] 90°回転デモ中はドラッグ回転・選択ができず、終了後は元どおり操作できる
-- [ ] 強調表示デモで辺 AB・面 BCGF・頂点 G が緑になり、約4秒後に元の見た目に戻る
-- [ ] PC（横長）・タブレット（縦/横）・スマホ（縦/横）でレイアウトが崩れず、立方体がはみ出さない
-- [ ] 画面回転・ウィンドウサイズ変更で立方体がゆがまない
+- [ ] 3D プレビュー：立方体・ラベル A〜H・回転・ズーム・視点リセット・選択・半透明/ワイヤー・デモが Phase 0 と同じく動く
+- [ ] トレーニング：基準の辺・面がオレンジで表示され、別の問題では基準の位置に合わせて視点が変わる
+- [ ] 回答後、誤選択が赤 → 正解が緑で1つずつ光り、基準のオレンジは残る。演出中は回転できず、終わると回せる
+- [ ] 「もう一度見る」「スキップ」が動作する
+- [ ] スマホ縦：問題文 → 3D → 選択肢 → 回答ボタンの順に並び、選択肢が押しやすい
+- [ ] PC・タブレット横：3D が左、問題文と回答エリアが右に並ぶ。長い文章の選択肢（P15）は1列になる
+- [ ] 「やめる」の確認ダイアログ、結果画面の各ボタン
 - [ ] 開発者ツールのコンソールに警告・エラーが出ない
-- [ ] GitHub Pages 上で CSS・JS・favicon が読み込まれる
 
 ## GitHub Pages への公開
 
@@ -152,72 +216,76 @@ ID は表記ゆれを正規化して扱います（`"BA"` → 辺 `AB`、`"FGCB"
 `npm ci → npm run test → npm run build → dist を公開` を実行します。テストかビルドが失敗すると公開されません。
 Actions 画面の「Run workflow」から手動実行もできます。
 
-### 初回の手順
-
-1. GitHub で `cube-master` という名前のリポジトリを作成する（README などは追加しない空のリポジトリ）
-2. ローカルで最初のコミットを作って push する
-
-   ```bash
-   git config user.name "あなたの名前"        # 未設定の場合のみ
-   git config user.email "you@example.com"    # 未設定の場合のみ
-   git add -A
-   git commit -m "Phase 0: 3D cube viewer foundation"
-   git remote add origin https://github.com/<ユーザー名>/cube-master.git
-   git push -u origin main
-   ```
-
-3. GitHub のリポジトリで **Settings → Pages → Build and deployment → Source** を **GitHub Actions** にする
-4. **Actions** タブでワークフローが成功したら `https://<ユーザー名>.github.io/cube-master/` で表示される
-   （手順3より前に push してワークフローが失敗した場合は、Actions から「Re-run jobs」してください）
+初回のみ、GitHub のリポジトリで **Settings → Pages → Build and deployment → Source** を **GitHub Actions** にしてください（設定済み）。
 
 リポジトリ名を変える場合、ワークフローはリポジトリ名から base パスを自動設定します。
-ローカルで別名用にビルドする場合は `BASE_PATH=/別名/ npm run build` を使います。
-（`<ユーザー名>.github.io` という名前のリポジトリに置く場合は `BASE_PATH=/` にしてください）
-Windows の Git Bash で `BASE_PATH` を指定すると、パスが Windows 形式に変換されてしまいます。
-その場合は `MSYS_NO_PATHCONV=1 BASE_PATH=/別名/ npm run build` としてください。
+ローカルで別名用にビルドする場合は `BASE_PATH=/別名/ npm run build` を使います
+（Windows の Git Bash では `MSYS_NO_PATHCONV=1 BASE_PATH=/別名/ npm run build`）。
 
-## Phase 1 以降で使う API
+## 後続 Phase で使う API
 
-### 数学データ（`src/core`）
+### 問題データの形（カテゴリ共通。`src/core/questionSchema.js`）
 
 ```js
-import { VERTICES, EDGES, FACES } from './core/cubeConstants.js';
-import {
-  resolveElement,      // 'BA' → { type: 'edge', id: 'AB' }（無効なら CubeElementError）
-  getEdgesOfVertex, getFacesOfVertex, getFacesOfEdge, getEdgesOfFace, getOppositeFace,
-  getVertexPosition, getEdgeEndpoints, getEdgeMidpoint, getFaceCenter, getFaceNormal,
-  sortElementIds, vecDot, vecCross, vecSub,
-} from './core/cubeGeometry.js';
+{
+  id, templateId: 'P01', key: 'P01:AB', category: 'position', difficulty: 1, type: 'multiple',
+  question: '辺ABと平行な辺をすべて選びなさい。',
+  scene: { model: 'cube', referenceElements: ['AB'], cameraPreset: 'default' },
+  choices: [{ id: 'CD', label: '辺CD', elementId: 'CD' }, { id: 'none', label: 'あてはまる面はない', fixed: true }],
+  correctAnswers: ['CD', 'EF', 'GH'],
+  explanation: { text: '…', highlightElements: ['CD', 'EF', 'GH'], animation: 'highlightElements' },
+}
 ```
 
-正解判定は、ユーザーの選択（`viewer.getSelected()` は標準順序の正規 ID 配列）と、
-`cubeGeometry` で計算した正解 ID 配列を比較するだけで行えます。
+- 選択肢の `id` は任意の文字列（サイコロの目・形の名前・分数などでもよい）。正誤は選択肢 ID の集合で比較する
+- `elementId` は 3D 上で対応する要素（誤選択を赤く表示するのに使う）。文章の選択肢では省略
+- `fixed: true` の選択肢はシャッフルせず末尾に置く
+
+### 問題テンプレート（`src/questions/<category>/`）
+
+```js
+{ id: 'P01', difficulty: 1, title: '…',
+  bases: () => [{ key: 'AB', refs: ['AB'], group?: '…', ...params }],  // 出題できる基準の一覧
+  build: (base, rng) => 問題オブジェクト（id 以外） }
+```
+
+### 問題エンジン（`src/core/questionEngine.js`）
+
+```js
+const session = new TrainingSession({ category, templates, difficulty: 1|2|3|'all', questionLimit: 10|'endless', rng });
+const q = session.nextQuestion();      // 問題（終了していれば null）
+const result = session.submit(['CD', 'EF', 'GH']); // { status: 'correct'|'partial'|'incorrect', hits, missing, wrong }
+session.hasNextQuestion(); session.finish(); session.getSummary(); // { answeredCount, correctCount, accuracy, history }
+```
+
+### 数学（`src/core/cubeRelations.js`）
+
+`areEdgesParallel` `doEdgesIntersect(a, b, { as })` `areEdgesPerpendicular` `areEdgesSkew` `classifyEdgePair`
+`areFacesParallel` `areFacesPerpendicular` `isEdgeContainedInFace` `isEdgeParallelToFace` `isEdgePerpendicularToFace` `classifyEdgeFace`
+`getCommonVertex` `getCommonEdge` `getEdgeFaceMeetingVertex` と、それぞれの一覧取得（`getParallelEdges(edge)` など）。
 
 ### ビューア（`createCubeViewer(container)`）
 
 | 分類 | API |
 |---|---|
-| カメラ | `enableRotation()` `disableRotation()` `enableZoom()` `disableZoom()` `resetCamera({ animate })` `getCameraState()` |
-| 選択 | `setSelectionMode('vertex'｜'edge'｜'face')` `setSelectionEnabled(bool)` `setMultipleSelection(bool)` `select(id)` `deselect(id)` `toggleSelection(id)` `clearSelection(type?)` `getSelected(type?)` `getSelectedByType()` `pickAt(x, y)` |
-| 強調 | `highlightVertex/Edge/Face(id, { color, opacity, duration })` `highlightElements(ids, options)` `clearHighlights(ids?)` `getHighlighted()` |
+| カメラ | `enableRotation()` `disableRotation()` `enableZoom()` `disableZoom()` `resetCamera({ animate })` `setCameraPreset(direction, { animate })` `getCameraState()` |
+| 選択（3D） | `setSelectionMode()` `setSelectionEnabled(bool)` `setMultipleSelection(bool)` `select(id)` `toggleSelection(id)` `clearSelection()` `getSelected()` `pickAt(x, y)` |
+| 強調 | `highlightVertex/Edge/Face(id, { color, opacity, duration, layer })` `highlightElements(ids, options)` `clearHighlights(ids?, { layer })` `clearHighlightLayer(layer)` `getHighlighted()` |
+| 演出 | `playAnswerReveal({ wrong, correct })` `animations.play/pause/resume/skip/cancel/isPlaying` |
 | 表示 | `setFaceDisplayMode('opaque'｜'translucent'｜'wireframe')` `setLabelsVisible(bool)` |
-| 演出 | `animations.play(anim, { lockInput })` → `Promise<{ status }>`、`pause()` `resume()` `skip()` `cancel()` `isPlaying()` |
-| イベント | `events.on('selection:change' ｜ 'highlight:change' ｜ 'camera:change' ｜ 'animation:state' ｜ 'input-lock:change', fn)` |
-| 破棄 | `dispose()`（画面離脱時に必ず呼ぶ） |
+| イベント | `events.on('selection:change'｜'highlight:change'｜'camera:change'｜'animation:state'｜'input-lock:change', fn)` |
+| 破棄 | `dispose()` |
 
-- 強調色 `color` は `'correct'`（緑・既定）・`'selected'`（オレンジ）・`'#rrggbb'`・`0xrrggbb` が使えます。
-- 強調表示は選択とは独立したオーバーレイ（`highlightsGroup`）なので、解除すれば元の見た目に戻ります。
-- 3D オブジェクトは `userData.elementType / elementId` に数学的 ID を持ちます（`viewer.model.getElement(id)`）。
-- 新しい演出は `{ duration, start?, update(progress), cancel?, end? }` 形式のオブジェクトを作り、
-  `animations.play()` に渡します。`tween()` `wait()` `sequence()` ヘルパーで組み立てられます。
-  再生中はユーザー操作が自動でロックされ、完了・スキップ・キャンセル・エラーのどれで終わっても解除されます。
-- 問題ごとの操作ロックは `viewer.inputLock.lock('question')` / `unlock('question')` のように理由キーを分けて使えます。
+強調のレイヤーは `reference`（基準・オレンジ）`default`（解説・緑）`wrong`（誤選択・赤）`correct`（正解・緑）。
+同じ要素が複数レイヤーにあるときは **correct > wrong > default > reference** の1つだけを表示し、上位を消すと下位の表示に戻ります。
+3D プレビューの選択色（オレンジ `#ff8c1a`）は選択状態の表示で、強調レイヤーとは別管理です。
 
 ## 今後の拡張方針
 
-- **Phase 1（位置関係）**：`cubeGeometry` に平行・垂直・ねじれの判定関数を追加し、問題画面（`src/ui/`）と
-  問題データ（例：`src/questions/`）を新設する。既存の頂点・辺・面の定義と 3D 描画は変更せずに使う。
-- トップ画面のメニューは `homeScreen.js` の `MENU_ITEMS` の `enabled` を true にして画面を `main.js` の `ROUTES` に追加する。
-- 展開図・切断などで新しい 3D オブジェクトが必要になったら、`cubeModel` とは別のモジュールで生成し、
-  `model.root` か専用グループに追加する（数学データは `core` に置く）。
-- 段位認定・タイマー・成績管理・効果音などは後続 Phase で実装する（Phase 0 では未実装）。
+- **新しいカテゴリ**：`src/questions/<category>/` にテンプレートを作り、`questionRegistry.js` の `CATEGORIES` で
+  `templates` を設定して `enabled: true` にする。問題画面・エンジン・判定はそのまま使える
+- **3D をタップして回答**：`AnswerSelection.toggle(id)` を `viewer.events.on('selection:change')` から呼べば、
+  選択肢ボタンと同じ回答状態を共有できる（選択肢 ID に要素 ID を使う問題）
+- **展開図・切断**など新しい 3D オブジェクトが必要になったら、`cubeModel` とは別のモジュールで生成し、
+  数学データは `core` に置く。問題データの `scene.model` に新しいモデル名を追加する
+- 段位認定・90秒タイマー・成績の保存・効果音は後続 Phase で実装する

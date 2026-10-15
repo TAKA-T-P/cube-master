@@ -6,30 +6,44 @@
  */
 import './styles/base.css';
 import './styles/layout.css';
+import './styles/training.css';
 import { mountHomeScreen } from './ui/homeScreen.js';
 import { mountPreviewScreen } from './ui/previewScreen.js';
 import { mountHelpScreen } from './ui/helpScreen.js';
+import { mountCategoryScreen } from './ui/categoryScreen.js';
+import { mountTrainingSetupScreen } from './ui/trainingSetupScreen.js';
+import { mountQuestionScreen } from './ui/questionScreen.js';
+import { mountTrainingResultScreen } from './ui/trainingResultScreen.js';
 import { h, showToast } from './utils/dom.js';
 
 const ROUTES = {
   home: mountHomeScreen,
   preview: mountPreviewScreen,
   help: mountHelpScreen,
+  categories: mountCategoryScreen,
+  setup: mountTrainingSetupScreen,
+  question: mountQuestionScreen,
+  result: mountTrainingResultScreen,
 };
 
 const app = document.getElementById('app');
 let current = null;
 
-/** 画面を移動する */
-export function navigate(route) {
-  const hash = route === 'home' ? '#/' : `#/${route}`;
+/**
+ * 画面を移動する
+ * @param {string} route
+ * @param {Record<string, string>} [params] URL のクエリ（例：{ category: 'position' }）
+ */
+export function navigate(route, params) {
+  const query = params ? `?${new URLSearchParams(params)}` : '';
+  const hash = route === 'home' ? '#/' : `#/${route}${query}`;
   if (location.hash !== hash) location.hash = hash;
   else render();
 }
 
 function currentRoute() {
-  const name = location.hash.replace(/^#\/?/, '').split('?')[0];
-  return name in ROUTES ? name : 'home';
+  const [path, query = ''] = location.hash.replace(/^#\/?/, '').split('?');
+  return { name: path in ROUTES ? path : 'home', params: Object.fromEntries(new URLSearchParams(query)) };
 }
 
 function render() {
@@ -41,11 +55,11 @@ function render() {
   current = null;
   app.replaceChildren();
 
-  const route = currentRoute();
+  const { name: route, params } = currentRoute();
   const container = h('main', { class: `screen screen--${route}` });
   app.append(container);
   try {
-    current = ROUTES[route](container, { navigate, version: __APP_VERSION__ });
+    current = ROUTES[route](container, { navigate, params, version: __APP_VERSION__ });
   } catch (err) {
     console.error('[router] 画面の表示でエラー', err);
     container.replaceChildren(

@@ -89,6 +89,8 @@ export const CUBE_COLORS = Object.freeze({
   face: 0x9fd3f5,
   edge: 0x1f4e9c,
   vertex: 0x163a75,
-  selected: 0xff8c1a,
-  correct: 0x22b14c,
+  selected: 0xff8c1a, // ユーザーの選択（3D プレビュー）
+  correct: 0x22b14c, // 正解・解説
+  reference: 0xf06a00, // 問題の基準要素
+  wrong: 0xe53935, // 誤って選んだ要素
 });

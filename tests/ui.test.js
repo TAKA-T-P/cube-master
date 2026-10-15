@@ -64,20 +64,23 @@ describe('トップ画面', () => {
   it('タイトル・バージョン・準備中ボタンを表示し、有効なボタンで移動する', () => {
     const container = document.createElement('main');
     const navigate = vi.fn();
-    mountHomeScreen(container, { navigate, version: '0.1.0' });
+    mountHomeScreen(container, { navigate, version: '0.2.0' });
     expect(container.querySelector('h1').textContent).toBe('CUBE MASTER');
     expect(container.textContent).toContain('立方体を極める！空間認識トレーニング');
-    expect(container.textContent).toContain('Ver.0.1.0');
+    expect(container.textContent).toContain('Ver.0.2.0');
 
+    // Phase 1：トレーニングは選べる・段位認定は準備中のまま
     const training = container.querySelector('[data-menu="training"]');
     const cert = container.querySelector('[data-menu="certification"]');
-    expect(training.disabled && cert.disabled).toBe(true);
-    expect(training.textContent).toContain('準備中');
+    expect(training.disabled).toBe(false);
+    expect(cert.disabled).toBe(true);
+    expect(cert.textContent).toContain('準備中');
 
     container.querySelector('[data-menu="preview"]').click();
     container.querySelector('[data-menu="help"]').click();
     training.click();
-    expect(navigate.mock.calls).toEqual([['preview'], ['help']]);
+    cert.click();
+    expect(navigate.mock.calls).toEqual([['preview'], ['help'], ['categories']]);
   });
 });
 

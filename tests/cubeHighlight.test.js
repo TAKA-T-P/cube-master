@@ -109,3 +109,87 @@ describe('強調表示', () => {
     expect(highlights.getHighlighted()).toEqual([]);
   });
 });
+
+describe('強調表示のレイヤーと優先順位（Phase 1）', () => {
+  let model;
+  let highlights;
+
+  beforeEach(() => {
+    model = createCubeModel({ labels: false });
+    highlights = createHighlightManager(model);
+  });
+
+  afterEach(() => {
+    highlights.dispose();
+    model.dispose();
+  });
+
+  it('基準・誤選択・正解を別々に管理し、レイヤー単位で解除できる', () => {
+    highlights.highlightElements(['AB'], { layer: 'reference' });
+    highlights.highlightElements(['CD', 'EF'], { layer: 'correct' });
+    highlights.highlightElements(['AE'], { layer: 'wrong' });
+    expect(highlights.getHighlight('AB').material.color.getHex()).toBe(CUBE_COLORS.reference);
+    expect(highlights.getHighlight('AE').material.color.getHex()).toBe(CUBE_COLORS.wrong);
+    expect(highlights.getHighlight('CD').material.color.getHex()).toBe(CUBE_COLORS.correct);
+    expect(highlights.getHighlighted('correct').sort()).toEqual(['CD', 'EF']);
+
+    highlights.clearLayer('correct');
+    highlights.clearLayer('wrong');
+    expect(highlights.getHighlighted()).toEqual(['AB']); // 基準は残る
+  });
+
+  it('同じ要素が複数レイヤーにあるときは 正解 > 誤選択 > 解説 > 基準 の順で1つだけ表示する', () => {
+    highlights.highlightEdge('AB', { layer: 'reference' });
+    highlights.highlightEdge('AB', { layer: 'wrong' });
+    expect(highlights.getVisibleLayer('AB')).toBe('wrong');
+    highlights.highlightEdge('AB', { layer: 'correct' });
+    expect(highlights.getVisibleLayer('AB')).toBe('correct');
+    const visible = model.groups.highlightsGroup.children.filter((o) => o.visible);
+    expect(visible).toHaveLength(1);
+
+    // 上位レイヤーを消すと、下のレイヤーの表示に戻る
+    highlights.clearHighlights(['AB'], { layer: 'correct' });
+    expect(highlights.getVisibleLayer('AB')).toBe('wrong');
+    highlights.clearLayer('wrong');
+    expect(highlights.getVisibleLayer('AB')).toBe('reference');
+    highlights.clearHighlights();
+    expect(highlights.getVisibleLayer('AB')).toBeNull();
+  });
+});
+
+describe('正解演出アニメーション', () => {
+  it('誤選択を赤、正解を1つずつ緑で表示し、リプレイしても重ならない。基準は消さない', async () => {
+    const { AnimationManager } = await import('../src/three/animationManager.js');
+    const { createAnswerReveal } = await import('../src/three/cubeAnimations.js');
+    const { InputLock } = await import('../src/core/inputLock.js');
+    const model = createCubeModel({ labels: false });
+    const highlights = createHighlightManager(model);
+    const inputLock = new InputLock();
+    const manager = new AnimationManager({ inputLock });
+    highlights.highlightEdge('AB', { layer: 'reference' });
+
+    const play = () => manager.play(createAnswerReveal(highlights, { wrong: ['AE'], correct: ['CD', 'EF', 'GH'] }));
+    let done = play();
+    manager.tick(0);
+    manager.tick(200);
+    expect(highlights.getHighlighted('wrong')).toEqual(['AE']);
+    expect(highlights.getHighlighted('correct')).toEqual([]); // 正解はまだ
+    expect(inputLock.isLocked()).toBe(true);
+    for (let t = 300; t <= 3000; t += 100) manager.tick(t);
+    await expect(done).resolves.toEqual({ status: 'completed' });
+    expect(highlights.getHighlighted('correct')).toEqual(['CD', 'EF', 'GH']);
+    expect(highlights.getHighlight('GH').material.opacity).toBe(1);
+    expect(inputLock.isLocked()).toBe(false); // 演出後は自由に回転できる
+
+    // リプレイ → スキップ：最終状態になり、オーバーレイは増えない
+    done = play();
+    manager.skip();
+    await expect(done).resolves.toEqual({ status: 'skipped' });
+    expect(highlights.getHighlighted('correct')).toEqual(['CD', 'EF', 'GH']);
+    expect(highlights.getHighlighted('reference')).toEqual(['AB']);
+    expect(model.groups.highlightsGroup.children).toHaveLength(5);
+
+    highlights.dispose();
+    model.dispose();
+  });
+});

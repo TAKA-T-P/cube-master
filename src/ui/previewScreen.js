@@ -4,7 +4,8 @@
  * UI はビューアの API と viewer.events だけを使い、Three.js には直接触れない。
  * 開発・検証用に、表示中は window.cubeMaster.viewer からビューア API を呼び出せる。
  */
-import { h, showToast } from '../utils/dom.js';
+import { h } from '../utils/dom.js';
+import { group, button, segmented, toggle } from './components.js';
 import { createCubeViewer, FACE_DISPLAY_MODES } from '../three/cubeViewer.js';
 import { WebGLUnavailableError } from '../three/sceneManager.js';
 import { ELEMENT_TYPE_LABELS } from '../core/cubeConstants.js';
@@ -156,61 +157,4 @@ export function mountPreviewScreen(container, { navigate }) {
       if (window.cubeMaster?.viewer === viewer) delete window.cubeMaster;
     },
   };
-}
-
-// ---------- 小さな UI 部品 ----------
-
-function group(title, ...children) {
-  return h('section', { class: 'panel-group' }, h('h2', { class: 'panel-group__title' }, title), ...children);
-}
-
-function button(label, onClick, extraClass = '') {
-  return h(
-    'button',
-    {
-      class: `btn ${extraClass}`,
-      type: 'button',
-      onClick: () => {
-        try {
-          onClick();
-        } catch (err) {
-          console.error(err);
-          showToast('操作を完了できませんでした。', { type: 'error' });
-        }
-      },
-    },
-    label,
-  );
-}
-
-/** 複数の選択肢から1つを選ぶボタン群 */
-function segmented(label, options, initial, onChange) {
-  let value = initial;
-  const buttons = options.map((opt) =>
-    h(
-      'button',
-      {
-        class: 'segmented__item',
-        type: 'button',
-        'aria-pressed': String(opt.value === value),
-        onClick: () => {
-          if (opt.value === value) return;
-          value = opt.value;
-          for (const [i, b] of buttons.entries()) b.setAttribute('aria-pressed', String(options[i].value === value));
-          onChange(value);
-        },
-      },
-      opt.label,
-    ),
-  );
-  const el = h('div', { class: 'field' }, h('span', { class: 'field__label' }, label), h('div', { class: 'segmented', role: 'group', 'aria-label': label }, buttons));
-  return { el, get: () => value };
-}
-
-/** ON/OFF スイッチ */
-function toggle(label, initial, onChange) {
-  const input = h('input', { type: 'checkbox', class: 'switch__input', checked: initial });
-  input.addEventListener('change', () => onChange(input.checked));
-  const el = h('label', { class: 'switch' }, input, h('span', { class: 'switch__track', 'aria-hidden': 'true' }), h('span', { class: 'switch__label' }, label));
-  return { el };
 }
