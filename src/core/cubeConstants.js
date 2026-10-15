@@ -83,6 +83,9 @@ export const FACES = Object.freeze([
   Object.freeze({ id: 'DAEH', vertices: Object.freeze(['D', 'A', 'E', 'H']), normal: freezeVec(-1, 0, 0) }),
 ]);
 
+/** 初期のカメラの向き（前面・右側面・上面が見える。2D の見取図も同じ向きで描く） */
+export const DEFAULT_VIEW_DIRECTION = Object.freeze([4, 3, 5]);
+
 /** 表示色（3D 描画用） */
 export const CUBE_COLORS = Object.freeze({
   background: 0xf3f7fb,

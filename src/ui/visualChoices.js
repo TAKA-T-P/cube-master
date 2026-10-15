@@ -1,0 +1,182 @@
+/**
+ * 図（見取図・面・色見本・回転の手順・見えていない面）の描画
+ *
+ * 選択肢ごとに 3D シーンを作ると重いので、2D の SVG で描く。
+ * 見取図は 3D 本体と同じ「向き・装飾・カメラの向き」のデータから、正射影で描くので 3D と食いちがわない。
+ */
+import { h } from '../utils/dom.js';
+import { DIRECTIONS, DIRECTION_VECTORS, applyMatrix } from '../core/cubeRotations.js';
+import { orientationToMatrix } from '../core/cubeOrientation.js';
+import { FACE_UP, ARROW_LABELS } from '../core/cubeFaceLabels.js';
+import { FACES } from '../core/cubeConstants.js';
+import { vecCross, vecDot } from '../core/cubeGeometry.js';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function svg(tag, attrs = {}, ...children) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) if (v !== undefined && v !== null) el.setAttribute(k, String(v));
+  for (const c of children.flat()) if (c) el.append(c);
+  return el;
+}
+
+const normalize = (v) => {
+  const len = Math.hypot(...v);
+  return v.map((x) => x / len);
+};
+
+/** 矢印の形（中心 0,0・大きさ 1 の正方形の中。上向き） */
+const ARROW_PATH = 'M0,-0.32 L0.22,-0.06 L0.08,-0.06 L0.08,0.3 L-0.08,0.3 L-0.08,-0.06 L-0.22,-0.06 Z';
+const ARROW_ROTATION = { up: 0, right: 90, down: 180, left: 270 };
+
+/** 正方形の面（中心 0,0・一辺 1）の中身 */
+function tileContent(face, { arrow, uprightLabel = false } = {}) {
+  const parts = [
+    svg('rect', { x: -0.5, y: -0.5, width: 1, height: 1, fill: face.color }),
+    svg('rect', { x: -0.44, y: -0.44, width: 0.88, height: 0.88, fill: 'none', stroke: 'rgba(0,0,0,0.18)', 'stroke-width': 0.03 }),
+  ];
+  if (arrow) {
+    parts.push(svg('path', { d: ARROW_PATH, fill: face.textColor, transform: `rotate(${ARROW_ROTATION[arrow]})` }));
+    parts.push(
+      svg('text', { x: -0.4, y: -0.3, fill: face.textColor, 'font-size': 0.13, 'font-weight': 700 }, document.createTextNode(face.label)),
+    );
+  } else if (!uprightLabel) {
+    parts.push(labelText(face, 0, 0, 1));
+  }
+  return parts;
+}
+
+function labelText(face, x, y, scale) {
+  const label = String(face.label);
+  const size = (label.length <= 1 ? 0.5 : label.length <= 2 ? 0.36 : 0.22) * scale;
+  return svg(
+    'text',
+    {
+      x,
+      y,
+      fill: face.textColor,
+      'font-size': size,
+      'font-weight': 800,
+      'text-anchor': 'middle',
+      'dominant-baseline': 'central',
+    },
+    document.createTextNode(label),
+  );
+}
+
+/**
+ * 立方体の見取図（3面が見える斜めの図）
+ * @param {{ orientation: object, faces: Record<string, object>, viewDirection: number[] }} visual
+ */
+export function renderCubeSvg({ orientation, faces, viewDirection }) {
+  const v = normalize(viewDirection);
+  const right = normalize(vecCross([0, 1, 0], v));
+  const up = vecCross(v, right);
+  const S = 40;
+  const P = (w) => [S * vecDot(w, right), -S * vecDot(w, up)];
+  const m = orientationToMatrix(orientation);
+
+  // 見えている面（カメラ側を向いている面）
+  const visible = DIRECTIONS.filter((d) => vecDot(DIRECTION_VECTORS[d], v) > 1e-9);
+  const corners = [-1, 1].flatMap((x) => [-1, 1].flatMap((y) => [-1, 1].map((z) => P([x, y, z]))));
+  const xs = corners.map((c) => c[0]);
+  const ys = corners.map((c) => c[1]);
+  const pad = 6;
+  const viewBox = [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) - Math.min(...xs) + pad * 2, Math.max(...ys) - Math.min(...ys) + pad * 2];
+
+  const groups = visible.map((d) => {
+    const faceId = orientation[d];
+    const face = faces[faceId];
+    const n0 = FACES.find((f) => f.id === faceId).normal;
+    const upW = applyMatrix(m, FACE_UP[faceId]);
+    const rightW = applyMatrix(m, vecCross(FACE_UP[faceId], n0));
+    const center = P(DIRECTION_VECTORS[d]);
+    const [a, b] = P(rightW).map((x) => x * 2);
+    const [c, dd] = P(upW).map((x) => -x * 2);
+    const shade = 0.22 * (1 - vecDot(DIRECTION_VECTORS[d], v));
+    const tile = svg(
+      'g',
+      { transform: `matrix(${a} ${b} ${c} ${dd} ${center[0]} ${center[1]})` },
+      tileContent(face, { arrow: face.arrow, uprightLabel: !face.arrow }),
+      svg('rect', { x: -0.5, y: -0.5, width: 1, height: 1, fill: '#0b1d3a', opacity: shade.toFixed(3) }),
+      svg('rect', { x: -0.5, y: -0.5, width: 1, height: 1, fill: 'none', stroke: '#1f4e9c', 'stroke-width': 0.035 }),
+    );
+    // 数字・色名は読みやすいように、ゆがめずに面の中央へ
+    const label = face.arrow ? null : labelText(face, center[0], center[1], S * 0.9);
+    return svg('g', { 'data-direction': d, 'data-face': faceId }, tile, label);
+  });
+
+  return svg('svg', { viewBox: viewBox.join(' '), class: 'figure-svg', role: 'img', 'aria-hidden': 'true' }, groups);
+}
+
+/** 正面から見た1つの面（矢印の向きは画面の向き） */
+export function renderFaceSvg({ face, arrow }) {
+  return svg(
+    'svg',
+    { viewBox: '-0.56 -0.56 1.12 1.12', class: 'figure-svg', role: 'img', 'aria-hidden': 'true' },
+    tileContent(face, { arrow }),
+    svg('rect', { x: -0.5, y: -0.5, width: 1, height: 1, fill: 'none', stroke: '#1f4e9c', 'stroke-width': 0.035 }),
+  );
+}
+
+/** 図を描く（種類ごと） */
+export function renderVisual(visual) {
+  switch (visual.type) {
+    case 'cube':
+      return h(
+        'figure',
+        { class: 'figure figure--cube' },
+        renderCubeSvg(visual),
+        visual.caption ? h('figcaption', {}, visual.caption) : null,
+      );
+    case 'face':
+      return h('figure', { class: 'figure figure--face' }, renderFaceSvg(visual));
+    case 'swatch':
+      return h('span', { class: 'swatch', style: { background: visual.face.color }, 'aria-hidden': 'true' });
+    case 'moves':
+      return h(
+        'ol',
+        { class: 'moves', 'aria-label': '回転の手順' },
+        visual.moves.map((m, i) =>
+          h(
+            'li',
+            { class: 'moves__item' },
+            h('span', { class: 'moves__step' }, String(i + 1)),
+            h('span', { class: 'moves__icon', 'aria-hidden': 'true' }, m.icon),
+            h('span', { class: 'moves__label' }, m.label),
+          ),
+        ),
+      );
+    case 'faceList':
+      return h(
+        'div',
+        { class: 'face-list' },
+        h('span', { class: 'face-list__title' }, visual.title),
+        visual.items.map((item) =>
+          h(
+            'span',
+            { class: 'face-list__item' },
+            `${item.label}：`,
+            h('span', { class: 'swatch', style: { background: item.face.color }, 'aria-hidden': 'true' }),
+            item.face.label,
+          ),
+        ),
+      );
+    default:
+      return h('span', {}, '');
+  }
+}
+
+/** 選択肢ボタンの中身（記号・図・文字） */
+export function renderChoiceContent(choice) {
+  const visual = choice.visual;
+  if (!visual) return [h('span', { class: 'choice__label' }, choice.label)];
+  if (visual.type === 'swatch') return [renderVisual(visual), h('span', { class: 'choice__label' }, choice.label)];
+  return [
+    h('span', { class: 'choice__label choice__label--mark' }, choice.label),
+    renderVisual(visual),
+    choice.description ? h('span', { class: 'sr-only' }, choice.description) : null,
+  ];
+}
+
+export { ARROW_LABELS };

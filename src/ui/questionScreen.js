@@ -15,6 +15,8 @@ import { createCubeViewer, FACE_DISPLAY_MODES } from '../three/cubeViewer.js';
 import { AnswerSelection } from '../core/answerSelection.js';
 import { ANSWER_STATUS } from '../core/answerValidator.js';
 import { difficultyLabel } from '../questions/questionRegistry.js';
+import { INITIAL_ORIENTATION } from '../core/cubeOrientation.js';
+import { renderVisual, renderChoiceContent } from './visualChoices.js';
 import { getSession, finishTraining } from './trainingStore.js';
 
 const RESULT_TITLES = {
@@ -51,6 +53,8 @@ export function mountQuestionScreen(container, { navigate }) {
 
   const typeHint = h('p', { class: 'quiz-type' });
   const questionText = h('h2', { class: 'quiz-text', tabindex: '-1' });
+  const figures = h('div', { class: 'quiz-figures' });
+  const viewNote = h('p', { class: 'quiz-view__note', hidden: true }, '回答するまで、立方体は回せません。');
   const viewport = h('div', { class: 'viewport viewport--quiz', 'aria-label': '3D立方体（ドラッグで回転）' });
   const legend = h(
     'div',
@@ -89,8 +93,8 @@ export function mountQuestionScreen(container, { navigate }) {
       h(
         'div',
         { class: 'quiz-body' },
-        h('section', { class: 'quiz-question' }, typeHint, questionText),
-        h('section', { class: 'quiz-view' }, viewport, legend, h('div', { class: 'quiz-view__tools' }, resetViewButton, faceModeButton)),
+        h('section', { class: 'quiz-question' }, typeHint, questionText, figures),
+        h('section', { class: 'quiz-view' }, viewport, legend, h('div', { class: 'quiz-view__tools' }, viewNote, resetViewButton, faceModeButton)),
         h('section', { class: 'quiz-answer' }, choicesEl, submitButton, feedback),
       ),
     ),
@@ -133,14 +137,26 @@ export function mountQuestionScreen(container, { navigate }) {
     typeHint.textContent = q.type === 'multiple' ? 'あてはまるものをすべて選ぼう' : '1つ選ぼう';
     questionText.textContent = q.question;
 
-    // 3D：前の問題の演出・強調・選択を消して、基準要素だけをオレンジで表示
+    // 問題の図（見取図・回転の手順など）
+    figures.replaceChildren(...(q.visuals ?? []).map(renderVisual));
+    figures.hidden = !q.visuals?.length;
+
+    // 3D：前の問題の演出・強調・選択を消し、この問題の立方体（装飾・向き）にする
+    const decorated = q.scene.model !== 'cube';
     if (viewer) {
       viewer.animations.cancel();
       viewer.clearHighlights();
       viewer.clearSelection();
+      viewer.setFaceDecorations(decorated ? q.scene.faces : null);
+      viewer.setCubeOrientation(q.scene.orientation ?? INITIAL_ORIENTATION);
+      viewer.setLabelsVisible(q.scene.showLabels ?? true);
+      // 色や数字の立方体は、隠れた面が透けて見えないように不透明にする
+      viewer.setFaceDisplayMode(decorated ? FACE_DISPLAY_MODES.OPAQUE : faceMode);
       viewer.highlightElements(q.scene.referenceElements, { layer: 'reference' });
-      viewer.setCameraPreset(q.scene.cameraPreset, { animate: !firstQuestion });
+      viewer.setCameraPreset(q.scene.cameraPreset, { animate: !firstQuestion && !decorated });
     }
+    faceModeButton.hidden = decorated;
+    applyInteraction(q, 'before');
     firstQuestion = false;
 
     // 回答の選択状態
@@ -152,14 +168,15 @@ export function mountQuestionScreen(container, { navigate }) {
     });
 
     const long = q.choices.some((c) => c.label.length > LONG_LABEL);
-    choicesEl.className = `choices ${long ? 'choices--single' : ''}`;
+    const withFigures = q.choices.some((c) => c.visual && c.visual.type !== 'swatch');
+    choicesEl.className = `choices ${long && !withFigures ? 'choices--single' : ''} ${withFigures ? 'choices--figures' : ''}`;
     choicesEl.setAttribute('role', q.type === 'single' ? 'radiogroup' : 'group');
     choicesEl.replaceChildren(
       ...q.choices.map((c) =>
         h(
           'button',
           {
-            class: 'choice',
+            class: `choice ${c.visual && c.visual.type !== 'swatch' ? 'choice--figure' : ''}`,
             type: 'button',
             role: q.type === 'single' ? 'radio' : 'checkbox',
             'aria-checked': 'false',
@@ -167,7 +184,7 @@ export function mountQuestionScreen(container, { navigate }) {
             onClick: () => selection.toggle(c.id),
           },
           h('span', { class: 'choice__mark', 'aria-hidden': 'true' }),
-          h('span', { class: 'choice__label' }, c.label),
+          ...renderChoiceContent(c),
         ),
       ),
     );
@@ -205,6 +222,7 @@ export function mountQuestionScreen(container, { navigate }) {
     selection.lock(); // 回答の変更を禁止
     const result = session.submit(selected);
     showResult(result);
+    applyInteraction(question, 'after');
     playReveal();
   }
 
@@ -235,7 +253,32 @@ export function mountQuestionScreen(container, { navigate }) {
     if (!viewer || !result) return;
     const wrong = result.wrong.map((id) => question.choices.find((c) => c.id === id)?.elementId).filter(Boolean);
     const correct = question.explanation.highlightElements;
-    viewer.playAnswerReveal({ wrong, correct });
+    const reveal = question.explanation.reveal;
+    if (reveal) {
+      // 回転・視点移動つきの演出（はじめの向きに戻してから再生）
+      viewer.playQuestionReveal({
+        orientation: question.scene.orientation ?? INITIAL_ORIENTATION,
+        cameraPreset: question.scene.cameraPreset,
+        steps: reveal.steps,
+        wrong,
+        correct,
+      });
+    } else {
+      viewer.playAnswerReveal({ wrong, correct });
+    }
+  }
+
+  /** 問題ごとの 3D 操作の制限（回答前は答えが見えないように回転を止める問題がある） */
+  function applyInteraction(q, phase) {
+    const i = q.scene.interaction ?? {};
+    const rotation = phase === 'before' ? (i.allowCameraRotationBeforeAnswer ?? true) : (i.allowCameraRotationAfterAnswer ?? true);
+    const zoom = phase === 'before' ? (i.allowZoomBeforeAnswer ?? true) : true;
+    viewNote.hidden = rotation || !viewer;
+    if (!viewer) return;
+    if (rotation) viewer.enableRotation();
+    else viewer.disableRotation();
+    if (zoom) viewer.enableZoom();
+    else viewer.disableZoom();
   }
 
   function updateScore() {
@@ -276,6 +319,7 @@ export function mountQuestionScreen(container, { navigate }) {
     if (session.state.answerLocked && result) {
       selection.lock();
       showResult(result);
+      applyInteraction(current, 'after');
       playReveal();
       viewer?.animations.skip();
     }

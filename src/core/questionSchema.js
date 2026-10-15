@@ -23,10 +23,27 @@
  *     text: string,
  *     highlightElements: string[], // 解説で緑に強調する要素（順番に光る）
  *     animation: 'highlightElements' | 'none',
+ *     reveal?: { steps: [...] },   // 正解演出（回転・視点移動）。three/cubeRotationAnimations 参照
  *   },
  * }
+ *
+ * Phase 2 で追加した項目（すべて省略可。省略時は Phase 1 と同じ動き）
+ *   scene.model        : 'cube'（ふつうの立方体） | 'dice'（数字） | 'colorCube'（色）
+ *   scene.faces        : 面 ID → 装飾（core/cubeFaceLabels）。dice / colorCube では必須
+ *   scene.orientation  : はじめの向き（core/cubeOrientation）。dice / colorCube では必須
+ *   scene.showLabels   : 頂点ラベル A〜H を表示するか（既定 true）
+ *   scene.interaction  : { allowCameraRotationBeforeAnswer, allowZoomBeforeAnswer, allowCameraRotationAfterAnswer }
+ *   visuals            : 問題文と一緒に表示する図（見取図・回転の手順・見えていない面の一覧）
+ *   choices[].visual   : 選択肢の図（見取図・面・色見本）。図の選択肢は labelByPosition でア〜エを付ける
  */
 import { isValidElementId } from './cubeGeometry.js';
+import { FACES } from './cubeConstants.js';
+import { isValidOrientation } from './cubeOrientation.js';
+import { MOVE_IDS } from './cubeRotations.js';
+
+export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube']);
+export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'moves', 'faceList']);
+const INTERACTION_KEYS = ['allowCameraRotationBeforeAnswer', 'allowZoomBeforeAnswer', 'allowCameraRotationAfterAnswer'];
 
 export class QuestionValidationError extends Error {
   constructor(errors, question) {
@@ -69,9 +86,30 @@ export function getQuestionErrors(q) {
   if (q.type === 'single' && correct.length !== 1) errors.push('single 問題の正解は1つです');
   if (q.type === 'multiple' && correct.length >= choices.length) errors.push('すべての選択肢が正解になっています');
 
+  for (const c of choices) {
+    if (c?.visual !== undefined && !VISUAL_TYPES.includes(c.visual?.type)) errors.push(`選択肢の図の種類が不正です: ${c.visual?.type}`);
+  }
+
   // 3D シーン
   const scene = q.scene;
-  if (!scene || scene.model !== 'cube') errors.push('scene.model は cube');
+  if (!scene || !SCENE_MODELS.includes(scene.model)) errors.push(`scene.model は ${SCENE_MODELS.join(' / ')}`);
+  if (scene && scene.model !== 'cube') {
+    const faces = scene.faces ?? {};
+    for (const f of FACES) {
+      const d = faces[f.id];
+      if (!d || !isNonEmptyString(d.label) || !isNonEmptyString(d.color)) errors.push(`面 ${f.id} の装飾がありません`);
+    }
+    if (!isValidOrientation(scene.orientation)) errors.push('scene.orientation が正しい向きではありません');
+  }
+  if (scene?.interaction !== undefined) {
+    for (const k of INTERACTION_KEYS) if (typeof scene.interaction[k] !== 'boolean') errors.push(`scene.interaction.${k} は true / false`);
+  }
+
+  // 問題の図
+  if (q.visuals !== undefined) {
+    if (!Array.isArray(q.visuals)) errors.push('visuals は配列');
+    else for (const v of q.visuals) if (!VISUAL_TYPES.includes(v?.type)) errors.push(`図の種類が不正です: ${v?.type}`);
+  }
   for (const id of scene?.referenceElements ?? []) {
     if (!isValidElementId(id)) errors.push(`基準要素が無効です: ${id}`);
   }
@@ -84,6 +122,17 @@ export function getQuestionErrors(q) {
   if (!isNonEmptyString(q.explanation?.text)) errors.push('解説文がありません');
   for (const id of q.explanation?.highlightElements ?? []) {
     if (!isValidElementId(id)) errors.push(`解説の強調要素が無効です: ${id}`);
+  }
+  const reveal = q.explanation?.reveal;
+  if (reveal !== undefined) {
+    if (!Array.isArray(reveal?.steps)) errors.push('reveal.steps は配列');
+    for (const step of reveal?.steps ?? []) {
+      if (step.type === 'rotate') {
+        if (!Array.isArray(step.moves) || !step.moves.every((m) => MOVE_IDS.includes(m))) errors.push('reveal の回転が不正です');
+      } else if (step.type === 'camera') {
+        if (!Array.isArray(step.direction) || step.direction.length !== 3 || !step.direction.every(Number.isFinite)) errors.push('reveal のカメラの向きが不正です');
+      } else if (step.type !== 'pause') errors.push(`reveal の種類が不正です: ${step.type}`);
+    }
   }
   return errors;
 }

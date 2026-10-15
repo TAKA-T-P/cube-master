@@ -29,6 +29,15 @@ globalThis.__createFakeViewer = () => {
     resetCamera: vi.fn(),
     playAnswerReveal: vi.fn(),
     dispose: vi.fn(),
+    // Phase 2
+    setFaceDecorations: vi.fn(),
+    setCubeOrientation: vi.fn(),
+    setLabelsVisible: vi.fn(),
+    enableRotation: vi.fn(),
+    disableRotation: vi.fn(),
+    enableZoom: vi.fn(),
+    disableZoom: vi.fn(),
+    playQuestionReveal: vi.fn(),
   };
   return viewer;
 };
@@ -53,7 +62,7 @@ describe('カテゴリ選択・設定画面', () => {
     container = document.createElement('main');
   });
 
-  it('10カテゴリを表示し、位置関係だけ選べる', () => {
+  it('10カテゴリを表示し、位置関係・サイコロ・回転・立方体の見え方を選べる', () => {
     const navigate = vi.fn();
     mountCategoryScreen(container, { navigate });
     const cards = container.querySelectorAll('.category-card');
@@ -61,10 +70,16 @@ describe('カテゴリ選択・設定画面', () => {
     const position = container.querySelector('[data-category="position"]');
     expect(position.textContent).toContain('平行・垂直・ねじれ');
     expect(position.textContent).toContain('小学6年生～中学1年生');
-    expect([...cards].filter((c) => !c.disabled)).toHaveLength(1);
-    container.querySelector('[data-category="dice"]').click();
+    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['position', 'dice', 'projection']);
+    container.querySelector('[data-category="net"]').click(); // 準備中
     position.click();
-    expect(navigate.mock.calls).toEqual([['setup', { category: 'position' }]]);
+    container.querySelector('[data-category="dice"]').click();
+    container.querySelector('[data-category="projection"]').click();
+    expect(navigate.mock.calls).toEqual([
+      ['setup', { category: 'position' }],
+      ['setup', { category: 'dice' }],
+      ['setup', { category: 'projection' }],
+    ]);
   });
 
   it('難易度・問題数を選んで開始する（初期値は すべて・10問）', () => {
@@ -81,7 +96,7 @@ describe('カテゴリ選択・設定画面', () => {
 
   it('遊べないカテゴリはカテゴリ選択に戻す', () => {
     const navigate = vi.fn();
-    mountTrainingSetupScreen(container, { navigate, params: { category: 'dice' } });
+    mountTrainingSetupScreen(container, { navigate, params: { category: 'net' } });
     expect(navigate).toHaveBeenCalledWith('categories');
   });
 });
@@ -311,5 +326,115 @@ describe('結果画面', () => {
     const navigate = vi.fn();
     mountTrainingResultScreen(container, { navigate });
     expect(navigate).toHaveBeenCalledWith('categories');
+  });
+});
+
+describe('問題画面（Phase 2：サイコロ・見え方）', () => {
+  let container;
+  let navigate;
+  let screen;
+
+  const start = (settings) => {
+    store.startTraining(settings, { rng: createRng(7) });
+    screen = mountQuestionScreen(container, { navigate });
+  };
+
+  beforeEach(() => {
+    store.resetTrainingStore();
+    container = document.createElement('main');
+    document.body.append(container);
+    navigate = vi.fn();
+  });
+
+  afterEach(() => {
+    screen?.unmount();
+    container.remove();
+  });
+
+  it('サイコロ：装飾・向きを 3D に設定し、回答前は回転を止め、図を表示する', () => {
+    start({ category: 'dice', difficulty: 1, questionLimit: 5 });
+    const q = currentQuestion();
+    expect(viewer.setFaceDecorations).toHaveBeenLastCalledWith(q.scene.faces);
+    expect(viewer.setCubeOrientation).toHaveBeenLastCalledWith(q.scene.orientation);
+    expect(viewer.setLabelsVisible).toHaveBeenLastCalledWith(false);
+    expect(viewer.disableRotation).toHaveBeenCalled();
+    expect(container.querySelector('.quiz-view__note').hidden).toBe(false);
+    expect(container.querySelectorAll('.quiz-figures svg').length).toBeGreaterThanOrEqual(1);
+    if (q.templateId === 'D01') expect(container.querySelector('.moves')).not.toBeNull();
+  });
+
+  it('回答すると回転の演出を再生し、そのあとは自由に回せる。リプレイも同じ演出', () => {
+    start({ category: 'dice', difficulty: 2, questionLimit: 5 });
+    const q = currentQuestion();
+    viewer.enableRotation.mockClear();
+    answer(container, { correct: false });
+    expect(viewer.enableRotation).toHaveBeenCalled();
+    expect(container.querySelector('.quiz-view__note').hidden).toBe(true);
+    const call = viewer.playQuestionReveal.mock.calls.at(-1)[0];
+    expect(call).toMatchObject({ orientation: q.scene.orientation, cameraPreset: q.scene.cameraPreset, steps: q.explanation.reveal.steps });
+    expect(call.correct).toEqual(q.explanation.highlightElements);
+    expect(call.wrong).toHaveLength(1); // 誤って選んだ数字の面
+    buttonByText(container, 'もう一度見る').click();
+    expect(viewer.playQuestionReveal).toHaveBeenCalledTimes(2);
+    expect(viewer.playAnswerReveal).not.toHaveBeenCalled();
+  });
+
+  it('見え方 ★3：図の選択肢（ア〜エ）で回答できる', () => {
+    start({ category: 'projection', difficulty: 3, questionLimit: 5 });
+    const figures = container.querySelectorAll('.choice--figure');
+    expect(figures).toHaveLength(4);
+    expect([...figures].map((b) => b.querySelector('.choice__label--mark').textContent)).toEqual(['ア', 'イ', 'ウ', 'エ']);
+    for (const b of figures) expect(b.querySelector('svg')).not.toBeNull();
+    expect(container.querySelector('.choices').classList).toContain('choices--figures');
+    answer(container);
+    expect(container.querySelector('.feedback__title').textContent).toBe('正解！');
+  });
+
+  it('色の選択肢には色見本と色名を表示する（色だけに頼らない）', () => {
+    start({ category: 'projection', difficulty: 1, questionLimit: 5 });
+    const choice = choiceButtons(container)[0];
+    expect(choice.querySelector('.swatch')).not.toBeNull();
+    expect(choice.querySelector('.choice__label').textContent.length).toBeGreaterThan(0);
+  });
+
+  it('位置関係の問題では、従来どおりのふつうの立方体に戻る', () => {
+    start({ category: 'position', difficulty: 1, questionLimit: 5 });
+    expect(viewer.setFaceDecorations).toHaveBeenLastCalledWith(null);
+    expect(viewer.setLabelsVisible).toHaveBeenLastCalledWith(true);
+    expect(viewer.enableRotation).toHaveBeenCalled();
+    expect(container.querySelector('.quiz-view__note').hidden).toBe(true);
+    answer(container);
+    expect(viewer.playAnswerReveal).toHaveBeenCalled();
+    expect(viewer.playQuestionReveal).not.toHaveBeenCalled();
+  });
+
+  it('見え方の5問を最後まで進められ、結果に反映される', () => {
+    start({ category: 'projection', difficulty: 'all', questionLimit: 5 });
+    for (let i = 0; i < 5; i++) {
+      answer(container);
+      buttonByText(container, i < 4 ? '次の問題へ' : '結果を見る').click();
+    }
+    expect(navigate).toHaveBeenCalledWith('result');
+    expect(store.getSummary()).toMatchObject({ answeredCount: 5, correctCount: 5, category: 'projection' });
+  });
+
+  it('WebGL が使えなくても、図と選択肢だけで回答できる', () => {
+    const original = globalThis.__createFakeViewer;
+    globalThis.__createFakeViewer = () => {
+      throw new Error('WebGL2 unavailable');
+    };
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      start({ category: 'dice', difficulty: 3, questionLimit: 5 });
+      expect(container.textContent).toContain('3D 表示を利用できない端末です');
+      expect(container.querySelectorAll('.quiz-figures svg').length).toBeGreaterThanOrEqual(1);
+      answer(container);
+      expect(container.querySelector('.feedback__title').textContent).toBe('正解！');
+      buttonByText(container, '次の問題へ').click();
+      expect(store.getSession().state.answeredCount).toBe(1);
+    } finally {
+      globalThis.__createFakeViewer = original;
+      spy.mockRestore();
+    }
   });
 });

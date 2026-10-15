@@ -14,12 +14,20 @@ import { shuffle, pick } from '../utils/random.js';
 export const ENDLESS = 'endless';
 export const DIFFICULTY_ALL = 'all';
 
-/** 選択肢をシャッフルする（fixed: true の選択肢は元の順で末尾に置く） */
+/** 位置で付ける選択肢の記号 */
+export const POSITION_LABELS = Object.freeze(['ア', 'イ', 'ウ', 'エ', 'オ', 'カ', 'キ', 'ク']);
+
+/**
+ * 選択肢をシャッフルする（fixed: true の選択肢は元の順で末尾に置く）
+ * labelByPosition: true の選択肢（図の選択肢）には、並べ替えたあとの位置でア・イ・ウ…を付け直す
+ */
 export function shuffleChoices(choices, rng = Math.random) {
   const movable = choices.filter((c) => !c.fixed);
   const fixed = choices.filter((c) => c.fixed);
-  return [...shuffle(movable, rng), ...fixed];
+  return relabelByPosition([...shuffle(movable, rng), ...fixed]);
 }
+
+export const relabelByPosition = (choices) => choices.map((c, i) => (c.labelByPosition ? { ...c, label: POSITION_LABELS[i] } : c));
 
 export class QuestionPicker {
   /**

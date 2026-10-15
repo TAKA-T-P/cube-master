@@ -89,7 +89,7 @@ export function createFaceFlash(highlights, faceId, { color = 'correct', duratio
  * 要素をふわっと表示する（辺・頂点は一瞬ふくらませて目立たせる）
  * @param {ReturnType<import('./cubeHighlight.js').createHighlightManager>} highlights
  */
-function createPop(highlights, ids, { layer, duration = 380, onUpdate = () => {} }) {
+export function createPop(highlights, ids, { layer, duration = 380, onUpdate = () => {} }) {
   let entries = [];
   return tween({
     duration,

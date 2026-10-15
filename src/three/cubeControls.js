@@ -10,9 +10,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { easeInOutCubic } from '../utils/easing.js';
+import { DEFAULT_VIEW_DIRECTION } from '../core/cubeConstants.js';
 
-/** 初期カメラの向き（前面・右側面・上面が見える） */
-export const DEFAULT_VIEW_DIRECTION = Object.freeze([4, 3, 5]);
+/** 初期カメラの向き（前面・右側面・上面が見える。定義は core/cubeConstants） */
+export { DEFAULT_VIEW_DIRECTION };
 
 const RESET_DURATION = 600; // ms
 const MIN_DISTANCE_RATIO = 0.6;
@@ -148,6 +149,22 @@ export function createCubeControls(sceneManager, { boundingRadius, inputLock = n
     },
     isRotationEnabled: () => settings.rotation,
     isZoomEnabled: () => settings.zoom,
+
+    /** いまのカメラの向き（注視点からカメラへの単位ベクトル） */
+    getViewDirection: () => camera.position.clone().sub(controls.target).normalize().toArray(),
+
+    /** カメラの向きをすぐに変える（距離はそのまま。演出用） */
+    setViewDirection(direction) {
+      const dir = new THREE.Vector3(...direction).normalize();
+      if (!Number.isFinite(dir.x)) return;
+      resetTween = null;
+      const distance = camera.position.distanceTo(controls.target);
+      camera.position.copy(controls.target).addScaledVector(dir, distance);
+      camera.lookAt(controls.target);
+      stopInertia();
+      sceneManager.requestRender();
+      onCameraChange(getCameraState());
+    },
 
     /**
      * 視点リセットで戻る向きを変える（問題ごとの見やすい視点）

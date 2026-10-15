@@ -22,6 +22,8 @@ import { createCubeSelection } from './cubeSelection.js';
 import { createHighlightManager } from './cubeHighlight.js';
 import { AnimationManager } from './animationManager.js';
 import { createRotationDemo, createFaceFlash, createAnswerReveal } from './cubeAnimations.js';
+import { createFaceDecorations } from './faceDecoration.js';
+import { createOrientationState, createTurnSequence, createQuestionReveal, DEFAULT_TURN_DURATION, DEFAULT_TURN_PAUSE } from './cubeRotationAnimations.js';
 
 /**
  * @param {HTMLElement} container 3D 表示領域
@@ -58,6 +60,10 @@ export function createCubeViewer(container) {
     onStateChange: (state) => events.emit('animation:state', state),
   });
   const offAnimationUpdater = sceneManager.addUpdater((time) => animations.tick(time));
+
+  // 面の装飾（数字・色）と、立方体の向き（数学上の向きと 3D を同期）
+  const decorations = createFaceDecorations(model);
+  const cubeState = createOrientationState(model.root, render);
 
   // 選択状態 → 見た目
   const offSelection = selection.onChange((event) => {
@@ -140,6 +146,46 @@ export function createCubeViewer(container) {
     playFaceFlashDemo: (faceId = 'ABFE', options) =>
       animations.play(createFaceFlash(highlights, faceId, { ...options, onUpdate: render })),
 
+    // ----- 面の装飾・立方体の向き（Phase 2） -----
+    /**
+     * 面の装飾（数字・色・記号）を設定する。null で装飾なしのふつうの立方体に戻る
+     * @param {Record<string, object>|null} faces 面 ID → 装飾（core/cubeFaceLabels）
+     */
+    setFaceDecorations(faces) {
+      decorations.set(faces ?? null);
+      render();
+    },
+    getFaceDecorations: decorations.get,
+    /** 立方体の向きを設定する（core/cubeOrientation の向き） */
+    setCubeOrientation(orientation) {
+      cubeState.set(orientation);
+    },
+    resetCubeOrientation() {
+      cubeState.reset();
+    },
+    getCubeOrientation: () => ({ ...cubeState.orientation }),
+
+    /**
+     * 立方体を 90° ずつ回転させる。完了・スキップで最終の向き、キャンセルで再生前の向きになる
+     * @param {{ direction: string, turns?: number, duration?: number }} params
+     */
+    playCubeRotation: ({ direction, turns = 1, duration = DEFAULT_TURN_DURATION }) =>
+      animations.play(createTurnSequence(cubeState, Array(turns).fill(direction), { durationPerTurn: duration, onUpdate: render })),
+
+    /**
+     * 回転を続けて行う（回転ごとに少し止まる）
+     * @param {{ directions: string[], durationPerTurn?: number, pause?: number }} params
+     */
+    playCubeRotationSequence: ({ directions, durationPerTurn = DEFAULT_TURN_DURATION, pause = DEFAULT_TURN_PAUSE }) =>
+      animations.play(createTurnSequence(cubeState, directions, { durationPerTurn, pause, onUpdate: render })),
+
+    /**
+     * 問題の正解演出（はじめの向きに戻す → 誤選択を赤 → 回転・視点移動 → 正解を緑）
+     * @param {{ orientation?, cameraPreset?, steps?, wrong?, correct? }} spec cubeRotationAnimations.createQuestionReveal 参照
+     */
+    playQuestionReveal: (spec) =>
+      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, onUpdate: render }, spec)),
+
     /**
      * 回答後の正解演出（誤選択を赤 → 正解を1つずつ緑）。完了時に { status } で解決
      * @param {{ wrong?: string[], correct?: string[] }} params 立方体の要素 ID
@@ -156,6 +202,7 @@ export function createCubeViewer(container) {
       picker.dispose();
       cameraControls.dispose();
       highlights.dispose();
+      decorations.dispose();
       model.dispose();
       sceneManager.dispose();
       events.clear();

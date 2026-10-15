@@ -550,3 +550,159 @@ ul.setup-note {
     padding: 2px;
   }
 }
+
+/* ----- 図（Phase 2：見取図・回転の手順・見えていない面・図の選択肢） ----- */
+.quiz-figures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+
+.quiz-figures[hidden] {
+  display: none;
+}
+
+.figure {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  margin: 0;
+}
+
+.figure figcaption {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-sub);
+}
+
+.figure-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.quiz-figures .figure--cube {
+  width: clamp(92px, 26vw, 128px);
+}
+
+.swatch {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 25%);
+  vertical-align: middle;
+}
+
+.moves {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.moves__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-weight: 800;
+}
+
+.moves__item + .moves__item::before {
+  content: '›';
+  margin: 0 4px 0 -2px;
+  color: var(--color-text-sub);
+}
+
+.moves__step {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 12px;
+}
+
+.moves__icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.face-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.face-list__title {
+  color: var(--color-text-sub);
+  font-size: 12px;
+}
+
+.face-list__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quiz-view__note {
+  margin-right: auto;
+  align-self: center;
+  font-size: 13px;
+  color: var(--color-text-sub);
+}
+
+.quiz-view__note[hidden] {
+  display: none;
+}
+
+/* 図の選択肢：2列。スマホでも押しやすい大きさ */
+.choices--figures {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.choice--figure {
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 120px;
+  padding: 8px;
+}
+
+.choice--figure .choice__mark {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+.choice__label--mark {
+  align-self: center;
+  font-size: 18px;
+}
+
+.choice--figure .figure {
+  width: min(100%, 132px);
+}
+
+.choice--figure .figure--face {
+  width: min(70%, 96px);
+}
