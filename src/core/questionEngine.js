@@ -133,14 +133,21 @@ export class QuestionPicker {
 
 export class TrainingSession {
   /**
-   * @param {{ category: string, templates: object[], difficulty?: 1|2|3|'all',
-   *           questionLimit?: number|'endless', rng?: () => number }} options
+   * @param {{ category: string, templates?: object[], difficulty?: 1|2|3|'all',
+   *           questionLimit?: number|'endless', rng?: () => number, questions?: object[] }} options
+   *   questions：テンプレートから作らずに、この問題を順に出す（復習用）。問題数はその数になる
    */
-  constructor({ category, templates, difficulty = DIFFICULTY_ALL, questionLimit = 10, rng = Math.random }) {
+  constructor({ category, templates = [], difficulty = DIFFICULTY_ALL, questionLimit = 10, rng = Math.random, questions = null }) {
+    if (questions) questionLimit = questions.length;
     if (!(questionLimit === ENDLESS || (Number.isInteger(questionLimit) && questionLimit > 0))) {
       throw new Error(`無効な問題数です: ${questionLimit}`);
     }
-    this.picker = new QuestionPicker({ templates, difficulty, rng });
+    if (questions) {
+      const list = [...questions];
+      this.picker = { next: () => list.shift() ?? null };
+    } else {
+      this.picker = new QuestionPicker({ templates, difficulty, rng });
+    }
     this._state = {
       category,
       difficulty,
@@ -229,6 +236,7 @@ export class TrainingSession {
       correctAnswers: [...q.correctAnswers],
       status: result.status,
       isCorrect: result.isCorrect,
+      question: q, // 結果画面から同じ問題を復習するため
     });
     return result;
   }

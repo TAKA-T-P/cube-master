@@ -47,4 +47,14 @@ describe('効果音', () => {
     expect(oscillators[4].frequency.value).toBeLessThan(300);
     for (const o of oscillators) expect(o.start).toHaveBeenCalled();
   });
+
+  it('結果画面へ進むときはファンファーレ（だんだん高くなる音）', async () => {
+    const { FakeAudioContext, oscillators } = fakeAudioContext();
+    globalThis.AudioContext = FakeAudioContext;
+    const { playFinishSound } = await import('../src/ui/answerSound.js');
+    playFinishSound();
+    expect(oscillators.length).toBeGreaterThanOrEqual(4);
+    const freqs = oscillators.slice(0, 4).map((o) => o.frequency.value);
+    expect(freqs).toEqual([...freqs].sort((a, b) => a - b));
+  });
 });

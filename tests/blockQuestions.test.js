@@ -173,3 +173,17 @@ describe('連続出題', () => {
     }
   });
 });
+
+describe('「正面」の文字（矢印のない積み木の図だけ）', () => {
+  const blockFigures = (q) => [q.scene.preview, ...(q.visuals ?? []), ...q.choices.map((c) => c.visual)].filter((v) => v?.type === 'blocks');
+  it('矢印のある図（V01〜V04）にはつけず、矢印のない図（V05 の選択肢・V06 の見取図）にはつける', () => {
+    for (const t of PROJECTION_TEMPLATES) {
+      for (const q of questionsOf(t.id)) {
+        for (const v of blockFigures(q)) expect(Boolean(v.showFront)).toBe(v.arrows.length === 0);
+      }
+    }
+    for (const q of questionsOf('V05')) expect(q.choices.every((c) => c.visual.showFront)).toBe(true);
+    for (const q of questionsOf('V06')) expect(q.scene.preview.showFront).toBe(true);
+    for (const id of ['V01', 'V02', 'V03', 'V04']) for (const q of questionsOf(id)) expect(q.scene.preview.showFront).toBeUndefined();
+  });
+});

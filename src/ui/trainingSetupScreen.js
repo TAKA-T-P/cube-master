@@ -37,7 +37,7 @@ export function mountTrainingSetupScreen(container, { navigate, params }) {
       h(
         'header',
         { class: 'page-header' },
-        h('button', { class: 'btn btn--ghost', type: 'button', onClick: () => navigate('categories') }, '← カテゴリ'),
+        h('button', { class: 'btn btn--back', type: 'button', onClick: () => navigate('categories') }, '← カテゴリ'),
         h('h1', {}, category.name),
       ),
       h(

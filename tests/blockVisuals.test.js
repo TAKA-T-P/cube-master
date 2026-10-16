@@ -25,6 +25,19 @@ describe('積み木の見取図', () => {
     expect(renderBlocksSvg({ cubes }).querySelectorAll('.block-arrow')).toHaveLength(0);
   });
 
+  it('showFront のときだけ、床の手前の辺の下に「正面」と書き、図の範囲に入る', () => {
+    expect(renderBlocksSvg({ cubes }).querySelector('[data-front-label]')).toBeNull();
+    const el = renderBlocksSvg({ cubes, showFront: true });
+    const label = el.querySelector('[data-front-label]');
+    expect(label.textContent).toBe('正面');
+    const [x0, y0, w, hgt] = el.getAttribute('viewBox').split(' ').map(Number);
+    const [x, y] = [Number(label.getAttribute('x')), Number(label.getAttribute('y'))];
+    expect(x).toBeGreaterThan(x0);
+    expect(x).toBeLessThan(x0 + w);
+    expect(y - 8).toBeGreaterThanOrEqual(y0);
+    expect(y + 8).toBeLessThanOrEqual(y0 + hgt);
+  });
+
   it('高く積んだ奥の立方体も、上が切れずに図の範囲（viewBox）に入る', () => {
     const tall = heightsToCubes([
       [4, 3, 0],

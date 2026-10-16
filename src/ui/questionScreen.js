@@ -17,9 +17,9 @@ import { ANSWER_STATUS } from '../core/answerValidator.js';
 import { difficultyLabel } from '../questions/questionRegistry.js';
 import { INITIAL_ORIENTATION } from '../core/cubeOrientation.js';
 import { renderVisual, renderChoiceContent } from './visualChoices.js';
-import { getSession, finishTraining } from './trainingStore.js';
+import { getSession, finishTraining, getReview, endReview } from './trainingStore.js';
 import { showAnswerSplash } from './answerSplash.js';
-import { playAnswerSound } from './answerSound.js';
+import { playAnswerSound, playFinishSound } from './answerSound.js';
 
 const RESULT_TITLES = {
   [ANSWER_STATUS.CORRECT]: '正解！',
@@ -33,8 +33,15 @@ const INLINE_VISUALS = ['swatch', 'pip'];
 /** 選択肢の文字数がこれより長ければ1列で表示する */
 const LONG_LABEL = 9;
 
-export function mountQuestionScreen(container, { navigate }) {
-  const session = getSession();
+export function mountQuestionScreen(container, { navigate, params }) {
+  // 復習（結果画面の「第◯問」から1問だけ解き直す）。もとのトレーニングの結果は変えない
+  const isReview = params?.review !== undefined;
+  const review = isReview ? getReview() : null;
+  if (isReview && !review) {
+    navigate('result');
+    return { unmount() {} };
+  }
+  const session = review?.session ?? getSession();
   if (!session) {
     navigate('categories');
     return { unmount() {} };
@@ -57,7 +64,9 @@ export function mountQuestionScreen(container, { navigate }) {
   const progress = h('span', { class: 'quiz-progress' });
   const difficulty = h('span', { class: 'badge badge--info' }, difficultyLabel(session.state.difficulty));
   const score = h('span', { class: 'quiz-score' });
-  const quitButton = button(session.isEndless ? '終了する' : 'やめる', () => confirmQuit(), 'btn--ghost');
+  const quitButton = review
+    ? button('結果に戻る', () => backToResult(), 'btn--ghost')
+    : button(session.isEndless ? '終了する' : 'やめる', () => confirmQuit(), 'btn--ghost');
 
   const typeHint = h('p', { class: 'quiz-type' });
   const questionText = h('h2', { class: 'quiz-text', tabindex: '-1' });
@@ -155,7 +164,11 @@ export function mountQuestionScreen(container, { navigate }) {
     splash = null;
     const state = session.state;
 
-    progress.textContent = session.isEndless ? `第${session.questionNumber}問` : `第${session.questionNumber}問 / ${state.questionLimit}問`;
+    progress.textContent = review
+      ? `復習：第${review.number}問`
+      : session.isEndless
+        ? `第${session.questionNumber}問`
+        : `第${session.questionNumber}問 / ${state.questionLimit}問`;
     updateScore();
     typeHint.textContent = q.type === 'multiple' ? 'あてはまるものをすべて選ぼう' : '1つ選ぼう';
     questionText.textContent = q.question;
@@ -280,7 +293,7 @@ export function mountQuestionScreen(container, { navigate }) {
     netToggleButton.textContent = '展開図に戻す';
     // 回答後にだけ見せる印（立方体にならない展開図の重なるマスなど）を表示する
     choicesEl.classList.add('choices--answered');
-    submitButton.textContent = session.hasNextQuestion() ? '次の問題へ' : '結果を見る';
+    submitButton.textContent = review ? '結果に戻る' : session.hasNextQuestion() ? '次の問題へ' : '結果を見る';
     submitButton.disabled = false;
     feedback.hidden = false;
     // スマホでは選択肢の下に結果が出るので、見える位置までスクロールする
@@ -359,18 +372,30 @@ export function mountQuestionScreen(container, { navigate }) {
 
   function updateScore() {
     const s = session.state;
-    score.textContent = `正解 ${s.correctCount}`;
+    score.textContent = review ? '' : `正解 ${s.correctCount}`;
   }
 
   // ---------- 次の問題・終了 ----------
   function goNext() {
     viewer?.animations.cancel(); // 前問の演出を終わらせる
+    if (review) {
+      backToResult();
+      return;
+    }
     if (!session.hasNextQuestion()) {
+      playFinishSound(); // 決めた問題数を解き終えた（「やめる」で途中終了したときは鳴らさない）
       finishTraining();
       navigate('result');
       return;
     }
     showQuestion(session.nextQuestion());
+  }
+
+  /** 復習を終えて、もとの結果画面に戻る */
+  function backToResult() {
+    viewer?.animations.cancel();
+    endReview();
+    navigate('result');
   }
 
   async function confirmQuit() {

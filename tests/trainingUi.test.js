@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createEventBus } from '../src/core/eventBus.js';
 import { createRng } from '../src/utils/random.js';
 
+vi.mock('../src/ui/answerSound.js', () => ({ playAnswerSound: vi.fn(), playFinishSound: vi.fn() }));
 vi.mock('../src/three/cubeViewer.js', () => ({
   FACE_DISPLAY_MODES: { OPAQUE: 'opaque', TRANSLUCENT: 'translucent', WIREFRAME: 'wireframe' },
   createCubeViewer: () => globalThis.__createFakeViewer(),
@@ -15,6 +16,7 @@ const { mountQuestionScreen } = await import('../src/ui/questionScreen.js');
 const { mountTrainingResultScreen } = await import('../src/ui/trainingResultScreen.js');
 const store = await import('../src/ui/trainingStore.js');
 const { answerSplash } = await import('../src/ui/answerSplash.js');
+const sounds = await import('../src/ui/answerSound.js');
 
 // 回答直後の「○△×」は、専用のテスト以外では出さずにすぐ結果を表示する
 const SPLASH_DURATION = answerSplash.duration;
@@ -77,18 +79,43 @@ describe('カテゴリ選択・設定画面', () => {
     const cards = container.querySelectorAll('.category-card');
     expect(cards).toHaveLength(10);
     const position = container.querySelector('[data-category="position"]');
-    expect(position.textContent).toContain('平行・垂直・ねじれ');
-    expect(position.textContent).toContain('小学6年生～中学1年生');
+    // ボタンは名前だけ（説明・対象学年は書かない）
+    expect(position.textContent).toBe('位置関係');
+    expect(position.textContent).not.toContain('小学6年生～中学1年生');
     expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['netMapping', 'position', 'netPuzzle', 'dice', 'projection']);
+    // はじめは下の説明と「次へ」を出さない
+    const detail = container.querySelector('.category-detail');
+    expect(detail.hidden).toBe(true);
     container.querySelector('[data-category="cutting"]').click(); // 準備中
+    expect(detail.hidden).toBe(true);
+    // 押すと下に説明・対象学年と「次へ」が出る（まだ移動しない）
     position.click();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(detail.hidden).toBe(false);
+    expect(position.getAttribute('aria-pressed')).toBe('true');
+    expect(detail.textContent).toContain('平行・垂直・ねじれ');
+    expect(detail.textContent).toContain('小学6年生～中学1年生');
+    // 説明と「次へ」は、スクロールする部分の外（画面下に固定）
+    expect(container.querySelector('.category-scroll').contains(detail)).toBe(false);
+    buttonByText(container, '次へ').click();
     container.querySelector('[data-category="dice"]').click();
+    expect(position.getAttribute('aria-pressed')).toBe('false');
+    expect(detail.querySelector('.category-detail__name').textContent).toBe('サイコロ・回転');
+    buttonByText(container, '次へ').click();
     container.querySelector('[data-category="projection"]').click();
+    buttonByText(container, '次へ').click();
     expect(navigate.mock.calls).toEqual([
       ['setup', { category: 'position' }],
       ['setup', { category: 'dice' }],
       ['setup', { category: 'projection' }],
     ]);
+  });
+
+  it('設定画面から戻ると、前に選んだカテゴリが選ばれた状態', () => {
+    store.startTraining({ category: 'dice' });
+    mountCategoryScreen(container, { navigate: vi.fn() });
+    expect(container.querySelector('[data-category="dice"]').getAttribute('aria-pressed')).toBe('true');
+    expect(container.querySelector('.category-detail').hidden).toBe(false);
   });
 
   it('難易度・問題数を選んで開始する（初期値は すべて・5問。問題数はスライダーで1〜20問）', () => {
@@ -337,6 +364,56 @@ describe('結果画面', () => {
     expect(navigate.mock.calls).toEqual([['question'], ['setup', { category: 'position' }], ['categories']]);
   });
 
+  it('「第◯問」のカードを押すと、同じ問題をもう一度解ける。解いても結果は変わらず、「結果に戻る」で戻る', () => {
+    finishWith([true, false, true]);
+    const summaryBefore = store.getSummary();
+    const navigate = vi.fn();
+    mountTrainingResultScreen(container, { navigate });
+    const cards = container.querySelectorAll('button.result-history__item');
+    expect(cards).toHaveLength(3);
+    expect(cards[1].getAttribute('aria-label')).toBe('第2問（不正解）をもう一度解く');
+    cards[1].click();
+    expect(navigate).toHaveBeenCalledWith('question', { review: '2' });
+    const original = summaryBefore.history[1].question;
+    expect(store.getReview().number).toBe(2);
+
+    // 復習の問題画面：同じ問題（同じ選択肢の並び）
+    const screenEl = document.createElement('main');
+    document.body.append(screenEl);
+    const back = vi.fn();
+    const screen = mountQuestionScreen(screenEl, { navigate: back, params: { review: '2' } });
+    expect(store.getReview().session.state.currentQuestion).toBe(original);
+    expect(screenEl.querySelector('.quiz-text').textContent).toBe(original.question);
+    expect([...screenEl.querySelectorAll('.choice')].map((c) => c.dataset.choice)).toEqual(original.choices.map((c) => c.id));
+    expect(screenEl.querySelector('.quiz-progress').textContent).toBe('復習：第2問');
+    for (const id of original.correctAnswers) screenEl.querySelector(`[data-choice="${id}"]`).click();
+    buttonByText(screenEl, '回答する').click();
+    expect(screenEl.querySelector('.feedback__title').textContent).toBe('正解！');
+    // もとの結果・トレーニングは変わらない
+    expect(store.getSummary()).toBe(summaryBefore);
+    expect(store.getSummary().correctCount).toBe(2);
+    buttonByText(screenEl, '結果に戻る').click();
+    expect(back).toHaveBeenCalledWith('result');
+    expect(store.getReview()).toBeNull();
+    screen.unmount();
+    screenEl.remove();
+  });
+
+  it('復習の途中でも「結果に戻る」で確認なしに戻れる。復習のデータがなければ結果画面へ', () => {
+    finishWith([false]);
+    store.startReview(1);
+    const screenEl = document.createElement('main');
+    const back = vi.fn();
+    const screen = mountQuestionScreen(screenEl, { navigate: back, params: { review: '1' } });
+    expect(buttonByText(screenEl, 'やめる')).toBeUndefined();
+    buttonByText(screenEl, '結果に戻る').click();
+    expect(back).toHaveBeenCalledWith('result');
+    screen.unmount();
+    const again = vi.fn();
+    mountQuestionScreen(document.createElement('main'), { navigate: again, params: { review: '1' } });
+    expect(again).toHaveBeenCalledWith('result');
+  });
+
   it('結果がなければカテゴリ選択へ戻す', () => {
     const navigate = vi.fn();
     mountTrainingResultScreen(container, { navigate });
@@ -577,7 +654,9 @@ describe('回答ボタンが「次の問題へ」に変わる', () => {
     expect(btn.disabled).toBe(true);
     answer(container);
     expect(btn.textContent).toBe('結果を見る');
+    sounds.playFinishSound.mockClear();
     btn.click();
+    expect(sounds.playFinishSound).toHaveBeenCalledTimes(1); // 解き終えて結果画面へ進むときの効果音
     expect(navigate).toHaveBeenCalledWith('result');
   });
 });

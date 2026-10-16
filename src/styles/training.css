@@ -42,28 +42,48 @@
 }
 
 /* ----- カテゴリ選択 ----- */
+/* カテゴリのボタンだけがスクロールし、下の説明と「次へ」は画面に固定 */
+.category-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-bottom: 0;
+}
+
+.category-page > .page-header {
+  flex: none;
+}
+
+.category-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: var(--gutter);
+}
+
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 8px;
   padding: 0 var(--gutter);
 }
 
 .category-card {
-  display: grid;
-  gap: 6px;
-  align-content: start;
-  min-height: 120px;
-  padding: 16px;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 8px 14px;
   border: 2px solid var(--color-primary);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   text-align: left;
   cursor: pointer;
+  touch-action: manipulation;
   transition:
-    transform 0.1s,
-    background-color 0.15s;
+    background-color 0.12s,
+    box-shadow 0.12s;
 }
 
 .category-card:hover:not(:disabled) {
@@ -72,6 +92,15 @@
 
 .category-card:active:not(:disabled) {
   transform: translateY(1px);
+}
+
+.category-card[aria-pressed='true'] {
+  background: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.category-card[aria-pressed='true'] .category-card__name {
+  color: #fff;
 }
 
 .category-card--disabled {
@@ -83,19 +112,41 @@
 
 .category-card__name {
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 800;
   color: var(--color-primary-strong);
 }
 
-.category-card__desc {
+.category-detail {
+  flex: none;
+  display: grid;
+  gap: 10px;
+  padding: 12px var(--gutter);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 -6px 16px rgb(15 35 70 / 8%);
+}
+
+.category-detail__text {
+  display: grid;
+  gap: 4px;
+}
+
+.category-detail__name {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--color-primary-strong);
+}
+
+.category-detail__desc {
   font-size: 15px;
 }
 
-.category-card__grades {
+.category-detail__grades {
   font-size: 13px;
   color: var(--color-text-sub);
 }
@@ -187,10 +238,27 @@ ul.setup-note {
   display: grid;
   justify-items: center;
   min-width: 52px;
+  min-height: 44px;
   padding: 4px 6px;
+  border: 2px solid transparent;
   border-radius: var(--radius-sm);
   background: var(--color-surface-2);
   font-size: 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color 0.12s;
+}
+
+.result-history__item:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
+.result-history__item:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.result-history__item:disabled {
+  cursor: default;
 }
 
 .result-history__mark {

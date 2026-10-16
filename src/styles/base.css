@@ -131,6 +131,20 @@ button {
   border-color: var(--color-border);
 }
 
+/* 前の画面に戻るボタン（水色。文字は1行のまま） */
+.btn--back {
+  flex-shrink: 0;
+  border-color: transparent;
+  background: var(--color-primary-soft);
+  box-shadow: none;
+  color: var(--color-primary-strong);
+  white-space: nowrap;
+}
+
+.btn--back:hover:not(:disabled) {
+  border-color: var(--color-primary);
+}
+
 /* ===== バッジ ===== */
 .badge {
   display: inline-block;

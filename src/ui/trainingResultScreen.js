@@ -3,7 +3,7 @@
  */
 import { h } from '../utils/dom.js';
 import { button } from './components.js';
-import { getSummary, getSettings, startTraining } from './trainingStore.js';
+import { getSummary, getSettings, startTraining, startReview, endReview } from './trainingStore.js';
 import { getCategory, difficultyLabel } from '../questions/questionRegistry.js';
 
 function praise(accuracy, answered) {
@@ -21,6 +21,7 @@ export function mountTrainingResultScreen(container, { navigate }) {
     navigate('categories');
     return { unmount() {} };
   }
+  endReview(); // 復習から戻ってきたとき
   const category = getCategory(summary.category);
   const percent = Math.round(summary.accuracy * 100);
   const limitLabel = Number.isInteger(summary.questionLimit) ? `${summary.questionLimit}問` : '';
@@ -31,10 +32,22 @@ export function mountTrainingResultScreen(container, { navigate }) {
     summary.history.map((item) =>
       h(
         'li',
-        { class: `result-history__item result-history__item--${item.status}` },
-        h('span', { class: 'result-history__mark', 'aria-hidden': 'true' }, item.isCorrect ? '○' : item.status === 'partial' ? '△' : '×'),
-        h('span', {}, `第${item.number}問`),
-        h('span', { class: 'sr-only' }, item.isCorrect ? '正解' : '不正解'),
+        {},
+        // 押すと、その問題をもう一度解ける（復習）
+        h(
+          'button',
+          {
+            class: `result-history__item result-history__item--${item.status}`,
+            type: 'button',
+            disabled: !item.question,
+            'aria-label': `第${item.number}問（${item.isCorrect ? '正解' : item.status === 'partial' ? 'おしい' : '不正解'}）をもう一度解く`,
+            onClick: () => {
+              if (startReview(item.number)) navigate('question', { review: String(item.number) });
+            },
+          },
+          h('span', { class: 'result-history__mark', 'aria-hidden': 'true' }, item.isCorrect ? '○' : item.status === 'partial' ? '△' : '×'),
+          h('span', { 'aria-hidden': 'true' }, `第${item.number}問`),
+        ),
       ),
     ),
   );
@@ -66,6 +79,7 @@ export function mountTrainingResultScreen(container, { navigate }) {
           h('dd', {}, limitLabel),
         ),
         summary.history.length > 0 ? historyList : null,
+        summary.history.length > 0 ? h('p', { class: 'setup-note' }, '「第◯問」を押すと、その問題をもう一度解けます（結果は変わりません）。') : null,
         h('p', { class: 'setup-note' }, '「おしい」（△）は正解の数に入りません。'),
       ),
       h(

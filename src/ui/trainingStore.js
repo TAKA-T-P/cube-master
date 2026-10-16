@@ -11,6 +11,7 @@ let state = {
   settings: null, // { category, difficulty, questionLimit }
   session: null,
   summary: null,
+  review: null, // 結果画面から1問だけ解き直すセッション（もとの結果は変えない）
 };
 
 /**
@@ -29,7 +30,7 @@ export function startTraining(settings, { rng } = {}) {
     questionLimit: full.questionLimit,
     rng,
   });
-  state = { settings: full, session, summary: null };
+  state = { settings: full, session, summary: null, review: null };
   return session;
 }
 
@@ -44,7 +45,28 @@ export function finishTraining() {
   return state.summary;
 }
 
+/**
+ * 結果画面の「第◯問」から、同じ問題（同じ図・同じ選択肢の並び）をもう一度解く
+ * @param {number} number 問題番号（1始まり）
+ * @returns {TrainingSession|null}
+ */
+export function startReview(number) {
+  const item = state.summary?.history.find((x) => x.number === number);
+  if (!item?.question) return null;
+  const session = new TrainingSession({ category: state.summary.category, difficulty: item.difficulty, questions: [item.question] });
+  state.review = { number, session };
+  return session;
+}
+
+/** 復習中のセッション（{ number, session }。復習していなければ null） */
+export const getReview = () => state.review;
+
+/** 復習を終える（結果画面に戻るとき） */
+export function endReview() {
+  state.review = null;
+}
+
 /** すべて消す（テスト用） */
 export function resetTrainingStore() {
-  state = { settings: null, session: null, summary: null };
+  state = { settings: null, session: null, summary: null, review: null };
 }

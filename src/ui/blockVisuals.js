@@ -34,9 +34,10 @@ export const ARROW_COLOR = '#e0262b';
 
 /**
  * 積み木の見取図
- * @param {{ cubes: object[], viewDirection?: number[], arrows?: string[] }} visual  arrows: 見る向き（矢印）
+ * @param {{ cubes: object[], viewDirection?: number[], arrows?: string[], showFront?: boolean }} visual
+ *   arrows: 見る向き（矢印）、showFront: 床の手前の辺の下に「正面」と書く（矢印のない図で、正面の向きを示す）
  */
-export function renderBlocksSvg({ cubes, viewDirection = BLOCK_VIEW_DIRECTION, arrows = [] }) {
+export function renderBlocksSvg({ cubes, viewDirection = BLOCK_VIEW_DIRECTION, arrows = [], showFront = false }) {
   const v = normalize(viewDirection);
   const right = normalize(vecCross([0, 1, 0], v));
   const up = vecCross(v, right);
@@ -92,11 +93,23 @@ export function renderBlocksSvg({ cubes, viewDirection = BLOCK_VIEW_DIRECTION, a
     );
   }
   const projected = all.map(P);
+  // 「正面」の文字：床の手前の辺（z = 奥行き）の真ん中のすぐ下
+  let frontLabel = null;
+  if (showFront) {
+    const [fx, fy] = P([W / 2, 0, D]);
+    const [lx, ly] = [fx, fy + 16];
+    frontLabel = svg(
+      'text',
+      { x: lx.toFixed(1), y: ly.toFixed(1), 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': 15, 'font-weight': 800, fill: '#c2410c', 'data-front-label': '' },
+      document.createTextNode('正面'),
+    );
+    projected.push([lx - 18, ly - 9], [lx + 18, ly + 9]);
+  }
   const xs = projected.map((p) => p[0]);
   const ys = projected.map((p) => p[1]);
   const pad = 10;
   const viewBox = [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) - Math.min(...xs) + pad * 2, Math.max(...ys) - Math.min(...ys) + pad * 2];
-  return svg('svg', { viewBox: viewBox.map((n) => n.toFixed(1)).join(' '), class: 'figure-svg block-figure', role: 'img', 'aria-hidden': 'true' }, floor, faces, arrowParts);
+  return svg('svg', { viewBox: viewBox.map((n) => n.toFixed(1)).join(' '), class: 'figure-svg block-figure', role: 'img', 'aria-hidden': 'true' }, floor, faces, arrowParts, frontLabel);
 }
 
 /**

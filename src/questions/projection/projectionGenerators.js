@@ -51,11 +51,13 @@ function makeBlocks(rng, level) {
   return { heights, cubes: heightsToCubes(heights) };
 }
 
+/** 積み木の見取図。矢印のない図は、どちらが正面かわかるように「正面」の文字をつける */
 const blocksVisual = (cubes, arrows = [], caption) => ({
   type: 'blocks',
   cubes: cubes.map((c) => ({ ...c })),
   viewDirection: [...BLOCK_VIEW_DIRECTION],
   arrows: [...arrows],
+  ...(arrows.length === 0 ? { showFront: true } : {}),
   ...(caption ? { caption } : {}),
 });
 const projectionVisual = (projection, caption) => ({ type: 'projection', projection, ...(caption ? { caption } : {}) });
