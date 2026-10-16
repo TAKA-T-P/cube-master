@@ -18,6 +18,8 @@ import { difficultyLabel } from '../questions/questionRegistry.js';
 import { INITIAL_ORIENTATION } from '../core/cubeOrientation.js';
 import { renderVisual, renderChoiceContent } from './visualChoices.js';
 import { getSession, finishTraining } from './trainingStore.js';
+import { showAnswerSplash } from './answerSplash.js';
+import { playAnswerSound } from './answerSound.js';
 
 const RESULT_TITLES = {
   [ANSWER_STATUS.CORRECT]: '正解！',
@@ -47,6 +49,9 @@ export function mountQuestionScreen(container, { navigate }) {
   let selection = null;
   let disposed = false;
   let firstQuestion = true;
+  // 回答してから「○△×」が消えるまでは false（その間は正誤・解説を出さない）
+  let revealed = false;
+  let splash = null;
 
   // ---------- 画面の骨組み ----------
   const progress = h('span', { class: 'quiz-progress' });
@@ -76,22 +81,25 @@ export function mountQuestionScreen(container, { navigate }) {
   const resultTitle = h('p', { class: 'feedback__title', role: 'status' });
   const resultDetail = h('p', { class: 'feedback__detail' });
   const explanationText = h('p', { class: 'feedback__explanation' });
+  // 回答後の 3D の操作（「視点リセット」などと同じ、立方体の下のボタン列に出す）
   const replayButton = button('もう一度見る', () => playReveal(), 'btn--small');
   const skipButton = button('スキップ', () => viewer?.animations.skip(), 'btn--small btn--ghost');
   // 展開図の問題：組み立てた立方体と展開図を行き来する
   const netToggleButton = button('展開図に戻す', () => toggleNetFold(), 'btn--small');
+  const revealTools = [replayButton, skipButton, netToggleButton];
+  for (const b of revealTools) b.hidden = true;
   const feedback = h(
     'section',
     { class: 'feedback', hidden: true, 'aria-live': 'polite' },
     resultTitle,
     resultDetail,
-    h('div', { class: 'feedback__box' }, h('h3', {}, '解説'), explanationText, h('div', { class: 'feedback__tools' }, replayButton, skipButton, netToggleButton)),
+    h('div', { class: 'feedback__box' }, h('h3', {}, '解説'), explanationText),
   );
 
   // 立方体の表示領域（画面に固定。答えが見えてしまう問題では回答するまで表示しない）
   // 回答前に 3D の代わりに表示する静的な図（積み木の見取図など）。回答すると同じ場所が 3D に切り替わる
   const previewEl = h('div', { class: 'quiz-preview', hidden: true });
-  const viewTools = h('div', { class: 'quiz-view__tools' }, resetViewButton, faceModeButton);
+  const viewTools = h('div', { class: 'quiz-view__tools' }, replayButton, skipButton, netToggleButton, resetViewButton, faceModeButton);
   const quizView = h('section', { class: 'quiz-view' }, viewport, previewEl, legend, viewTools);
   const quizRoot = h(
     'div',
@@ -142,6 +150,9 @@ export function mountQuestionScreen(container, { navigate }) {
   // ---------- 出題 ----------
   function showQuestion(q) {
     question = q;
+    revealed = false;
+    splash?.cancel();
+    splash = null;
     const state = session.state;
 
     progress.textContent = session.isEndless ? `第${session.questionNumber}問` : `第${session.questionNumber}問 / ${state.questionLimit}問`;
@@ -208,14 +219,15 @@ export function mountQuestionScreen(container, { navigate }) {
 
     feedback.hidden = true;
     submitButton.textContent = '回答する';
-    netToggleButton.hidden = true; // 展開図に戻すボタンは、展開図の問題に回答したあとだけ
+    // もう一度見る・スキップ・展開図に戻すは、回答したあとだけ
+    for (const b of revealTools) b.hidden = true;
     renderChoices();
     questionText.focus({ preventScroll: true });
   }
 
   /** 選択状態・正誤をボタンに反映する */
   function renderChoices() {
-    const result = session.state.lastResult;
+    const result = revealed ? session.state.lastResult : null;
     for (const el of choicesEl.children) {
       const id = el.dataset.choice;
       const selected = selection.isSelected(id) || (result?.selected.includes(id) ?? false);
@@ -230,8 +242,8 @@ export function mountQuestionScreen(container, { navigate }) {
         el.querySelector('.choice__mark').textContent = isCorrect ? '○' : selected ? '×' : '';
       }
     }
-    // 回答後は「次の問題へ」として押せる。回答前は選んでいるときだけ押せる
-    submitButton.disabled = result ? false : !selection.canSubmit();
+    // 回答後は「次の問題へ」として押せる。回答前は選んでいるときだけ押せる（「○△×」の表示中は押せない）
+    submitButton.disabled = result ? false : session.state.answerLocked || !selection.canSubmit();
   }
 
   // ---------- 回答 ----------
@@ -240,6 +252,18 @@ export function mountQuestionScreen(container, { navigate }) {
     const selected = selection.getSelected();
     selection.lock(); // 回答の変更を禁止
     const result = session.submit(selected);
+    renderChoices();
+    // 「○△×」を大きく出して効果音を鳴らし、消えてから正誤・解説・3D の演出を出す
+    playAnswerSound(result.status);
+    splash = showAnswerSplash(quizRoot, result.status, () => {
+      splash = null;
+      if (disposed) return;
+      revealResult(result);
+    });
+  }
+
+  function revealResult(result) {
+    revealed = true;
     showResult(result);
     applyInteraction(question, 'after');
     playReveal();
@@ -250,6 +274,8 @@ export function mountQuestionScreen(container, { navigate }) {
     resultTitle.className = `feedback__title feedback__title--${result.status}`;
     resultDetail.textContent = resultDetailText(result);
     explanationText.textContent = resolveChoiceRefs(question.explanation.text);
+    replayButton.hidden = !viewer;
+    skipButton.hidden = !viewer;
     netToggleButton.hidden = question.scene.model !== 'net' || !viewer;
     netToggleButton.textContent = '展開図に戻す';
     // 回答後にだけ見せる印（立方体にならない展開図の重なるマスなど）を表示する
@@ -368,9 +394,7 @@ export function mountQuestionScreen(container, { navigate }) {
     const result = session.state.lastResult;
     if (session.state.answerLocked && result) {
       selection.lock();
-      showResult(result);
-      applyInteraction(current, 'after');
-      playReveal();
+      revealResult(result);
       viewer?.animations.skip();
     }
   } else {
@@ -380,6 +404,7 @@ export function mountQuestionScreen(container, { navigate }) {
   return {
     unmount() {
       disposed = true;
+      splash?.cancel();
       for (const off of cleanups) off();
       viewer?.dispose();
       if (window.cubeMaster?.viewer === viewer) delete window.cubeMaster;

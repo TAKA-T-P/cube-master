@@ -67,6 +67,11 @@ button {
   outline-offset: 2px;
 }
 
+/* hidden 属性の要素は、クラスで display を指定していても必ず隠す（.btn の inline-flex などに負けない） */
+[hidden] {
+  display: none !important;
+}
+
 /* ===== ボタン ===== */
 .btn {
   display: inline-flex;

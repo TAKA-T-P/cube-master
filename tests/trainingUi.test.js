@@ -14,6 +14,11 @@ const { mountTrainingSetupScreen } = await import('../src/ui/trainingSetupScreen
 const { mountQuestionScreen } = await import('../src/ui/questionScreen.js');
 const { mountTrainingResultScreen } = await import('../src/ui/trainingResultScreen.js');
 const store = await import('../src/ui/trainingStore.js');
+const { answerSplash } = await import('../src/ui/answerSplash.js');
+
+// 回答直後の「○△×」は、専用のテスト以外では出さずにすぐ結果を表示する
+const SPLASH_DURATION = answerSplash.duration;
+answerSplash.duration = 0;
 
 let viewer;
 globalThis.__createFakeViewer = () => {
@@ -646,5 +651,79 @@ describe('問題画面（展開図）', () => {
     start({ category: 'dice', difficulty: 2 });
     const figure = container.querySelector('.quiz-figures svg');
     expect([...figure.querySelectorAll('[data-direction-label]')].map((t) => t.textContent).sort()).toEqual(['上', '前', '右'].sort());
+  });
+});
+
+describe('回答直後の「○」「△」「×」', () => {
+  let container;
+  let screen;
+  beforeEach(() => {
+    vi.useFakeTimers();
+    answerSplash.duration = SPLASH_DURATION;
+    store.resetTrainingStore();
+    container = document.createElement('main');
+    document.body.append(container);
+  });
+  afterEach(() => {
+    screen?.unmount();
+    container.remove();
+    answerSplash.duration = 0;
+    vi.useRealTimers();
+  });
+  const start = () => {
+    store.startTraining({ category: 'position', difficulty: 1, questionLimit: 3 }, { rng: createRng(5) });
+    screen = mountQuestionScreen(container, { navigate: vi.fn() });
+  };
+
+  it('約1秒、前面に大きく表示し、消えてから正誤・解説・3D の演出・回答後のボタンを出す', () => {
+    start();
+    expect(answerSplash.duration).toBe(1000);
+    expect(buttonByText(container, 'もう一度見る').hidden).toBe(true);
+    answer(container, { correct: true });
+    const splash = container.querySelector('.answer-splash');
+    expect(splash.classList).toContain('answer-splash--correct');
+    expect(splash.getAttribute('aria-label')).toBe('正解！');
+    expect(splash.querySelector('circle')).not.toBeNull();
+    // 表示中は、まだ結果を出さない
+    expect(container.querySelector('.feedback').hidden).toBe(true);
+    expect(container.querySelector('.choice--correct')).toBeNull();
+    expect(viewer.playAnswerReveal).not.toHaveBeenCalled();
+    expect(container.querySelector('.btn--primary').disabled).toBe(true);
+    vi.advanceTimersByTime(999);
+    expect(container.querySelector('.answer-splash')).not.toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(container.querySelector('.answer-splash')).toBeNull();
+    expect(container.querySelector('.feedback').hidden).toBe(false);
+    expect(container.querySelector('.feedback__title').textContent).toBe('正解！');
+    expect(viewer.playAnswerReveal).toHaveBeenCalledTimes(1);
+    expect(buttonByText(container, '次の問題へ').disabled).toBe(false);
+    // もう一度見る・スキップは「視点リセット」と同じ、立方体の下のボタン列にある
+    const tools = container.querySelector('.quiz-view__tools');
+    for (const label of ['もう一度見る', 'スキップ', '視点リセット']) expect(tools.contains(buttonByText(container, label))).toBe(true);
+    expect(buttonByText(container, 'もう一度見る').hidden).toBe(false);
+    expect(container.querySelector('.feedback').contains(buttonByText(container, 'もう一度見る'))).toBe(false);
+  });
+
+  it('不正解は「×」。タップするとすぐ閉じて結果を出す', () => {
+    start();
+    answer(container, { correct: false });
+    const splash = container.querySelector('.answer-splash');
+    expect(splash.classList).toContain('answer-splash--incorrect');
+    expect(splash.querySelectorAll('line')).toHaveLength(2);
+    splash.click();
+    expect(container.querySelector('.answer-splash')).toBeNull();
+    expect(container.querySelector('.feedback__title').textContent).toBe('不正解');
+    vi.advanceTimersByTime(2000);
+    expect(viewer.playAnswerReveal).toHaveBeenCalledTimes(1); // 二重に出さない
+  });
+
+  it('表示中に画面を閉じても、あとから結果を出そうとしない', () => {
+    start();
+    answer(container);
+    screen.unmount();
+    screen = null;
+    vi.advanceTimersByTime(2000);
+    expect(container.querySelector('.answer-splash')).toBeNull();
+    expect(viewer.playAnswerReveal).not.toHaveBeenCalled();
   });
 });

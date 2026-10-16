@@ -340,7 +340,8 @@ ul.setup-note {
 
 .quiz-view__tools {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px 8px;
   justify-content: flex-end;
 }
 
@@ -521,12 +522,6 @@ ul.setup-note {
   margin: 0;
   font-size: 14px;
   color: var(--color-text-sub);
-}
-
-.feedback__tools {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
 }
 
 /* PC・タブレット横：3D を左、問題文と回答を右に（右側だけスクロール） */
@@ -837,6 +832,68 @@ ul.setup-note {
   max-height: 100%;
 }
 
-.feedback__tools .btn[hidden] {
-  display: none;
+/* ----- 回答直後の「○」「△」「×」 ----- */
+.answer-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  background: rgb(255 255 255 / 55%);
+  cursor: pointer;
+  animation: answer-splash-fade var(--splash-duration, 1000ms) ease-out forwards;
+}
+
+.answer-splash__mark {
+  width: min(62vw, 46dvh, 300px);
+  height: auto;
+  stroke: currentColor;
+  filter: drop-shadow(0 4px 10px rgb(0 0 0 / 18%));
+  animation: answer-splash-pop 0.28s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.answer-splash__label {
+  font-size: clamp(26px, 8vw, 40px);
+  font-weight: 900;
+}
+
+.answer-splash--correct {
+  color: var(--color-success);
+}
+
+.answer-splash--partial {
+  color: #e08a00;
+}
+
+.answer-splash--incorrect {
+  color: var(--color-danger);
+}
+
+@keyframes answer-splash-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes answer-splash-fade {
+  0%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .answer-splash__mark {
+    animation: none;
+  }
 }
