@@ -7,7 +7,7 @@
  */
 import * as THREE from 'three';
 import { FACES, CUBE_SIZE } from '../core/cubeConstants.js';
-import { FACE_UP, PIP_LAYOUTS, pipRadius, pipColor } from '../core/cubeFaceLabels.js';
+import { FACE_UP, PIP_LAYOUTS, MARK_SHAPES, pipRadius, pipColor } from '../core/cubeFaceLabels.js';
 
 const OFFSET = 0.004; // 面から少し浮かせる（強調表示のオーバーレイ 0.006 より内側）
 const TEXTURE_SIZE = 256;
@@ -131,6 +131,11 @@ export function drawDecoration(ctx, decoration, size) {
     }
     return;
   }
+  // マークは図形で描く（SVG の図と同じ形・同じ位置）
+  if (decoration.kind === 'symbol' && MARK_SHAPES[decoration.value]) {
+    drawMark(ctx, decoration.value, s, decoration.textColor);
+    return;
+  }
   const label = String(decoration.label);
   const fontSize = label.length <= 1 ? s * 0.55 : label.length <= 2 ? s * 0.4 : s * 0.24;
   ctx.fillStyle = decoration.textColor;
@@ -138,6 +143,30 @@ export function drawDecoration(ctx, decoration, size) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(label, s / 2, s / 2 + s * 0.02);
+}
+
+function drawMark(ctx, value, s, color) {
+  const X = (n) => s / 2 + n * s;
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const shape of MARK_SHAPES[value]) {
+    ctx.beginPath();
+    if (shape.type === 'circle') ctx.arc(X(0), X(0), shape.r * s, 0, Math.PI * 2);
+    else if (shape.type === 'line') {
+      ctx.moveTo(X(shape.from[0]), X(shape.from[1]));
+      ctx.lineTo(X(shape.to[0]), X(shape.to[1]));
+    } else {
+      shape.points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(X(x), X(y)) : ctx.lineTo(X(x), X(y))));
+      ctx.closePath();
+    }
+    if (shape.fill) ctx.fill();
+    else {
+      ctx.lineWidth = shape.stroke * s;
+      ctx.stroke();
+    }
+  }
 }
 
 const ARROW_ANGLE = { up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 };

@@ -12,6 +12,7 @@ import { FACE_UP, ARROW_LABELS, PIP_LAYOUTS, FACE_MARKS, pipRadius, pipColor } f
 import { FACES } from '../core/cubeConstants.js';
 import { vecCross, vecDot } from '../core/cubeGeometry.js';
 import { renderBlockVisual } from './blockVisuals.js';
+import { markShape } from './markShape.js';
 import { renderNetVisual } from './netVisuals.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -58,6 +59,8 @@ function tileContent(face, { arrow, turn = 0, uprightLabel = false } = {}) {
   ];
   if (isPipFace(face)) {
     parts.push(pips(face.value, turn));
+  } else if (isMarkFace(face)) {
+    parts.push(markShape(face.value, face.textColor));
   } else if (arrow) {
     parts.push(svg('path', { d: ARROW_PATH, fill: face.textColor, transform: `rotate(${ARROW_ROTATION[arrow]})` }));
     parts.push(

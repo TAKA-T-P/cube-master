@@ -166,6 +166,22 @@ export function pipTurnAsSeen(faceId, orientation, viewDirection) {
  */
 export const FACE_MARKS = Object.freeze(['〇', '◎', '×', '●', '◇', '◆']);
 
+/**
+ * マークの形（中心 0,0・一辺 1 の正方形の中）。文字（フォント）で描くと端末によって位置がずれるので、
+ * SVG と 3D の両方でこの図形データから描き、面のちょうど中央にそろえる。
+ *   circle: { r, fill: true } または { r, stroke }、polygon: { points, fill: true } または { points, stroke }、
+ *   line: { from, to, stroke }
+ */
+const DIAMOND = [[0, -0.3], [0.3, 0], [0, 0.3], [-0.3, 0]];
+export const MARK_SHAPES = Object.freeze({
+  '〇': [{ type: 'circle', r: 0.25, stroke: 0.06 }],
+  '◎': [{ type: 'circle', r: 0.27, stroke: 0.05 }, { type: 'circle', r: 0.13, stroke: 0.05 }],
+  '×': [{ type: 'line', from: [-0.21, -0.21], to: [0.21, 0.21], stroke: 0.08 }, { type: 'line', from: [0.21, -0.21], to: [-0.21, 0.21], stroke: 0.08 }],
+  '●': [{ type: 'circle', r: 0.25, fill: true }],
+  '◇': [{ type: 'polygon', points: DIAMOND, stroke: 0.05 }],
+  '◆': [{ type: 'polygon', points: DIAMOND, fill: true }],
+});
+
 export const symbolFace = (mark, extra = {}) => ({ kind: 'symbol', value: mark, label: mark, color: '#ffffff', textColor: '#1b2a41', ...extra });
 export const symbolFaces = (byFace) => Object.fromEntries(FACES.map((f) => [f.id, symbolFace(byFace[f.id])]));
 

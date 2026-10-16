@@ -14,6 +14,7 @@
 import { h } from '../utils/dom.js';
 import { cellCorners, pointKey, getNetBounds } from '../core/cubeNet.js';
 import { PIP_LAYOUTS, pipRadius, pipColor } from '../core/cubeFaceLabels.js';
+import { markShape, hasMarkShape } from './markShape.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const C = 36; // 1マスの大きさ
@@ -33,6 +34,7 @@ function decorationIn(cx, cy, face) {
   if (face.kind === 'number' && PIP_LAYOUTS[face.value]) {
     return svg('g', {}, PIP_LAYOUTS[face.value].map(([x, y]) => svg('circle', { cx: cx + x * C, cy: cy + y * C, r: pipRadius(face.value) * C, fill: pipColor(face.value) })));
   }
+  if (hasMarkShape(face)) return markShape(face.value, face.textColor ?? '#1b2a41', `translate(${cx} ${cy}) scale(${C})`);
   return text(cx, cy, face.label, { 'font-size': C * 0.55, fill: face.textColor ?? '#1b2a41' });
 }
 

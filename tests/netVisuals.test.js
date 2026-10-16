@@ -43,7 +43,10 @@ describe('展開図の SVG', () => {
     expect(el.querySelector('[data-cell="f0"]').getAttribute('stroke')).toBe('#f06a00');
     expect(el.querySelector('[data-candidate="ア"]')).not.toBeNull();
     expect(el.querySelector('[data-conflict="f2"]').classList).toContain('net-conflict');
-    expect(el.textContent).toContain('◎');
+    // マークは文字ではなく図形で、マスの中央に描く
+    const mark = el.querySelector('[data-mark="◎"]');
+    expect(mark.querySelectorAll('circle')).toHaveLength(2);
+    expect(el.textContent).not.toContain('◎');
   });
 
   it('visual（type: net）として描ける', () => {

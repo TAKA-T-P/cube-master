@@ -37,13 +37,22 @@ describe('見取図（SVG）', () => {
     const el = renderVisual(viewOnlyVisual({ top: colorFace('red'), front: colorFace('blue'), right: colorFace('yellow') }));
     for (const name of ['赤', '青', '黄']) expect(el.textContent).toContain(name);
   });
-  it('記号（〇◎×●◇◆）は面と一緒にゆがめて描く（3D の面の印と同じ向きに見える）。「？」はゆがめない', () => {
+  it('記号（〇◎×●◇◆）は図形で、面と一緒にゆがめて面の中央に描く（3D の面の印と同じ向き）。「？」はゆがめない', () => {
     const ids = Object.keys(faces);
     const marks = Object.fromEntries(ids.map((id, i) => [id, symbolFace(FACE_MARKS[i])]));
     const el = renderCubeSvg({ orientation: INITIAL_ORIENTATION, faces: marks, viewDirection: [4, 3, 5] });
     for (const g of el.querySelectorAll('[data-direction]')) {
-      const text = g.querySelector('text');
-      expect(text.parentElement.getAttribute('transform')).toMatch(/^matrix/);
+      const mark = g.querySelector('.mark');
+      expect(mark.dataset.mark).toBe(marks[g.dataset.face].value);
+      expect(mark.hasAttribute('transform')).toBe(false); // 面の中心（0,0）に置く
+      expect(mark.parentElement.getAttribute('transform')).toMatch(/^matrix/);
+      expect(g.querySelector('text')).toBeNull();
+    }
+    // 選択肢の面も図形で、中央に描く
+    for (const m of FACE_MARKS) {
+      const face = renderFaceSvg({ face: symbolFace(m) });
+      expect(face.querySelector('.mark').dataset.mark).toBe(m);
+      expect(face.querySelector('text')).toBeNull();
     }
     const q = { ...marks, [INITIAL_ORIENTATION.top]: symbolFace('？') };
     const el2 = renderCubeSvg({ orientation: INITIAL_ORIENTATION, faces: q, viewDirection: [4, 3, 5] });
