@@ -12,6 +12,7 @@ import { getMove } from '../core/cubeRotations.js';
 import { tween, wait, sequence } from './animationManager.js';
 import { easeInOutCubic } from '../utils/easing.js';
 import { createPop } from './cubeAnimations.js';
+import { createLayerCounting, createLayerFocus, createBlockAdding } from './blockCountingAnimations.js';
 
 /** 回転 1 回の標準の時間（ms） */
 export const DEFAULT_TURN_DURATION = 800;
@@ -150,6 +151,9 @@ export function createCameraMove(controls, direction, { duration = 900, onUpdate
  *        | { type: 'divide', duration? }                  小立方体の境界線が現れる（切り分ける）
  *        | { type: 'separate', to: 0〜1, duration? }      小立方体どうしを少しはなす（1）・もとに戻す（0）
  *        | { type: 'highlightSubcubes', cubes, label? }   条件に合う小立方体を緑に・ほかを半透明に・個数を表示
+ *        | { type: 'countLayers', hidden? }              積み木を段ごとに分けて、各段の個数と合計を表示（hidden：見えない積み木）
+ *        | { type: 'countLayer', level }                 指定した段だけを取り出して1個ずつ数える
+ *        | { type: 'addBlocks', cubes }                  加える積み木を1つずつ置いて完成形にする
  */
 export function createQuestionReveal({ state, controls, highlights, blocks = null, net = null, subcubes = null, onUpdate = () => {} }, spec) {
   const { orientation = INITIAL_ORIENTATION, cameraPreset = 'default', steps = [], wrong = [], correct = [] } = spec;
@@ -211,6 +215,12 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
         }),
         wait(400),
       );
+    } else if (step.type === 'countLayers' && blocks) {
+      parts.push(createLayerCounting(blocks, { hidden: step.hidden ?? [], onUpdate }), wait(300));
+    } else if (step.type === 'countLayer' && blocks) {
+      parts.push(createLayerFocus(blocks, { level: step.level, onUpdate }), wait(300));
+    } else if (step.type === 'addBlocks' && blocks) {
+      parts.push(createBlockAdding(blocks, { cubes: step.cubes, onUpdate }), wait(300));
     } else if (step.type === 'highlightBlocks' && blocks) {
       parts.push(
         tween({
@@ -233,6 +243,7 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
     highlights.clearLayer('wrong');
     highlights.clearLayer('correct');
     blocks?.clearHighlights();
+    blocks?.resetCounting?.(); // 積み木の個数の演出：段の持ち上げ・半透明・ラベルを戻す
     net?.setProgress(0); // 展開図は平らな状態から
     // 小立方体は、切り分ける前の立方体から
     subcubes?.clearHighlights();

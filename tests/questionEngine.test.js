@@ -148,11 +148,11 @@ describe('TrainingSession', () => {
 });
 
 describe('questionRegistry', () => {
-  it('10カテゴリがあり、遊べるのは展開図と頂点・辺・位置関係・展開図パズル・サイコロ・回転・小立方体の個数・着色・積み木の見え方・投影図', () => {
+  it('10カテゴリがあり、遊べるのは展開図と頂点・辺・位置関係・展開図パズル・サイコロ・回転・立方体の個数・着色・積み木の見え方・投影図', () => {
     expect(CATEGORIES).toHaveLength(10);
     expect(CATEGORIES.filter((c) => c.enabled).map((c) => c.id)).toEqual(['netMapping', 'position', 'netPuzzle', 'dice', 'paintedCube', 'projection']);
     expect(CATEGORIES.map((c) => c.id)[6]).toBe('paintedCube'); // ⑦
-    expect(getCategory('paintedCube')).toMatchObject({ name: '小立方体の個数・着色', grades: '小学5年生～中学2年生' });
+    expect(getCategory('paintedCube')).toMatchObject({ name: '立方体の個数・着色', grades: '小学5年生～中学2年生' });
     expect(getCategory('netMapping')).toMatchObject({ name: '展開図と頂点・辺', grades: '小学5年生～中学1年生' });
     expect(getCategory('netPuzzle')).toMatchObject({ name: '展開図パズル', grades: '小学4年生～中学1年生' });
     expect(getCategory('position')).toMatchObject({ name: '位置関係', grades: '小学6年生～中学1年生' });

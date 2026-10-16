@@ -44,6 +44,8 @@
  *   scene.model: 'subcubes' と scene.subcubes { divisions, paintedFaces, removed }（小立方体に分けた立方体。core/subdividedCube）
  *   図の種類 'subcubes'、演出 { type: 'divide' } { type: 'separate', to } { type: 'highlightSubcubes', cubes, label }
  *   hint: { text }  回答前に「ヒントを見る」で表示する短いヒント（答えそのものは書かない）
+ *   積み木の個数：scene.counting（段ごとに持ち上げる演出の余白）、図の種類 'blocksPair'（今の形と完成形）、
+ *     演出 { type: 'countLayers', hidden } { type: 'countLayer', level, cubes } { type: 'addBlocks', cubes }
  *
  * QUESTION_SCHEMA_VERSION：ブラウザに保存した復習用の問題が、今の形と合うかを確かめるための番号。
  * 問題データの形を互換性のない形に変えたときは、この番号を上げる（古い保存データは読み込まずに除外する）。
@@ -60,7 +62,7 @@ import { isValidDivisions, getSubcubeListErrors, CUBE_SIDES } from './subdivided
 export const QUESTION_SCHEMA_VERSION = 1;
 
 export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube', 'blocks', 'net', 'subcubes']);
-export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'pip', 'moves', 'faceList', 'blocks', 'projection', 'projectionPair', 'net', 'subcubes']);
+export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'pip', 'moves', 'faceList', 'blocks', 'projection', 'projectionPair', 'net', 'subcubes', 'blocksPair']);
 const INTERACTION_KEYS = ['allowCameraRotationBeforeAnswer', 'allowZoomBeforeAnswer', 'allowCameraRotationAfterAnswer'];
 
 export class QuestionValidationError extends Error {
@@ -118,6 +120,7 @@ export function getQuestionErrors(q) {
   } else if (scene?.model === 'blocks') {
     for (const e of getBlockErrors(scene.blocks)) errors.push(`scene.blocks: ${e}`);
     if (!Array.isArray(scene.arrows) || !scene.arrows.every((a) => PROJECTION_DIRECTIONS.includes(a))) errors.push('scene.arrows が不正です');
+    if (scene.counting !== undefined && typeof scene.counting !== 'boolean') errors.push('scene.counting は true / false');
     if (scene.preview !== undefined && !VISUAL_TYPES.includes(scene.preview?.type)) errors.push('scene.preview が不正です');
   } else if (scene?.model === 'subcubes') {
     const sc = scene.subcubes;
@@ -173,6 +176,12 @@ export function getQuestionErrors(q) {
         if (!(step.to >= 0 && step.to <= 1)) errors.push('reveal の分離が不正です');
       } else if (step.type === 'highlightSubcubes') {
         if (!Array.isArray(step.cubes) || getSubcubeListErrors(step.cubes, scene?.subcubes?.divisions ?? 0).length > 0) errors.push('reveal の強調する小立方体が不正です');
+      } else if (step.type === 'countLayers' || step.type === 'countLayer' || step.type === 'addBlocks') {
+        // 積み木の個数の演出：対象の小立方体は、どれも scene.blocks の中にある
+        const keys = new Set((scene?.blocks ?? []).map((c) => `${c.x},${c.y},${c.z}`));
+        const list = step.type === 'countLayers' ? step.hidden ?? [] : step.cubes;
+        if (scene?.model !== 'blocks' || !Array.isArray(list) || !list.every((c) => keys.has(`${c?.x},${c?.y},${c?.z}`))) errors.push(`reveal の ${step.type} が不正です`);
+        if (step.type === 'countLayer' && !(Number.isInteger(step.level) && step.level >= 1)) errors.push('reveal の段の指定が不正です');
       } else if (step.type !== 'pause' && step.type !== 'divide') errors.push(`reveal の種類が不正です: ${step.type}`);
     }
   }

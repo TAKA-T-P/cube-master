@@ -197,7 +197,7 @@ export function mountQuestionScreen(container, { navigate, params }) {
       viewer.clearHighlights();
       viewer.clearSelection();
       viewer.setFaceDecorations(decorated && !isBlocks ? q.scene.faces : null);
-      viewer.setBlocks(isBlocks ? q.scene.blocks : null, { arrows: q.scene.arrows ?? [] });
+      viewer.setBlocks(isBlocks ? q.scene.blocks : null, { arrows: q.scene.arrows ?? [], ...(q.scene.counting ? { countingRoom: true } : {}) });
       viewer.setNet?.(q.scene.model === 'net' ? q.scene.net : null);
       viewer.setSubcubes?.(q.scene.model === 'subcubes' ? q.scene.subcubes : null);
       viewer.setCubeOrientation(q.scene.orientation ?? INITIAL_ORIENTATION);

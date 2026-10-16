@@ -36,8 +36,9 @@ export const ARROW_COLOR = '#e0262b';
  * 積み木の見取図
  * @param {{ cubes: object[], viewDirection?: number[], arrows?: string[], showFront?: boolean }} visual
  *   arrows: 見る向き（矢印）、showFront: 床の手前の辺の下に「正面」と書く（矢印のない図で、正面の向きを示す）
+ *   fitTo: 図の範囲をこの小立方体の一覧にも合わせる（2つの図を並べるとき、小立方体を同じ大きさに描く）
  */
-export function renderBlocksSvg({ cubes, viewDirection = BLOCK_VIEW_DIRECTION, arrows = [], showFront = false }) {
+export function renderBlocksSvg({ cubes, viewDirection = BLOCK_VIEW_DIRECTION, arrows = [], showFront = false, fitTo = [] }) {
   const v = normalize(viewDirection);
   const right = normalize(vecCross([0, 1, 0], v));
   const up = vecCross(v, right);
@@ -74,7 +75,7 @@ export function renderBlocksSvg({ cubes, viewDirection = BLOCK_VIEW_DIRECTION, a
   const arrowParts = [];
   // 図の範囲は、すべての立方体の8つの角で決める（2つの角だけだと、奥の上の角がはみ出して切れる）
   const corners = (c) => [0, 1].flatMap((dx) => [0, 1].flatMap((dy) => [0, 1].map((dz) => [c.x + dx, c.y + dy, c.z + dz])));
-  const all = [...cubes.flatMap(corners), [0, 0, 0], [W, 0, 0], [0, 0, D], [W, 0, D]];
+  const all = [...cubes.flatMap(corners), ...fitTo.flatMap(corners), [0, 0, 0], [W, 0, 0], [0, 0, D], [W, 0, D]];
   for (const arrow of arrows) {
     const { from, to } = arrowPoints(cubes, arrow);
     all.push(from, to);
@@ -170,6 +171,16 @@ export function renderBlockVisual(visual) {
         visual.items.map((item) =>
           h('figure', { class: 'figure figure--projection' }, renderProjectionSvg(item), h('figcaption', {}, item.caption ?? PROJECTION_NAMES[item.projection.direction])),
         ),
+      );
+    case 'blocksPair':
+      // 2つの積み木（今の形 → 完成形）を、矢印をはさんで並べる
+      return h(
+        'div',
+        { class: 'blocks-pair' },
+        visual.items.flatMap((item, i) => [
+          i > 0 ? h('span', { class: 'blocks-pair__arrow', 'aria-hidden': 'true' }, '→') : null,
+          h('figure', { class: 'figure figure--blocks figure--paired' }, renderBlocksSvg(item), h('figcaption', {}, item.caption ?? '')),
+        ]),
       );
     default:
       return null;

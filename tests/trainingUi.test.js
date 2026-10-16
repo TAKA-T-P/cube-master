@@ -816,7 +816,7 @@ describe('回答直後の「○」「△」「×」', () => {
   });
 });
 
-describe('問題画面（小立方体の個数・着色）', () => {
+describe('問題画面（立方体の個数・着色：小立方体）', () => {
   let container;
   let screen;
   beforeEach(() => {
@@ -836,6 +836,11 @@ describe('問題画面（小立方体の個数・着色）', () => {
 
   it('回答前は静的な見取図（分割線・着色）、回答すると 3D に切りかわり、分割 → 分離 → 強調の演出を再生する', () => {
     start();
+    // 積み木の個数の問題（B09）が先に出たら、小立方体の問題まで進める
+    while (currentQuestion().scene.model !== 'subcubes') {
+      answer(container);
+      buttonByText(container, '次の問題へ').click();
+    }
     const q = currentQuestion();
     expect(q.scene.model).toBe('subcubes');
     expect(viewer.setSubcubes).toHaveBeenLastCalledWith(q.scene.subcubes);
@@ -858,7 +863,8 @@ describe('問題画面（小立方体の個数・着色）', () => {
     expect(toggle.textContent).toBe('分離して見る');
     // 次の問題では前の問題の表示を残さない
     buttonByText(container, '次の問題へ').click();
-    expect(viewer.setSubcubes).toHaveBeenLastCalledWith(currentQuestion().scene.subcubes);
+    const next = currentQuestion();
+    expect(viewer.setSubcubes).toHaveBeenLastCalledWith(next.scene.model === 'subcubes' ? next.scene.subcubes : null);
     expect(buttonByText(container, '分離して見る').hidden).toBe(true);
   });
 
@@ -1090,5 +1096,48 @@ describe('学習記録', () => {
     mount(mountLearningHistoryScreen);
     expect(container.textContent).toContain('この端末では記録を保存できません');
     expect(learning.isLearningStorageAvailable()).toBe(false);
+  });
+});
+
+describe('問題画面（立方体の個数・着色：積み木の個数）', () => {
+  let container;
+  let screen;
+  beforeEach(() => {
+    learning.configureLearningStorage(createMemoryBackend());
+    store.resetTrainingStore();
+    container = document.createElement('main');
+    document.body.append(container);
+  });
+  afterEach(() => {
+    screen?.unmount();
+    container.remove();
+  });
+  /** 指定したテンプレートの問題まで進める */
+  function startAt(templateId, difficulty) {
+    store.startTraining({ category: 'paintedCube', difficulty, questionLimit: 20 }, { rng: createRng(5) });
+    screen = mountQuestionScreen(container, { navigate: vi.fn() });
+    while (currentQuestion().templateId !== templateId) {
+      answer(container);
+      buttonByText(container, '次の問題へ').click();
+    }
+    return currentQuestion();
+  }
+
+  it('B09：回答前は見取図、回答すると 3D の積み木（上に余白）で段ごとに数える演出', () => {
+    const q = startAt('B09', 1);
+    expect(container.querySelector('.quiz-preview svg.block-figure')).not.toBeNull();
+    expect(viewer.setBlocks).toHaveBeenLastCalledWith(q.scene.blocks, { arrows: [], countingRoom: true });
+    answer(container);
+    const spec = viewer.playQuestionReveal.mock.calls.at(-1)[0];
+    expect(spec.steps.map((st) => st.type)).toEqual(['camera', 'countLayers']);
+    expect(container.querySelector('.feedback__explanation').textContent).toMatch(/1段目\d+個/);
+  });
+
+  it('B12：今の形と完成形を、矢印をはさんで並べて表示する', () => {
+    startAt('B12', 3);
+    const pair = container.querySelector('.quiz-preview .blocks-pair');
+    expect([...pair.querySelectorAll('figcaption')].map((f) => f.textContent)).toEqual(['今の形', '完成形']);
+    expect(pair.querySelectorAll('svg.block-figure')).toHaveLength(2);
+    expect(pair.querySelector('.blocks-pair__arrow').textContent).toBe('→');
   });
 });

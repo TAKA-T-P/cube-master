@@ -10,6 +10,7 @@ import { PROJECTION_TEMPLATES } from './projection/projectionGenerators.js';
 import { NET_MAPPING_TEMPLATES } from './netMapping/netMappingGenerators.js';
 import { NET_PUZZLE_TEMPLATES } from './netPuzzle/netPuzzleGenerators.js';
 import { PAINTED_CUBE_TEMPLATES } from './paintedCube/paintedCubeGenerators.js';
+import { BLOCK_COUNT_TEMPLATES } from './paintedCube/blockCountGenerators.js';
 import { withHints } from './hints.js';
 
 export const DIFFICULTIES = Object.freeze([
@@ -77,15 +78,20 @@ export const CATEGORIES = Object.freeze([
     templates: withHints(DICE_TEMPLATES),
     levelNotes: ['基本：1回転がしたときの上の面・向かい合う面', '標準：見えなかった面・2回転', '応用：同じサイコロ探し・3回転'],
   },
-  // ⑦ 小立方体の個数・着色（Phase 4。準備中だった「色ぬり立方体」の内容をふくむ）
+  // ⑦ 立方体の個数・着色（Phase 4。準備中だった「色ぬり立方体」の内容をふくむ）
+  //    B01〜B08：大きな立方体を分けた小立方体の着色・個数、B09〜B12：積み木の個数
   {
     id: 'paintedCube',
-    name: '小立方体の個数・着色',
-    description: '立方体を小さく分けるとどうなる？色のついた面や、小立方体の数を考えよう！',
+    name: '立方体の個数・着色',
+    description: '積み木は全部で何個？色がついた小立方体はいくつ？立方体の数を見抜こう！',
     grades: '小学5年生～中学2年生',
     enabled: true,
-    templates: PAINTED_CUBE_TEMPLATES,
-    levelNotes: ['基本：3面・2面に色がつく小立方体', '標準：1面だけ・色がつかない・一部の面だけ塗る', '応用：条件の組み合わせ・取り除く・分けた数の逆算'],
+    templates: [...PAINTED_CUBE_TEMPLATES, ...BLOCK_COUNT_TEMPLATES],
+    levelNotes: [
+      '基本：3面・2面に色がつく小立方体・積み木は全部で何個',
+      '標準：1面だけ・色がつかない・一部の面だけ塗る・見えない積み木・段ごとの個数',
+      '応用：条件の組み合わせ・取り除く・分けた数の逆算・完成形まであと何個',
+    ],
   },
   // ⑧〜⑨
   { id: 'stacking', name: '積み木', description: '積み重ねた立方体の数を数えよう。', grades: '小学4年生～小学6年生', enabled: false },
