@@ -50,7 +50,7 @@ export const CATEGORIES = Object.freeze([
   {
     id: 'dice',
     name: 'サイコロ・回転',
-    description: 'サイコロを頭の中でクルッと回そう！数字や色の位置を見抜けるかな？',
+    description: 'サイコロを頭の中でクルッと回そう！目の位置を見抜けるかな？',
     grades: '小学4年生以上',
     enabled: true,
     templates: DICE_TEMPLATES,
@@ -66,7 +66,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学5年生以上',
     enabled: true,
     templates: PROJECTION_TEMPLATES,
-    levelNotes: ['★1 きほん：上・横から見える面', '★2 標準：見え方の図・回したあとの図', '★3 チャレンジ：条件に合う立方体・ありえない配置'],
+    levelNotes: ['★1 きほん：上・横から見える面', '★2 標準：目の並び方・回したあとの図', '★3 チャレンジ：条件に合うサイコロ・ありえない配置'],
   },
 ]);
 

@@ -700,3 +700,23 @@ ul.setup-note {
 .choice--figure .figure--face {
   width: min(70%, 96px);
 }
+
+/* ----- サイコロの目（選択肢・見えていない面の一覧） ----- */
+.pip-icon {
+  display: block;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  box-shadow: 0 0 0 1px rgb(31 78 156 / 35%);
+}
+
+.pip-icon--small {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+}
+
+.choice .pip-icon {
+  margin: 0 auto 0 4px;
+}

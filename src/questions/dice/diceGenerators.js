@@ -9,9 +9,9 @@
 import { getEdgesOfFace } from '../../core/cubeGeometry.js';
 import { ALL_ORIENTATIONS, INITIAL_ORIENTATION, rotateOrientationSequence, findRotationPath, sequenceMatrix, orientationKey } from '../../core/cubeOrientation.js';
 import { MOVE_IDS, ROLL_MOVE_IDS, ROTATION_MOVES, rotateLabeling, ALL_ROTATIONS, getOppositeDirection, DIRECTIONS, matrixKey, IDENTITY } from '../../core/cubeRotations.js';
-import { STANDARD_DICE, numberFaces, numberFace, randomNumberAssignment, isStandardDice, byDirection, colorFaces, randomColorAssignment } from '../../core/cubeFaceLabels.js';
+import { STANDARD_DICE, numberFaces, numberFace, randomNumberAssignment, isStandardDice, byDirection, pipLabel } from '../../core/cubeFaceLabels.js';
 import { solveUnique, viewOf, mirrorView, viewKey, canMatchView, VIEW_DIRECTIONS } from '../../core/cubePuzzle.js';
-import { cubeVisual, viewOnlyVisual, movesVisual, hiddenFacesVisual, swatchChoice, figureChoice, assembleQuestion } from '../decoratedCube.js';
+import { cubeVisual, viewOnlyVisual, movesVisual, hiddenFacesVisual, pipChoice, figureChoice, assembleQuestion } from '../decoratedCube.js';
 import { shuffle, pick } from '../../utils/random.js';
 import * as X from './diceExplanations.js';
 
@@ -19,13 +19,13 @@ export const DICE_CATEGORY = 'dice';
 
 const NUMBERS = [1, 2, 3, 4, 5, 6];
 const ASKED_LABELS = { top: '上の面', front: '前の面', right: '右の面' };
-const RULE_NOTE = 'このサイコロは、向かい合う面の数の和が7です。';
+const RULE_NOTE = 'このサイコロは、向かい合う面の目の数の和が7です。';
 const POSE_VARIANTS = [0, 5, 11, 17, 23];
 
-/** 面 ID の4辺（正解の面を緑の枠で示す。面の数字や色を隠さないため） */
+/** 面 ID の4辺（正解の面を緑の枠で示す。面の目を隠さないため） */
 const faceFrame = (faceId) => getEdgesOfFace(faceId);
 
-/** サイコロの数字の配置を決める */
+/** サイコロの目の配置を決める */
 function setupDie(rng, { preferStandard } = {}) {
   const standard = preferStandard ?? rng() < 0.6;
   const byFace = standard ? { ...STANDARD_DICE } : randomNumberAssignment(rng);
@@ -43,17 +43,17 @@ function chooseInfo({ byDir, answerOf, standard, rng }) {
   return 'list';
 }
 
-/** 数字の選択肢（4択）。priority の数字を優先して誤答にする */
+/** 目の選択肢（4択）。priority の目を優先して誤答にする */
 function numberChoices({ correct, priority, byFace, rng }) {
   const faceOf = (n) => Object.keys(byFace).find((f) => byFace[f] === n);
   const wrong = [...new Set(priority.filter((n) => n !== correct && NUMBERS.includes(n)))];
   const rest = shuffle(NUMBERS.filter((n) => n !== correct && !wrong.includes(n)), rng);
   const picked = [...wrong, ...rest].slice(0, 3);
-  return [correct, ...picked].map((n) => ({ id: String(n), label: String(n), elementId: faceOf(n) }));
+  return [correct, ...picked].map((n) => pipChoice(n, { elementId: faceOf(n) }));
 }
 
 /**
- * 回転のあと、ある方向にくる数字を答える問題（D01・D03・D04・D06）
+ * 回転のあと、ある方向にくる目を答える問題（D01・D03・D04・D06）
  */
 function trackingQuestion(template, base, rng, { moves, askedDir, pose, preferStandard }) {
   const { byFace, standard } = setupDie(rng, { preferStandard });
@@ -82,7 +82,7 @@ function trackingQuestion(template, base, rng, { moves, askedDir, pose, preferSt
 
   return assembleQuestion(template, base, DICE_CATEGORY, {
     type: 'single',
-    question: `${note}このサイコロを${X.movesPhrase(moves)}と、${ASKED_LABELS[askedDir]}の数字はいくつになりますか。`,
+    question: `${note}このサイコロを${X.movesPhrase(moves)}と、${ASKED_LABELS[askedDir]}の目はいくつになりますか。`,
     visuals,
     choices: numberChoices({ correct: answer, priority, byFace, rng }),
     correctAnswers: [String(answer)],
@@ -132,10 +132,12 @@ export const DICE_TEMPLATES = [
     title: '向かい合う面',
     bases: () => VISIBLE_DIRS.flatMap((dir) => [0, 1, 2, 3, 4, 5, 6, 7].map((v) => ({ key: `${dir}-${v}`, refs: [], dir, group: dir }))),
     build(base, rng) {
-      const colorsByFace = randomColorAssignment(rng);
-      const faces = colorFaces(colorsByFace);
+      // 和が7のルールでは解けないように、ふつうでない目の配置にする
+      let byFace = randomNumberAssignment(rng);
+      while (isStandardDice(byFace)) byFace = randomNumberAssignment(rng);
+      const faces = numberFaces(byFace);
       const pose = INITIAL_ORIENTATION;
-      const byDir = byDirection(colorsByFace, pose);
+      const byDir = byDirection(byFace, pose);
       const target = byDir[base.dir];
       const answerDir = getOppositeDirection(base.dir);
       const answer = byDir[answerDir];
@@ -163,13 +165,18 @@ export const DICE_TEMPLATES = [
           }
         }
       }
-      const colorOf = (id) => faces[Object.keys(colorsByFace).find((f) => colorsByFace[f] === id)];
-      const faceOfColor = (id) => Object.keys(colorsByFace).find((f) => colorsByFace[f] === id);
+      const faceOf = (n) => Object.keys(byFace).find((f) => byFace[f] === n);
 
-      const others = shuffle(Object.values(byDir).filter((c) => c !== target && c !== answer), rng).slice(0, 3);
-      const choices = [answer, ...others].map((c) => swatchChoice(c, colorOf(c), { elementId: faceOfColor(c) }));
+      // 誤答は、7−（目）のまちがい（和が7と思いこむ）を優先する
+      const sevenMistake = 7 - target;
+      const othersPool = Object.values(byDir).filter((n) => n !== target && n !== answer);
+      const others = [
+        ...(othersPool.includes(sevenMistake) ? [sevenMistake] : []),
+        ...shuffle(othersPool.filter((n) => n !== sevenMistake), rng),
+      ].slice(0, 3);
+      const choices = [answer, ...others].map((n) => pipChoice(n, { elementId: faceOf(n) }));
 
-      // 正解演出：基準の色を前に向けてから、水平に 180° 回して向かい合う面を前に出す
+      // 正解演出：基準の目を前に向けてから、水平に 180° 回して向かい合う面を前に出す
       const targetFace = pose[base.dir];
       const toFront = ALL_ORIENTATIONS.filter((o) => o.front === targetFace)
         .map((o) => pathBetween(pose, o))
@@ -178,22 +185,24 @@ export const DICE_TEMPLATES = [
       if (toFront.length > 0) steps.push({ type: 'rotate', moves: toFront, pauseAfter: 700 });
       steps.push({ type: 'rotate', moves: ['turnRight', 'turnRight'] });
 
-      const neighbors = DIRECTIONS.filter((d) => d !== base.dir && d !== answerDir).map((d) => colorOf(byDir[d]).label);
+      const neighbors = DIRECTIONS.filter((d) => d !== base.dir && d !== answerDir).map((d) => pipLabel(byDir[d]));
       return assembleQuestion(this, base, DICE_CATEGORY, {
         type: 'single',
-        question: `${colorOf(target).label}の面と向かい合う面は何色ですか。図1と図2は、同じ立方体を別の向きから見たものです。`,
+        question:
+          `${pipLabel(target)}の面と向かい合う面の目はいくつですか。図1と図2は、同じサイコロを別の向きから見たものです。` +
+          'このサイコロは、向かい合う面の目の和が7とはかぎりません。',
         visuals: [
           cubeVisual(pose, faces, { caption: '図1' }),
           ...extras.map((m, i) => cubeVisual(rotateLabeling(pose, m), faces, { caption: `図${i + 2}` })),
         ],
         choices,
-        correctAnswers: [answer],
+        correctAnswers: [String(answer)],
         explanation:
-          `図をくらべると、${colorOf(target).label}ととなり合う面は${neighbors.join('・')}の4つだとわかります。` +
-          `となりにない残りの${colorOf(answer).label}が、${colorOf(target).label}と向かい合う面です。`,
+          `図をくらべると、${pipLabel(target)}ととなり合う面は${neighbors.join('・')}の4つだとわかります。` +
+          `となりにない残りの${pipLabel(answer)}が、${pipLabel(target)}と向かい合う面です。`,
         highlight: faceFrame(pose[answerDir]),
         reveal: { steps },
-        scene: { model: 'colorCube', faces, orientation: pose },
+        scene: { model: 'dice', faces, orientation: pose },
       });
     },
   },
@@ -281,7 +290,9 @@ export const DICE_TEMPLATES = [
         explanation:
           `正解の図は、もとのサイコロを${X.movesPhrase(path)}と同じ向きになります。` +
           '鏡に映したように面の並びが反対回りになっている図は、どのように回しても作れません。' +
-          (opposite ? `また、${opposite.view.front}と${opposite.view.right}は向かい合う面（和が7）なので、同時に見えることはありません。` : ''),
+          (opposite
+            ? `また、${pipLabel(opposite.view.front)}と${pipLabel(opposite.view.right)}は向かい合う面（和が7）なので、同時に見えることはありません。`
+            : ''),
         reveal: { steps: [{ type: 'rotate', moves: path }] },
         scene: { model: 'dice', faces, orientation: refPose },
       });
@@ -311,5 +322,5 @@ export const DICE_TEMPLATES = [
 
 /** 見取図の読み上げ用の説明 */
 function describeView(view) {
-  return `上 ${view.top}、前 ${view.front}、右 ${view.right}`;
+  return `上 ${pipLabel(view.top)}、前 ${pipLabel(view.front)}、右 ${pipLabel(view.right)}`;
 }

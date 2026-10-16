@@ -7,7 +7,7 @@
  */
 import * as THREE from 'three';
 import { FACES, CUBE_SIZE } from '../core/cubeConstants.js';
-import { FACE_UP } from '../core/cubeFaceLabels.js';
+import { FACE_UP, PIP_LAYOUTS, pipRadius, pipColor } from '../core/cubeFaceLabels.js';
 
 const OFFSET = 0.004; // 面から少し浮かせる（強調表示のオーバーレイ 0.006 より内側）
 const TEXTURE_SIZE = 256;
@@ -120,6 +120,17 @@ export function drawDecoration(ctx, decoration, size) {
     ctx.fillText(decoration.label, s * 0.1, s * 0.09);
     return;
   }
+  // サイコロの面は数字ではなく目（ドット）で描く
+  if (decoration.kind === 'number' && PIP_LAYOUTS[decoration.value]) {
+    const n = decoration.value;
+    ctx.fillStyle = pipColor(n);
+    for (const [x, y] of PIP_LAYOUTS[n]) {
+      ctx.beginPath();
+      ctx.arc(s / 2 + x * s, s / 2 + y * s, pipRadius(n) * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    return;
+  }
   const label = String(decoration.label);
   const fontSize = label.length <= 1 ? s * 0.55 : label.length <= 2 ? s * 0.4 : s * 0.24;
   ctx.fillStyle = decoration.textColor;
@@ -127,10 +138,6 @@ export function drawDecoration(ctx, decoration, size) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(label, s / 2, s / 2 + s * 0.02);
-  // 6 と 9 などの向きがわかるように、数字には下線を引く
-  if (decoration.kind === 'number') {
-    ctx.fillRect(s * 0.38, s * 0.8, s * 0.24, s * 0.035);
-  }
 }
 
 const ARROW_ANGLE = { up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 };

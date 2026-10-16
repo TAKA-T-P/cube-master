@@ -42,7 +42,7 @@ import { isValidOrientation } from './cubeOrientation.js';
 import { MOVE_IDS } from './cubeRotations.js';
 
 export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube']);
-export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'moves', 'faceList']);
+export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'pip', 'moves', 'faceList']);
 const INTERACTION_KEYS = ['allowCameraRotationBeforeAnswer', 'allowZoomBeforeAnswer', 'allowCameraRotationAfterAnswer'];
 
 export class QuestionValidationError extends Error {

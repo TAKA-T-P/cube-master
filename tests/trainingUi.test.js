@@ -392,16 +392,16 @@ describe('問題画面（Phase 2：サイコロ・見え方）', () => {
     expect(container.querySelector('.feedback__title').textContent).toBe('正解！');
   });
 
-  it('色の選択肢には色見本と色名を表示する（色だけに頼らない）', () => {
+  it('目を答える選択肢は目の絵で表示し、読み上げ用に「〇の目」を持つ', () => {
     start({ category: 'projection', difficulty: 1, questionLimit: 5 });
     const choice = choiceButtons(container)[0];
-    expect(choice.querySelector('.swatch')).not.toBeNull();
+    expect(choice.querySelector('svg.pip-icon')).not.toBeNull();
+    expect(choice.querySelector('.choice__label').textContent).toMatch(/^[1-6]の目$/);
     // 次の問題へ進むと、回答前の問題では立方体がまた隠れる
     answer(container);
     expect(container.querySelector('.quiz-view').hidden).toBe(false);
     buttonByText(container, '次の問題へ').click();
     expect(container.querySelector('.quiz-view').hidden).toBe(true);
-    expect(choice.querySelector('.choice__label').textContent.length).toBeGreaterThan(0);
   });
 
   it('位置関係の問題では、従来どおりのふつうの立方体に戻る', () => {

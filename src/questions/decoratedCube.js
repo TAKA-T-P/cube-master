@@ -1,11 +1,11 @@
 /**
- * 数字・色つき立方体の問題で共通に使うヘルパー（Three.js・DOM 非依存）
+ * サイコロ（目のついた立方体）の問題で共通に使うヘルパー（Three.js・DOM 非依存）
  *
  * 「図」（visual）はデータだけを作り、描画は ui/visualChoices.js が行う。
  * 3D 本体と同じ向き・装飾のデータから図を作るので、3D と図が食いちがわない。
  */
 import { ROTATION_MOVES, DIRECTION_LABELS, DIRECTIONS } from '../core/cubeRotations.js';
-import { byDirection, unknownFace } from '../core/cubeFaceLabels.js';
+import { byDirection, unknownFace, numberFace, pipLabel } from '../core/cubeFaceLabels.js';
 import { INITIAL_ORIENTATION } from '../core/cubeOrientation.js';
 import { DEFAULT_VIEW_DIRECTION } from '../core/cubeConstants.js';
 import { relabelByPosition } from '../core/questionEngine.js';
@@ -60,11 +60,11 @@ export function hiddenFacesVisual(faces, orientation, directions = ['bottom', 'b
   };
 }
 
-/** 面の色見本つきの選択肢（色の問題） */
-export const swatchChoice = (id, decoration, extra = {}) => ({
-  id,
-  label: decoration.label,
-  visual: { type: 'swatch', face: decoration },
+/** サイコロの目の選択肢（目の絵で表示。id は数字の文字列、label は「3の目」） */
+export const pipChoice = (n, extra = {}) => ({
+  id: String(n),
+  label: pipLabel(n),
+  visual: { type: 'pip', face: numberFace(n) },
   ...extra,
 });
 

@@ -1,13 +1,14 @@
 /**
- * 図（見取図・面・色見本・回転の手順・見えていない面）の描画
+ * 図（見取図・面・サイコロの目・回転の手順・見えていない面）の描画
  *
+ * サイコロの面（kind: 'number'）は数字ではなく目（ドット）で描く。
  * 選択肢ごとに 3D シーンを作ると重いので、2D の SVG で描く。
  * 見取図は 3D 本体と同じ「向き・装飾・カメラの向き」のデータから、正射影で描くので 3D と食いちがわない。
  */
 import { h } from '../utils/dom.js';
 import { DIRECTIONS, DIRECTION_VECTORS, applyMatrix } from '../core/cubeRotations.js';
 import { orientationToMatrix } from '../core/cubeOrientation.js';
-import { FACE_UP, ARROW_LABELS } from '../core/cubeFaceLabels.js';
+import { FACE_UP, ARROW_LABELS, PIP_LAYOUTS, pipRadius, pipColor } from '../core/cubeFaceLabels.js';
 import { FACES } from '../core/cubeConstants.js';
 import { vecCross, vecDot } from '../core/cubeGeometry.js';
 
@@ -29,13 +30,27 @@ const normalize = (v) => {
 const ARROW_PATH = 'M0,-0.32 L0.22,-0.06 L0.08,-0.06 L0.08,0.3 L-0.08,0.3 L-0.08,-0.06 L-0.22,-0.06 Z';
 const ARROW_ROTATION = { up: 0, right: 90, down: 180, left: 270 };
 
+/** サイコロの目で描く面か */
+export const isPipFace = (face) => face?.kind === 'number' && Boolean(PIP_LAYOUTS[face.value]);
+
+/** サイコロの目（中心 0,0・一辺 1 の正方形の中）。turn は並びの回転（度） */
+function pips(n, turn = 0) {
+  return svg(
+    'g',
+    { class: 'pips', 'data-pips': n, transform: turn ? `rotate(${turn})` : undefined },
+    PIP_LAYOUTS[n].map(([x, y]) => svg('circle', { cx: x, cy: y, r: pipRadius(n), fill: pipColor(n) })),
+  );
+}
+
 /** 正方形の面（中心 0,0・一辺 1）の中身 */
-function tileContent(face, { arrow, uprightLabel = false } = {}) {
+function tileContent(face, { arrow, turn = 0, uprightLabel = false } = {}) {
   const parts = [
     svg('rect', { x: -0.5, y: -0.5, width: 1, height: 1, fill: face.color }),
     svg('rect', { x: -0.44, y: -0.44, width: 0.88, height: 0.88, fill: 'none', stroke: 'rgba(0,0,0,0.18)', 'stroke-width': 0.03 }),
   ];
-  if (arrow) {
+  if (isPipFace(face)) {
+    parts.push(pips(face.value, turn));
+  } else if (arrow) {
     parts.push(svg('path', { d: ARROW_PATH, fill: face.textColor, transform: `rotate(${ARROW_ROTATION[arrow]})` }));
     parts.push(
       svg('text', { x: -0.4, y: -0.3, fill: face.textColor, 'font-size': 0.13, 'font-weight': 700 }, document.createTextNode(face.label)),
@@ -97,24 +112,25 @@ export function renderCubeSvg({ orientation, faces, viewDirection }) {
     const tile = svg(
       'g',
       { transform: `matrix(${a} ${b} ${c} ${dd} ${center[0]} ${center[1]})` },
-      tileContent(face, { arrow: face.arrow, uprightLabel: !face.arrow }),
+      // 目と矢印は面と一緒にゆがめて描く（3D と同じ向きに見える）
+      tileContent(face, { arrow: face.arrow, uprightLabel: !face.arrow && !isPipFace(face) }),
       svg('rect', { x: -0.5, y: -0.5, width: 1, height: 1, fill: '#0b1d3a', opacity: shade.toFixed(3) }),
       svg('rect', { x: -0.5, y: -0.5, width: 1, height: 1, fill: 'none', stroke: '#1f4e9c', 'stroke-width': 0.035 }),
     );
-    // 数字・色名は読みやすいように、ゆがめずに面の中央へ
-    const label = face.arrow ? null : labelText(face, center[0], center[1], S * 0.9);
+    // 文字（「？」など）は読みやすいように、ゆがめずに面の中央へ
+    const label = face.arrow || isPipFace(face) ? null : labelText(face, center[0], center[1], S * 0.9);
     return svg('g', { 'data-direction': d, 'data-face': faceId }, tile, label);
   });
 
   return svg('svg', { viewBox: viewBox.join(' '), class: 'figure-svg', role: 'img', 'aria-hidden': 'true' }, groups);
 }
 
-/** 正面から見た1つの面（矢印の向きは画面の向き） */
-export function renderFaceSvg({ face, arrow }) {
+/** 正面から見た1つの面（矢印の向き・目の並びの回転は画面の向き） */
+export function renderFaceSvg({ face, arrow, turn = 0 }, className = 'figure-svg') {
   return svg(
     'svg',
-    { viewBox: '-0.56 -0.56 1.12 1.12', class: 'figure-svg', role: 'img', 'aria-hidden': 'true' },
-    tileContent(face, { arrow }),
+    { viewBox: '-0.56 -0.56 1.12 1.12', class: className, role: 'img', 'aria-hidden': 'true' },
+    tileContent(face, { arrow, turn }),
     svg('rect', { x: -0.5, y: -0.5, width: 1, height: 1, fill: 'none', stroke: '#1f4e9c', 'stroke-width': 0.035 }),
   );
 }
@@ -133,6 +149,8 @@ export function renderVisual(visual) {
       return h('figure', { class: 'figure figure--face' }, renderFaceSvg(visual));
     case 'swatch':
       return h('span', { class: 'swatch', style: { background: visual.face.color }, 'aria-hidden': 'true' });
+    case 'pip':
+      return renderFaceSvg({ face: visual.face }, 'pip-icon');
     case 'moves':
       return h(
         'ol',
@@ -157,8 +175,9 @@ export function renderVisual(visual) {
             'span',
             { class: 'face-list__item' },
             `${item.label}：`,
-            h('span', { class: 'swatch', style: { background: item.face.color }, 'aria-hidden': 'true' }),
-            item.face.label,
+            isPipFace(item.face)
+              ? [renderFaceSvg({ face: item.face }, 'pip-icon pip-icon--small'), h('span', { class: 'sr-only' }, `${item.face.value}の目`)]
+              : [h('span', { class: 'swatch', style: { background: item.face.color }, 'aria-hidden': 'true' }), item.face.label],
           ),
         ),
       );
@@ -172,6 +191,8 @@ export function renderChoiceContent(choice) {
   const visual = choice.visual;
   if (!visual) return [h('span', { class: 'choice__label' }, choice.label)];
   if (visual.type === 'swatch') return [renderVisual(visual), h('span', { class: 'choice__label' }, choice.label)];
+  // サイコロの目の選択肢：目の絵だけを見せ、文字（「3の目」）は読み上げ用
+  if (visual.type === 'pip') return [renderVisual(visual), h('span', { class: 'choice__label sr-only' }, choice.label)];
   return [
     h('span', { class: 'choice__label choice__label--mark' }, choice.label),
     renderVisual(visual),

@@ -25,6 +25,9 @@ const RESULT_TITLES = {
   [ANSWER_STATUS.INCORRECT]: '不正解',
 };
 
+/** 文字と並べて小さく表示する図（色見本・サイコロの目）。それ以外の図の選択肢は大きなボタンにする */
+const INLINE_VISUALS = ['swatch', 'pip'];
+
 /** 選択肢の文字数がこれより長ければ1列で表示する */
 const LONG_LABEL = 9;
 
@@ -173,7 +176,7 @@ export function mountQuestionScreen(container, { navigate }) {
     });
 
     const long = q.choices.some((c) => c.label.length > LONG_LABEL);
-    const withFigures = q.choices.some((c) => c.visual && c.visual.type !== 'swatch');
+    const withFigures = q.choices.some((c) => c.visual && !INLINE_VISUALS.includes(c.visual.type));
     choicesEl.className = `choices ${long && !withFigures ? 'choices--single' : ''} ${withFigures ? 'choices--figures' : ''}`;
     choicesEl.setAttribute('role', q.type === 'single' ? 'radiogroup' : 'group');
     choicesEl.replaceChildren(
@@ -181,7 +184,7 @@ export function mountQuestionScreen(container, { navigate }) {
         h(
           'button',
           {
-            class: `choice ${c.visual && c.visual.type !== 'swatch' ? 'choice--figure' : ''}`,
+            class: `choice ${c.visual && !INLINE_VISUALS.includes(c.visual.type) ? 'choice--figure' : ''}`,
             type: 'button',
             role: q.type === 'single' ? 'radio' : 'checkbox',
             'aria-checked': 'false',

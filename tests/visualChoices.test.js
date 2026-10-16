@@ -10,11 +10,16 @@ const faces = numberFaces(STANDARD_DICE);
 const facesShown = (el) => Object.fromEntries([...el.querySelectorAll('[data-direction]')].map((g) => [g.dataset.direction, g.dataset.face]));
 
 describe('見取図（SVG）', () => {
-  it('ふつうの視点では、上・前・右の面を、その向きの面 ID と数字どおりに描く', () => {
+  it('ふつうの視点では、上・前・右の面を、その向きの面 ID と目の数どおりに描く（数字は描かない）', () => {
     for (const o of ALL_ORIENTATIONS) {
       const el = renderCubeSvg({ orientation: o, faces, viewDirection: [4, 3, 5] });
       expect(facesShown(el)).toEqual({ top: o.top, front: o.front, right: o.right });
-      for (const g of el.querySelectorAll('[data-direction]')) expect(g.textContent).toBe(String(STANDARD_DICE[g.dataset.face]));
+      for (const g of el.querySelectorAll('[data-direction]')) {
+        const n = STANDARD_DICE[g.dataset.face];
+        expect(g.querySelector('.pips').getAttribute('data-pips')).toBe(String(n));
+        expect(g.querySelectorAll('circle')).toHaveLength(n);
+        expect(g.textContent).toBe('');
+      }
     }
   });
 
@@ -35,7 +40,10 @@ describe('見取図（SVG）', () => {
 });
 
 describe('そのほかの図', () => {
-  it('面の図は矢印の向きを回転で表す', () => {
+  it('面の図：目の並びの回転と、矢印の向き', () => {
+    const six = renderFaceSvg({ face: numberFaces(STANDARD_DICE).EFGH, turn: 90 });
+    expect(six.querySelector('.pips').getAttribute('transform')).toBe('rotate(90)');
+    expect(six.querySelectorAll('circle')).toHaveLength(6);
     const el = renderFaceSvg({ face: colorFace('green'), arrow: 'left' });
     expect(el.querySelector('path').getAttribute('transform')).toBe('rotate(270)');
   });
@@ -44,7 +52,8 @@ describe('そのほかの図', () => {
     const el = renderVisual(movesVisual(['right', 'forward', 'turnLeft']));
     const items = [...el.querySelectorAll('.moves__item')];
     expect(items.map((i) => i.querySelector('.moves__label').textContent)).toEqual(['右へ', '前へ', '水平に左へ']);
-    expect(items.map((i) => i.querySelector('.moves__icon').textContent)).toEqual(['→', '↓', '↺']);
+    // 前（手前）は見取図の左下 ↙、後ろ（奥）は右上 ↗。水平に左へは真上から見て時計回り ↻
+    expect(items.map((i) => i.querySelector('.moves__icon').textContent)).toEqual(['→', '↙', '↻']);
   });
 
   it('見えていない面の一覧', () => {
@@ -53,12 +62,13 @@ describe('そのほかの図', () => {
     for (const text of ['下：青', '後ろ：緑', '左：オレンジ']) expect(el.textContent).toContain(text);
   });
 
-  it('図の選択肢は記号と図、色の選択肢は色見本と色名', () => {
+  it('図の選択肢は記号と図、目の選択肢は目の絵', () => {
     const fig = renderChoiceContent({ id: 'x', label: 'イ', visual: { type: 'face', face: colorFace('red'), arrow: 'up' }, description: '赤の面、矢印は上向き' });
     expect(fig[0].textContent).toBe('イ');
     expect(fig[1].querySelector('svg')).not.toBeNull();
-    const swatch = renderChoiceContent({ id: 'red', label: '赤', visual: { type: 'swatch', face: colorFace('red') } });
-    expect(swatch[0].classList).toContain('swatch');
-    expect(swatch[1].textContent).toBe('赤');
+    const pip = renderChoiceContent({ id: '5', label: '5の目', visual: { type: 'pip', face: numberFaces(STANDARD_DICE).CDHG } });
+    expect(pip[0].querySelectorAll('circle')).toHaveLength(5); // 目の絵
+    expect(pip[1].textContent).toBe('5の目'); // 読み上げ用の文字
+    expect(pip[1].classList).toContain('sr-only');
   });
 });

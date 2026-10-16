@@ -7,7 +7,7 @@ import { createRng } from '../src/utils/random.js';
 import { rotateOrientation, rotateOrientationSequence, isValidOrientation } from '../src/core/cubeOrientation.js';
 import { rotateLabeling, DIRECTIONS, DIRECTION_VECTORS, MOVE_IDS } from '../src/core/cubeRotations.js';
 import { sequenceMatrix } from '../src/core/cubeOrientation.js';
-import { byDirection, arrowAsSeen } from '../src/core/cubeFaceLabels.js';
+import { byDirection, pipTurnAsSeen, pipLabel, ORIENTED_PIPS } from '../src/core/cubeFaceLabels.js';
 import { solveUnique, canMatchView, canSatisfyConditions, viewOf, viewKey } from '../src/core/cubePuzzle.js';
 import { movesPhrase } from '../src/questions/dice/diceExplanations.js';
 
@@ -39,11 +39,11 @@ const visibleOf = (q) => {
   return { top: byDir.top, front: byDir.front, right: byDir.right };
 };
 const fullOf = (q) => byDirection(values(q.scene.faces), q.scene.orientation);
-const hasRule = (q) => q.question.includes('向かい合う面の数の和が7');
+const hasRule = (q) => q.question.includes('向かい合う面の目の数の和が7です');
 const hasHiddenList = (q) => (q.visuals ?? []).some((v) => v.type === 'faceList');
 const movesOf = (q) => q.visuals.find((v) => v.type === 'moves')?.moves.map((m) => m.id);
 const ASKED = { 上の面: 'top', 前の面: 'front', 右の面: 'right' };
-const askedOf = (q) => ASKED[Object.keys(ASKED).find((k) => q.question.includes(`${k}の数字`))];
+const askedOf = (q) => ASKED[Object.keys(ASKED).find((k) => q.question.includes(`${k}の目はいくつ`))];
 
 describe('D01〜D06・V01〜V06 の生成', () => {
   it('テンプレートと難易度', () => {
@@ -98,7 +98,7 @@ describe('サイコロ：正解が数学的に正しく、提示した情報だ�
       const moves = movesOf(q);
       const asked = askedOf(q);
       expect(q.question).toContain(movesPhrase(moves));
-      // 正解 = 回転後の向きで、その方向にある面の数字
+      // 正解 = 回転後の向きで、その方向にある面の目
       const final = rotateOrientationSequence(q.scene.orientation, moves);
       expect(q.correctAnswers).toEqual([String(q.scene.faces[final[asked]].value)]);
       // 正解演出の回転は問題の手順と同じ
@@ -133,11 +133,13 @@ describe('サイコロ：正解が数学的に正しく、提示した情報だ�
       const known = visibleOf(q);
       const views = others.map((v) => viewOf(byDirection(values(v.faces), v.orientation)));
       const targetLabel = q.question.match(/^(.+?)の面と向かい合う/)[1];
-      const targetDir = DIRECTIONS.find((d) => q.scene.faces[q.scene.orientation[d]].label === targetLabel);
+      const targetDir = DIRECTIONS.find((d) => pipLabel(q.scene.faces[q.scene.orientation[d]].value) === targetLabel);
       const opposite = { top: 'bottom', front: 'back', right: 'left' }[targetDir];
       const result = solveUnique({ values: Object.values(values(q.scene.faces)), known, views }, (l) => l[opposite]);
       expect(result.unique).toBe(true);
-      expect(result.answers).toEqual(q.correctAnswers);
+      expect(result.answers.map(String)).toEqual(q.correctAnswers);
+      // 和が7のルールでは解けない（ふつうでない配置で、問題文にもそう書く）
+      expect(q.question).toContain('和が7とはかぎりません');
     }
   });
 
@@ -157,9 +159,9 @@ describe('サイコロ：正解が数学的に正しく、提示した情報だ�
 });
 
 describe('見え方：正解が数学的に正しい', () => {
-  it.each(['V01', 'V02'])('%s：答えの方向の面の色で、その面はカメラから見えている', (id) => {
+  it.each(['V01', 'V02'])('%s：答えの方向の面の目で、その面はカメラから見えている', (id) => {
     for (const { q } of questionsOf(id)) {
-      const dir = DIRECTIONS.find((d) => q.scene.faces[q.scene.orientation[d]].value === q.correctAnswers[0]);
+      const dir = DIRECTIONS.find((d) => String(q.scene.faces[q.scene.orientation[d]].value) === q.correctAnswers[0]);
       const cam = q.scene.cameraPreset;
       const v = DIRECTION_VECTORS[dir];
       expect(v[0] * cam[0] + v[1] * cam[1] + v[2] * cam[2]).toBeGreaterThan(0);
@@ -168,12 +170,15 @@ describe('見え方：正解が数学的に正しい', () => {
     }
   });
 
-  it('V03：矢印の見え方が向きの計算と一致する', () => {
+  it('V03：目の並び方の見え方が向きの計算と一致する', () => {
     for (const { q } of questionsOf('V03')) {
       const dir = q.question.includes('真上') ? 'top' : q.question.includes('正面') ? 'front' : 'right';
       const face = q.scene.orientation[dir];
-      expect(q.correctAnswers).toEqual([arrowAsSeen(face, q.scene.faces[face].arrow, q.scene.orientation, dir)]);
-      expect(q.choices.map((c) => c.id).sort()).toEqual(['down', 'left', 'right', 'up']);
+      const v = q.scene.faces[face].value;
+      expect(ORIENTED_PIPS).toContain(v); // 向きで見え方が変わる 2・3・6 の目
+      expect(q.correctAnswers).toEqual([`${v}-${pipTurnAsSeen(face, q.scene.orientation, dir)}`]);
+      // 同じ目の2通りの並び方が必ず選択肢に入る
+      expect(q.choices.map((c) => c.id)).toEqual(expect.arrayContaining([`${v}-0`, `${v}-90`]));
     }
   });
 

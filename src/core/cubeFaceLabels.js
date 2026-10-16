@@ -123,3 +123,37 @@ export function arrowAsSeen(faceId, arrow, orientation, viewDirection) {
 }
 
 export { DIRECTION_VECTORS };
+
+// ---------- サイコロの目 ----------
+
+/** 「3の目」のような言い方 */
+export const pipLabel = (n) => `${n}の目`;
+
+/**
+ * 目の位置（面の中心を原点、一辺 1 の正方形。x は右、y は下が正）。
+ * 面の「上」（FACE_UP）を上にしたときの並び。2・3 は右上から左下へ、6 はたて2列。
+ */
+export const PIP_LAYOUTS = Object.freeze({
+  1: Object.freeze([[0, 0]]),
+  2: Object.freeze([[0.25, -0.25], [-0.25, 0.25]]),
+  3: Object.freeze([[0.25, -0.25], [0, 0], [-0.25, 0.25]]),
+  4: Object.freeze([[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]]),
+  5: Object.freeze([[-0.25, -0.25], [0.25, -0.25], [0, 0], [-0.25, 0.25], [0.25, 0.25]]),
+  6: Object.freeze([[-0.22, -0.27], [-0.22, 0], [-0.22, 0.27], [0.22, -0.27], [0.22, 0], [0.22, 0.27]]),
+});
+
+/** 目の半径（1の目は大きく赤くする） */
+export const pipRadius = (n) => (n === 1 ? 0.17 : 0.085);
+export const pipColor = (n) => (n === 1 ? '#d6232a' : '#1b2a41');
+
+/** 向きによって見え方が変わる目（90°回すと並び方が変わる） */
+export const ORIENTED_PIPS = Object.freeze([2, 3, 6]);
+
+/**
+ * 面を正面から見たときの目の並びの回り方（0 = 描いたまま / 90 = 90°回った並び）
+ * 2・3・6 の目は 180° 回しても同じ見え方なので、0 と 90 の2通りにまとめる。
+ */
+export function pipTurnAsSeen(faceId, orientation, viewDirection) {
+  const seen = arrowAsSeen(faceId, 'up', orientation, viewDirection);
+  return seen === 'up' || seen === 'down' ? 0 : 90;
+}

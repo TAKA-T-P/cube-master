@@ -79,14 +79,16 @@ function axisRotation(axis, quarterTurns) {
 /**
  * 回転の定義。axis / quarterTurns は 3D アニメーション用（右ねじの向きが正）。
  * roll: 転がす（底の辺を支点に転がる動き） / turn: 水平に回す
+ * icon は、右手前の斜め上から見た見取図での向き（前＝左下 ↙、後ろ＝右上 ↗）。
+ * 水平に右へ回すと、真上から見て反時計回り（↺）に回る。
  */
 export const ROTATION_MOVES = Object.freeze({
   right: Object.freeze({ id: 'right', axis: 'z', quarterTurns: -1, kind: 'roll', inverse: 'left', label: '右へ転がす', short: '右へ', icon: '→' }),
   left: Object.freeze({ id: 'left', axis: 'z', quarterTurns: 1, kind: 'roll', inverse: 'right', label: '左へ転がす', short: '左へ', icon: '←' }),
-  forward: Object.freeze({ id: 'forward', axis: 'x', quarterTurns: 1, kind: 'roll', inverse: 'backward', label: '前（手前）へ転がす', short: '前へ', icon: '↓' }),
-  backward: Object.freeze({ id: 'backward', axis: 'x', quarterTurns: -1, kind: 'roll', inverse: 'forward', label: '後ろ（奥）へ転がす', short: '後ろへ', icon: '↑' }),
-  turnRight: Object.freeze({ id: 'turnRight', axis: 'y', quarterTurns: 1, kind: 'turn', inverse: 'turnLeft', label: '水平に右へ回す', short: '水平に右へ', icon: '↻' }),
-  turnLeft: Object.freeze({ id: 'turnLeft', axis: 'y', quarterTurns: -1, kind: 'turn', inverse: 'turnRight', label: '水平に左へ回す', short: '水平に左へ', icon: '↺' }),
+  forward: Object.freeze({ id: 'forward', axis: 'x', quarterTurns: 1, kind: 'roll', inverse: 'backward', label: '前（手前）へ転がす', short: '前へ', icon: '↙' }),
+  backward: Object.freeze({ id: 'backward', axis: 'x', quarterTurns: -1, kind: 'roll', inverse: 'forward', label: '後ろ（奥）へ転がす', short: '後ろへ', icon: '↗' }),
+  turnRight: Object.freeze({ id: 'turnRight', axis: 'y', quarterTurns: 1, kind: 'turn', inverse: 'turnLeft', label: '水平に右へ回す', short: '水平に右へ', icon: '↺' }),
+  turnLeft: Object.freeze({ id: 'turnLeft', axis: 'y', quarterTurns: -1, kind: 'turn', inverse: 'turnRight', label: '水平に左へ回す', short: '水平に左へ', icon: '↻' }),
 });
 
 export const MOVE_IDS = Object.freeze(Object.keys(ROTATION_MOVES));
