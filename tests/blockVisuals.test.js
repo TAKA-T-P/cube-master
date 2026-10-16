@@ -24,6 +24,25 @@ describe('積み木の見取図', () => {
   it('矢印なしでも描ける', () => {
     expect(renderBlocksSvg({ cubes }).querySelectorAll('.block-arrow')).toHaveLength(0);
   });
+
+  it('高く積んだ奥の立方体も、上が切れずに図の範囲（viewBox）に入る', () => {
+    const tall = heightsToCubes([
+      [4, 3, 0],
+      [3, 3, 2],
+      [1, 2, 1],
+    ]);
+    const el = renderBlocksSvg({ cubes: tall, arrows: ['front', 'right'] });
+    const [x0, y0, w, hgt] = el.getAttribute('viewBox').split(' ').map(Number);
+    for (const poly of el.querySelectorAll('polygon')) {
+      for (const pt of poly.getAttribute('points').trim().split(/\s+/)) {
+        const [x, y] = pt.split(',').map(Number);
+        expect(x).toBeGreaterThanOrEqual(x0);
+        expect(x).toBeLessThanOrEqual(x0 + w);
+        expect(y).toBeGreaterThanOrEqual(y0);
+        expect(y).toBeLessThanOrEqual(y0 + hgt);
+      }
+    }
+  });
 });
 
 describe('投影図', () => {

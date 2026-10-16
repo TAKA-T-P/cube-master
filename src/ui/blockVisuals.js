@@ -71,7 +71,9 @@ export function renderBlocksSvg({ cubes, viewDirection = BLOCK_VIEW_DIRECTION, a
 
   // 観察の向きを示す赤い矢印（根元が見る人の側）
   const arrowParts = [];
-  const all = [...cubes.flatMap((c) => [[c.x, c.y, c.z], [c.x + 1, c.y + 1, c.z + 1]]), [0, 0, 0], [W, 0, D]];
+  // 図の範囲は、すべての立方体の8つの角で決める（2つの角だけだと、奥の上の角がはみ出して切れる）
+  const corners = (c) => [0, 1].flatMap((dx) => [0, 1].flatMap((dy) => [0, 1].map((dz) => [c.x + dx, c.y + dy, c.z + dz])));
+  const all = [...cubes.flatMap(corners), [0, 0, 0], [W, 0, 0], [0, 0, D], [W, 0, D]];
   for (const arrow of arrows) {
     const { from, to } = arrowPoints(cubes, arrow);
     all.push(from, to);
