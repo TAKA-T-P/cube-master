@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderCubeSvg, renderFaceSvg, renderVisual, renderChoiceContent } from '../src/ui/visualChoices.js';
 import { INITIAL_ORIENTATION, rotateOrientation, ALL_ORIENTATIONS } from '../src/core/cubeOrientation.js';
-import { numberFaces, colorFaces, STANDARD_DICE, colorFace } from '../src/core/cubeFaceLabels.js';
+import { numberFaces, colorFaces, STANDARD_DICE, colorFace, symbolFace, FACE_MARKS } from '../src/core/cubeFaceLabels.js';
 import { movesVisual, hiddenFacesVisual, viewOnlyVisual } from '../src/questions/decoratedCube.js';
 
 const faces = numberFaces(STANDARD_DICE);
@@ -36,6 +36,19 @@ describe('見取図（SVG）', () => {
   it('鏡映しの図（見えている3面だけ）も描ける', () => {
     const el = renderVisual(viewOnlyVisual({ top: colorFace('red'), front: colorFace('blue'), right: colorFace('yellow') }));
     for (const name of ['赤', '青', '黄']) expect(el.textContent).toContain(name);
+  });
+  it('記号（〇◎×●◇◆）は面と一緒にゆがめて描く（3D の面の印と同じ向きに見える）。「？」はゆがめない', () => {
+    const ids = Object.keys(faces);
+    const marks = Object.fromEntries(ids.map((id, i) => [id, symbolFace(FACE_MARKS[i])]));
+    const el = renderCubeSvg({ orientation: INITIAL_ORIENTATION, faces: marks, viewDirection: [4, 3, 5] });
+    for (const g of el.querySelectorAll('[data-direction]')) {
+      const text = g.querySelector('text');
+      expect(text.parentElement.getAttribute('transform')).toMatch(/^matrix/);
+    }
+    const q = { ...marks, [INITIAL_ORIENTATION.top]: symbolFace('？') };
+    const el2 = renderCubeSvg({ orientation: INITIAL_ORIENTATION, faces: q, viewDirection: [4, 3, 5] });
+    const top = el2.querySelector('[data-direction="top"] > text');
+    expect(top.textContent).toBe('？');
   });
 });
 

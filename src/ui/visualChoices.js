@@ -8,7 +8,7 @@
 import { h } from '../utils/dom.js';
 import { DIRECTIONS, DIRECTION_VECTORS, DIRECTION_LABELS, applyMatrix } from '../core/cubeRotations.js';
 import { orientationToMatrix } from '../core/cubeOrientation.js';
-import { FACE_UP, ARROW_LABELS, PIP_LAYOUTS, pipRadius, pipColor } from '../core/cubeFaceLabels.js';
+import { FACE_UP, ARROW_LABELS, PIP_LAYOUTS, FACE_MARKS, pipRadius, pipColor } from '../core/cubeFaceLabels.js';
 import { FACES } from '../core/cubeConstants.js';
 import { vecCross, vecDot } from '../core/cubeGeometry.js';
 import { renderBlockVisual } from './blockVisuals.js';
@@ -34,6 +34,12 @@ const ARROW_ROTATION = { up: 0, right: 90, down: 180, left: 270 };
 
 /** サイコロの目で描く面か */
 export const isPipFace = (face) => face?.kind === 'number' && Boolean(PIP_LAYOUTS[face.value]);
+
+/**
+ * 記号の面（〇◎×●◇◆）か。どれも 90° 回しても同じ形なので、面と一緒にゆがめて描けば
+ * 面の上下の向きによらず 3D の面の印と同じ向きに見える
+ */
+const isMarkFace = (face) => face?.kind === 'symbol' && FACE_MARKS.includes(face.value);
 
 /** サイコロの目（中心 0,0・一辺 1 の正方形の中）。turn は並びの回転（度） */
 function pips(n, turn = 0) {
@@ -96,10 +102,16 @@ export function renderCubeSvg({ orientation, faces, viewDirection, showDirection
   // 見えている面（カメラ側を向いている面）
   const visible = DIRECTIONS.filter((d) => vecDot(DIRECTION_VECTORS[d], v) > 1e-9);
   const corners = [-1, 1].flatMap((x) => [-1, 1].flatMap((y) => [-1, 1].map((z) => P([x, y, z]))));
-  // 向きの文字（上・前・右）は、図の中心から面の中心へ向かう方向に、立方体の輪郭の外まで出して置く
+  // 向きの文字（上・前・右）は立方体の輪郭の外に置く。
+  // 横の面（前・右など）は、その面の下の辺の真ん中のすぐ下。上・下の面は、図の中心から面の中心へ向かう方向
   const outline = Math.max(...corners.map(([x, y]) => Math.hypot(x, y))) + 11;
   const labelAt = (d) => {
-    const [x, y] = P(DIRECTION_VECTORS[d]);
+    const n = DIRECTION_VECTORS[d];
+    if (n[1] === 0) {
+      const [x, y] = P([n[0], -1, n[2]]);
+      return [x, y + 12];
+    }
+    const [x, y] = P(n);
     const len = Math.hypot(x, y) || 1;
     return [(x / len) * outline, (y / len) * outline];
   };
@@ -122,13 +134,13 @@ export function renderCubeSvg({ orientation, faces, viewDirection, showDirection
     const tile = svg(
       'g',
       { transform: `matrix(${a} ${b} ${c} ${dd} ${center[0]} ${center[1]})` },
-      // 目と矢印は面と一緒にゆがめて描く（3D と同じ向きに見える）
-      tileContent(face, { arrow: face.arrow, uprightLabel: !face.arrow && !isPipFace(face) }),
+      // 目・矢印・記号は面と一緒にゆがめて描く（3D と同じ向きに見える）
+      tileContent(face, { arrow: face.arrow, uprightLabel: !face.arrow && !isPipFace(face) && !isMarkFace(face) }),
       svg('rect', { x: -0.5, y: -0.5, width: 1, height: 1, fill: '#0b1d3a', opacity: shade.toFixed(3) }),
       svg('rect', { x: -0.5, y: -0.5, width: 1, height: 1, fill: 'none', stroke: '#1f4e9c', 'stroke-width': 0.035 }),
     );
     // 文字（「？」など）は読みやすいように、ゆがめずに面の中央へ
-    const label = face.arrow || isPipFace(face) ? null : labelText(face, center[0], center[1], S * 0.9);
+    const label = face.arrow || isPipFace(face) || isMarkFace(face) ? null : labelText(face, center[0], center[1], S * 0.9);
     return svg('g', { 'data-direction': d, 'data-face': faceId }, tile, label);
   });
 
