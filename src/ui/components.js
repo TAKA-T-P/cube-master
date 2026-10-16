@@ -62,6 +62,40 @@ export function segmented(label, options, initial, onChange) {
   return { el, get: () => value };
 }
 
+/** 数を選ぶスライダー（今の値を「5問」のように横に出す） */
+export function slider(label, { min, max, step = 1, unit = '' }, initial, onChange) {
+  let value = initial;
+  const output = h('output', { class: 'slider__value' }, `${value}${unit}`);
+  const input = h('input', {
+    class: 'slider__input',
+    type: 'range',
+    min: String(min),
+    max: String(max),
+    step: String(step),
+    value: String(value),
+    'aria-label': label,
+  });
+  input.addEventListener('input', () => {
+    value = Number(input.value);
+    output.textContent = `${value}${unit}`;
+    onChange(value);
+  });
+  const el = h(
+    'div',
+    { class: 'field' },
+    h('span', { class: 'field__label' }, label),
+    h(
+      'div',
+      { class: 'slider' },
+      h('span', { class: 'slider__end', 'aria-hidden': 'true' }, String(min)),
+      input,
+      h('span', { class: 'slider__end', 'aria-hidden': 'true' }, String(max)),
+      output,
+    ),
+  );
+  return { el, get: () => value };
+}
+
 /** ON/OFF スイッチ */
 export function toggle(label, initial, onChange) {
   const input = h('input', { type: 'checkbox', class: 'switch__input', checked: initial });

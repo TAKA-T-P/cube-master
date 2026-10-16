@@ -86,15 +86,21 @@ describe('カテゴリ選択・設定画面', () => {
     ]);
   });
 
-  it('難易度・問題数を選んで開始する（初期値は すべて・10問）', () => {
+  it('難易度・問題数を選んで開始する（初期値は すべて・5問。問題数はスライダーで1〜20問）', () => {
     const navigate = vi.fn();
     mountTrainingSetupScreen(container, { navigate, params: { category: 'position' } });
     const pressed = [...container.querySelectorAll('[aria-pressed="true"]')].map((b) => b.textContent);
-    expect(pressed).toEqual(['すべて', '10問']);
-    buttonByText(container, '★2 標準').click();
-    buttonByText(container, '5問').click();
+    expect(pressed).toEqual(['すべて']);
+    expect([...container.querySelectorAll('.segmented__item')].map((b) => b.textContent)).toEqual(['基本', '標準', '応用', 'すべて']);
+    const range = container.querySelector('input[type="range"]');
+    expect([range.min, range.max, range.value]).toEqual(['1', '20', '5']);
+    expect(container.querySelector('.slider__value').textContent).toBe('5問');
+    buttonByText(container, '標準').click();
+    range.value = '13';
+    range.dispatchEvent(new Event('input'));
+    expect(container.querySelector('.slider__value').textContent).toBe('13問');
     buttonByText(container, 'スタート').click();
-    expect(store.getSettings()).toMatchObject({ category: 'position', difficulty: 2, questionLimit: 5 });
+    expect(store.getSettings()).toMatchObject({ category: 'position', difficulty: 2, questionLimit: 13 });
     expect(navigate).toHaveBeenCalledWith('question');
   });
 
@@ -132,7 +138,7 @@ describe('問題画面', () => {
     start({ difficulty: 1, questionLimit: 5 });
     const q = currentQuestion();
     expect(container.querySelector('.quiz-progress').textContent).toBe('第1問 / 5問');
-    expect(container.textContent).toContain('★1 きほん');
+    expect(container.textContent).toContain('基本');
     expect(container.querySelector('.quiz-text').textContent).toBe(q.question);
     expect(choiceButtons(container).map((b) => b.dataset.choice)).toEqual(q.choices.map((c) => c.id));
     expect(viewer.setSelectionEnabled).toHaveBeenCalledWith(false);
@@ -309,7 +315,7 @@ describe('結果画面', () => {
     expect(container.querySelector('[data-testid="correct-count"]').textContent).toBe('3');
     expect(container.textContent).toContain('/ 5 問正解');
     expect(container.textContent).toContain('正答率 60%');
-    expect(container.textContent).toContain('★2 標準');
+    expect(container.textContent).toContain('標準');
     expect(container.querySelectorAll('.result-history__item')).toHaveLength(5);
   });
 

@@ -4,7 +4,7 @@
 import { h } from '../utils/dom.js';
 import { button } from './components.js';
 import { getSummary, getSettings, startTraining } from './trainingStore.js';
-import { getCategory, difficultyLabel, QUESTION_LIMITS } from '../questions/questionRegistry.js';
+import { getCategory, difficultyLabel } from '../questions/questionRegistry.js';
 
 function praise(accuracy, answered) {
   if (answered === 0) return 'また挑戦してね！';
@@ -23,7 +23,7 @@ export function mountTrainingResultScreen(container, { navigate }) {
   }
   const category = getCategory(summary.category);
   const percent = Math.round(summary.accuracy * 100);
-  const limitLabel = QUESTION_LIMITS.find((l) => l.value === summary.questionLimit)?.label ?? '';
+  const limitLabel = Number.isInteger(summary.questionLimit) ? `${summary.questionLimit}問` : '';
 
   const historyList = h(
     'ol',

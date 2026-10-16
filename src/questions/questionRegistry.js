@@ -11,25 +11,20 @@ import { NET_MAPPING_TEMPLATES } from './netMapping/netMappingGenerators.js';
 import { NET_PUZZLE_TEMPLATES } from './netPuzzle/netPuzzleGenerators.js';
 
 export const DIFFICULTIES = Object.freeze([
-  { value: 1, label: '★1', name: 'きほん' },
-  { value: 2, label: '★2', name: '標準' },
-  { value: 3, label: '★3', name: 'チャレンジ' },
-  { value: 'all', label: 'すべて', name: '混合出題' },
+  { value: 1, label: '基本' },
+  { value: 2, label: '標準' },
+  { value: 3, label: '応用' },
+  { value: 'all', label: 'すべて' },
 ]);
 
-export const QUESTION_LIMITS = Object.freeze([
-  { value: 5, label: '5問' },
-  { value: 10, label: '10問' },
-  { value: 20, label: '20問' },
-  { value: 'endless', label: 'エンドレス' },
-]);
+/** 問題数（スライダーで 1〜20 問） */
+export const QUESTION_LIMIT_RANGE = Object.freeze({ min: 1, max: 20 });
 
-export const DEFAULT_SETTINGS = Object.freeze({ difficulty: 'all', questionLimit: 10 });
+export const DEFAULT_SETTINGS = Object.freeze({ difficulty: 'all', questionLimit: 5 });
 
-/** 難易度の表示名（'★1 きほん' など） */
+/** 難易度の表示名（'基本' など） */
 export function difficultyLabel(value) {
-  const d = DIFFICULTIES.find((x) => x.value === value);
-  return d ? (d.value === 'all' ? d.label : `${d.label} ${d.name}`) : String(value);
+  return DIFFICULTIES.find((x) => x.value === value)?.label ?? String(value);
 }
 
 /**
@@ -44,7 +39,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学5年生～中学1年生',
     enabled: true,
     templates: NET_MAPPING_TEMPLATES,
-    levelNotes: ['★1 きほん：重なる点・向かい合う面', '★2 標準：重なる辺・となり合う面', '★3 チャレンジ：完成した立方体・点と辺の組み合わせ'],
+    levelNotes: ['基本：重なる点・向かい合う面', '標準：重なる辺・となり合う面', '応用：完成した立方体・点と辺の組み合わせ'],
   },
   // ②
   { id: 'cutting', name: '切断', description: '立方体を平面で切ったときの切り口を考えよう。', grades: '中学1年生～中学3年生', enabled: false },
@@ -56,7 +51,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学6年生～中学1年生',
     enabled: true,
     templates: POSITION_TEMPLATES,
-    levelNotes: ['★1 きほん：辺と辺・面と面の平行・垂直など', '★2 標準：辺と面の関係・ねじれの位置', '★3 チャレンジ：2つの条件を組み合わせた問題'],
+    levelNotes: ['基本：辺と辺・面と面の平行・垂直など', '標準：辺と面の関係・ねじれの位置', '応用：2つの条件を組み合わせた問題'],
   },
   // ④ 展開図パズル
   {
@@ -66,7 +61,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学4年生～中学1年生',
     enabled: true,
     templates: NET_PUZZLE_TEMPLATES,
-    levelNotes: ['★1 きほん：立方体になる展開図・あと1マス', '★2 標準：いらない1マス・1マスを動かす', '★3 チャレンジ：同じ種類・ちがう種類の展開図'],
+    levelNotes: ['基本：立方体になる展開図・あと1マス', '標準：いらない1マス・1マスを動かす', '応用：同じ種類・ちがう種類の展開図'],
   },
   // ⑤
   { id: 'volume', name: '体積・表面積', description: '立体の大きさを計算しよう。', grades: '小学5年生～中学1年生', enabled: false },
@@ -78,7 +73,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学4年生以上',
     enabled: true,
     templates: DICE_TEMPLATES,
-    levelNotes: ['★1 きほん：1回転がしたときの上の面・向かい合う面', '★2 標準：見えなかった面・2回転', '★3 チャレンジ：同じサイコロ探し・3回転'],
+    levelNotes: ['基本：1回転がしたときの上の面・向かい合う面', '標準：見えなかった面・2回転', '応用：同じサイコロ探し・3回転'],
   },
   // ⑦〜⑨
   { id: 'stacking', name: '積み木', description: '積み重ねた立方体の数を数えよう。', grades: '小学4年生～小学6年生', enabled: false },
@@ -92,7 +87,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学4年生～中学2年生',
     enabled: true,
     templates: PROJECTION_TEMPLATES,
-    levelNotes: ['★1 きほん：矢印の方向・真上から見た形', '★2 標準：正面図と右側面図・列の高さ', '★3 チャレンジ：3方向の図から立体を推理・ありえない図'],
+    levelNotes: ['基本：矢印の方向・真上から見た形', '標準：正面図と右側面図・列の高さ', '応用：3方向の図から立体を推理・ありえない図'],
   },
 ]);
 

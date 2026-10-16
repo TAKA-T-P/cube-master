@@ -2,8 +2,8 @@
  * トレーニング設定画面（難易度・問題数）
  */
 import { h } from '../utils/dom.js';
-import { segmented, button } from './components.js';
-import { getCategory, DIFFICULTIES, QUESTION_LIMITS, DEFAULT_SETTINGS } from '../questions/questionRegistry.js';
+import { segmented, slider, button } from './components.js';
+import { getCategory, DIFFICULTIES, QUESTION_LIMIT_RANGE, DEFAULT_SETTINGS } from '../questions/questionRegistry.js';
 import { startTraining, getSettings } from './trainingStore.js';
 
 export function mountTrainingSetupScreen(container, { navigate, params }) {
@@ -17,13 +17,10 @@ export function mountTrainingSetupScreen(container, { navigate, params }) {
   const prev = getSettings();
   const initial = prev?.category === category.id ? prev : DEFAULT_SETTINGS;
 
-  const difficulty = segmented(
-    '難易度',
-    DIFFICULTIES.map((d) => ({ value: d.value, label: d.value === 'all' ? d.label : `${d.label} ${d.name}` })),
-    initial.difficulty,
-    () => {},
-  );
-  const limit = segmented('問題数', QUESTION_LIMITS, initial.questionLimit, () => {});
+  const difficulty = segmented('難易度', DIFFICULTIES, initial.difficulty, () => {});
+  const { min, max } = QUESTION_LIMIT_RANGE;
+  const initialLimit = Number.isInteger(initial.questionLimit) ? Math.min(max, Math.max(min, initial.questionLimit)) : DEFAULT_SETTINGS.questionLimit;
+  const limit = slider('問題数', { min, max, unit: '問' }, initialLimit, () => {});
   const start = button(
     'スタート',
     () => {
