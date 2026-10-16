@@ -24,7 +24,6 @@ export function mountTrainingResultScreen(container, { navigate }) {
   endReview(); // 復習から戻ってきたとき
   const category = getCategory(summary.category);
   const percent = Math.round(summary.accuracy * 100);
-  const limitLabel = Number.isInteger(summary.questionLimit) ? `${summary.questionLimit}問` : '';
 
   const historyList = h(
     'ol',
@@ -75,12 +74,9 @@ export function mountTrainingResultScreen(container, { navigate }) {
           h('dd', {}, category?.name ?? summary.category),
           h('dt', {}, '難易度'),
           h('dd', {}, difficultyLabel(summary.difficulty)),
-          h('dt', {}, '問題数'),
-          h('dd', {}, limitLabel),
         ),
         summary.history.length > 0 ? historyList : null,
         summary.history.length > 0 ? h('p', { class: 'setup-note' }, '「第◯問」を押すと、その問題をもう一度解けます（結果は変わりません）。') : null,
-        h('p', { class: 'setup-note' }, '「おしい」（△）は正解の数に入りません。'),
       ),
       h(
         'div',
