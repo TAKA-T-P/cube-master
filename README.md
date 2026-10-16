@@ -5,10 +5,11 @@
 
 公開ページ：https://taka-t-p.github.io/cube-master/
 
-**現在は Phase 3（Ver.0.4.0）**：3D 立方体ビューア（Phase 0）、共通の問題エンジンと「位置関係」（Phase 1）、
-「サイコロ・回転」「積み木の見え方・投影図」（Phase 2）に加えて、「展開図と頂点・辺」「展開図パズル」の2カテゴリと、
-展開図の折りたたみの数学エンジン・3D 折りたたみアニメーションを実装しています。
-5カテゴリ・39種類の問題テンプレートで遊べます。段位認定・タイマー・成績の保存・効果音はまだありません。
+**現在は Phase 4（Ver.0.5.0）**：3D 立方体ビューア（Phase 0）、共通の問題エンジンと「位置関係」（Phase 1）、
+「サイコロ・回転」「積み木の見え方・投影図」（Phase 2）、「展開図と頂点・辺」「展開図パズル」と 3D 折りたたみ（Phase 3）に加えて、
+「⑦小立方体の個数・着色」カテゴリ（分割・着色の数学エンジン、分割 → 分離 → 強調の 3D 演出）と、
+トレーニングの学習支援（全カテゴリのヒント、間違えた問題の復習、カテゴリ別の学習記録のブラウザ保存）を実装しています。
+6カテゴリ・47種類の問題テンプレートで遊べます。段位認定（90秒）・タイマーはまだありません。
 
 - 技術：HTML / CSS / JavaScript（ES Modules）、Vite、Three.js（OrbitControls・Raycaster・CSS2DRenderer）、Vitest
 - サーバー・データベース不要の静的サイト（GitHub Pages で公開）
@@ -34,14 +35,16 @@ npm run preview    # ビルド結果の確認 → http://localhost:4173/cube-mas
 
 ```text
 トップ ─┬─ 3D立方体をためす（Phase 0 のプレビュー）
-        ├─ トレーニング → カテゴリ選択 → 設定（難易度・問題数）→ 問題 ⇄ 解答・解説 → 結果
+        ├─ トレーニング → カテゴリ選択 → 設定（難易度・問題数）→ 問題 ⇄ 解答・解説 → 結果 → 復習 → 復習の結果
+        │                    └─ 学習記録（カテゴリ別の記録・保存した問題の復習・記録の消去）
         ├─ 段位認定（準備中）
         └─ あそびかた
 ```
 
 ### トレーニング
 
-1. **カテゴリ選択**：10 カテゴリを表示。遊べるのは「①展開図と頂点・辺」「③位置関係」「④展開図パズル」「⑥サイコロ・回転」「⑩積み木の見え方・投影図」（ほかは準備中）
+1. **カテゴリ選択**：10 カテゴリを名前だけの小さなボタンで表示。遊べるのは「①展開図と頂点・辺」「③位置関係」「④展開図パズル」「⑥サイコロ・回転」「⑦小立方体の個数・着色」「⑩積み木の見え方・投影図」（ほかは準備中）。
+   ボタンを押すと、画面下（固定）に説明・対象学年と「次へ」が出ます。右上の「学習記録」で記録を見られます
 2. **設定**：難易度（基本／標準／応用／すべて）と問題数（スライダーで1〜20問。初期値は5問）
 3. **問題**：問題文を読み、選択肢から答えて「回答する」。回答すると、同じ位置のボタンが「次の問題へ」（最後の問題では「結果を見る」）に変わります
    - 問題の基準になる辺・面は **オレンジ** で表示され、正解表示中も消えません（位置関係）
@@ -55,13 +58,27 @@ npm run preview    # ビルド結果の確認 → http://localhost:4173/cube-mas
      和が7ではない配置のサイコロは、目の代わりに **マーク（〇◎×●◇◆）** で表示します。答えの選択肢も面の絵で表示します
    - 図を選ぶ問題では、選択肢に見取図や面の図（ア〜エ）を表示します
    - 「すべて選ぼう」の問題はチェック形式、「1つ選ぼう」の問題はラジオ形式
+   - **ヒント**：回答前に「ヒントを見る」で、考え方の手がかりを表示します（答えは出しません。何度見ても同じ内容）。
+     ヒントを使っても正誤判定・正答率は変わりません（使ったかどうかは学習記録に残します）
+   - 小立方体の問題では、3D の場所に静的な見取図（分割線・色を塗った面・取り除いた小立方体の赤い点線）を表示し、回答すると 3D に切りかわります
 4. **解答・解説**：「正解！」「おしい！」「不正解」と解説を表示
    - 3D では、誤って選んだ要素が **赤**、正解の要素が **緑** で1つずつ光ります
    - サイコロでは立方体が実際に回転し、積み木ではカメラが矢印の方向（正面・右・真上など）へ移動して答えを確かめられます
-   - 「もう一度見る」でリプレイ、「スキップ」で演出を飛ばせます
+   - 回答すると「○」「△」「×」が効果音とともに約1秒大きく出て、そのあと解説を表示します（タップですぐ閉じる）
+   - 小立方体では、境界線が現れて小立方体に分かれ、少しはなれてから、条件に合う小立方体が緑の輪郭（ほかは半透明）で光り、個数を表示します。
+     「元に戻す」「分離して見る」で切りかえられます
+   - 3D の下の「もう一度見る」でリプレイ、「スキップ」で演出を飛ばせます
    - 「おしい！」は正解・不正解のちがいが1つだけのとき。正答率には完全正解だけを数えます
-5. **結果**：正解数・出題数・正答率・難易度。「もう一度挑戦」「設定を変更」「カテゴリ選択に戻る」
+5. **結果**：正解数・正答率・カテゴリ・難易度。「間違えた問題を復習」「もう一度挑戦」「設定を変更」「カテゴリ選択に戻る」
    - 「やめる」は確認のうえ、回答済みの分の結果を表示します
+   - 「第◯問」のカードを押すと、その問題を1問だけ解き直せます
+6. **復習**：「間違えた問題を復習（N問）」で、不正解・おしいだった問題を **同じ問題（同じ図・条件・正解・選択肢の並び）** のまま解き直します（0問ならボタンを出しません）
+   - 終わると「復習の結果」（復習した問題数・正解できた数・復習の正答率）を表示。まだ間違えている問題があれば、続けて復習できます
+   - 復習の結果は、もとのトレーニングの結果（正解数・正答率・学習記録の累計）には入れません
+7. **学習記録**：カテゴリ別に累計問題数・累計正解数・正答率・練習回数・ヒントの回数・難易度別の正答率・最近の結果・復習待ちの問題数を表示します
+   - 未プレイのカテゴリは「まだ記録がありません」
+   - 間違えた問題はブラウザに保存され、後日「復習する」で同じ問題を復習できます（正しく解けた問題は復習待ちから外れます）
+   - 「学習記録を消去」（学習記録画面・あそびかた）で、確認のうえ CUBE MASTER の保存データだけを消せます
 
 ### 画面のレイアウト
 
@@ -206,6 +223,42 @@ v.setCameraPreset([-4, 3, -5]);                           // 視点を変えて�
 - 立方体になるかどうかは、すべて折りたたみ計算で判定します。立方体にならない図は、回答後に重なるマスを赤で示します
 - 解説の「〔choice:ID〕」は、表示するときに選択肢の記号（ア・イ…）に置きかわります（選択肢の並びはシャッフル後に決まるため）
 
+## 小立方体の個数・着色の問題テンプレート
+
+大きな立方体を規則的に n 等分し、**小立方体の位置（角・辺・面の中央・内部）・個数・着色** を考えます。
+積み木（⑩）とちがい、投影図（どの方向から見た形か）は扱いません。
+
+| ID | 難易度 | 内容 | 例 | 分ける数 |
+|---|---|---|---|---|
+| B01 | ★1 | 3面に色がつく小立方体 | 表面に色を塗り 3×3×3 に切り分けた。3面に色がついているのは何個？ | 2〜4 |
+| B02 | ★1 | 2面に色がつく小立方体 | 4×4×4 で、ちょうど2面に色がつくのは何個？ | 3・4 |
+| B03 | ★2 | 1面だけ色がつく小立方体 | 4×4×4 で、1面だけ色がつくのは何個？ | 3〜5 |
+| B04 | ★2 | 色がついていない小立方体 | 5×5×5 で、1面も色がついていないのは何個？ | 3〜5 |
+| B05 | ★2 | 一部の面だけ着色 | 上面と前面だけを塗り 3×3×3 に。ちょうど2面に色がつくのは何個？（となり合う・向かい合う2面、角に集まる3面など） | 3・4 |
+| B06 | ★3 | 条件の組み合わせ | 4×4×4 で、色のついた面が0面または1面なのは何個？ | 4・5 |
+| B07 | ★3 | 小立方体を取り除く | 3×3×3 から、図の赤い点線の小立方体（角・辺の列・つきぬける列など）を取り除いた残りは何個？（重なりを2回数えない） | 3・4 |
+| B08 | ★3 | 分けた数を逆算 | 2面に色がついた小立方体が24個だった。1辺を何等分した？（答えがただ1つに決まる個数だけ） | 3〜5 |
+
+- 小立方体は整数座標 `{ x, y, z }`（各軸 0〜n-1。x 右・y 上・z 手前）で管理します（`src/core/subdividedCube.js`）。3D の座標とは分けています
+- 着色は **切り分ける前の大きな立方体の外側の面** に塗った色です。切り口（新しく現れた面）には色がつきません（`src/core/cubePainting.js`）
+- 正解は公式ではなく、すべての小立方体を1個ずつ調べて着色面の数を数えて求めます（一部の面だけ塗る・取り除くにも同じ方法で対応）。
+  6面すべてを塗ったときの公式（3面 8・2面 12(n-2)・1面 6(n-2)²・0面 (n-2)³、n=2 は8個すべて3面）はテストと解説で使います
+- 選択肢は4つ。正解を必ず含み、同じ値・負の数をふくみません。B08 は 2〜8 等分のうち同じ個数になる分け方がないものだけを出題します
+- 見取図（回答前）・3D（回答後）・正解の計算・演出で強調する小立方体は、すべて同じデータから作ります
+- 3D（`src/three/subdividedCubeModel.js`）は InstancedMesh で描き（125 個でも描画オブジェクトは十数個）、境界線の濃さ（分割）・すきま（分離）・強調／半透明を切りかえます
+
+## ヒント・復習・学習記録
+
+- **ヒント**：問題データの `hint: { text }`。既存39テンプレートは `src/questions/hints.js`（基準の辺・面の名前を入れた文など）、
+  小立方体は各テンプレートで付けます。`TrainingSession.useHint()` は回答前だけ使え、`history[].hintUsed`・`summary.hintUsedCount` に記録します（減点なし）
+- **復習**：`TrainingSession` に出題した問題データそのもの（`questions` オプション）を渡して解き直します。ランダムに作り直さないので、別の問題になりません
+- **保存**（`localStorage`。キーはすべて `cubeMaster:` で始まる）
+  - `cubeMaster:history`：カテゴリ別の学習記録（`src/core/learningHistory.js`。`version: 1`）
+  - `cubeMaster:review`：間違えた問題（`src/core/reviewManager.js`。1件ごとに `schemaVersion`・`category`・`templateId`・`problemKey`・問題データ・`lastIncorrectAt`・`incorrectCount`）
+  - 個人情報（名前・ID）は保存しません。保存数はカテゴリごと15問・全体60問・約1.2MB まで（古いものから消す）
+  - 読み込むときは必ず形を確かめ、こわれた値は直すか捨てます。問題の `schemaVersion`（`QUESTION_SCHEMA_VERSION`）が今とちがう・データが不正・テンプレートがなくなった問題は、作り直さずに除外します
+  - `localStorage` が使えない環境（プライベートモードなど）でも練習でき、記録はページを閉じるまでメモリに残ります。保存に失敗したときは1度だけお知らせを出します
+
 ## 展開図の数学エンジン
 
 - **格子データ**（`src/core/cubeNet.js`）：展開図は整数格子上のマス `{ id, x, y }` の集まり（x は右、y は下）。
@@ -256,6 +309,11 @@ cube-master/
 │   │   ├── cubeNetCatalog.js      6マスの図形 35 種類・立方体の展開図 11 種類
 │   │   ├── cubeNetFolding.js      折りたたみの計算と成立判定
 │   │   ├── cubeNetMapping.js      展開図の点・辺・マス → 立方体の頂点・辺・面
+│   │   ├── subdividedCube.js      小立方体に分けた立方体（座標・外側の面・角／辺の列・取り除き）
+│   │   ├── cubePainting.js        着色面の数の計算・公式
+│   │   ├── storageManager.js      localStorage の安全な窓口（cubeMaster: のキーだけ・容量制限・失敗してもエラーにしない）
+│   │   ├── learningHistory.js     学習記録（カテゴリ別・難易度別の集計、形の確かめ）
+│   │   ├── reviewManager.js       間違えた問題の保存データ（スナップショット・確かめ・上限）
 │   │   ├── questionSchema.js      問題データの共通スキーマとバリデーション
 │   │   ├── questionEngine.js      QuestionPicker（抽出・重複管理・シャッフル）/ TrainingSession（進行）
 │   │   ├── answerValidator.js     正誤判定（集合比較・差分）
@@ -272,7 +330,9 @@ cube-master/
 │   │   ├── dice/                  サイコロ・回転：diceGenerators（D01〜D06）/ diceExplanations
 │   │   ├── projection/            積み木の見え方・投影図：projectionGenerators（V01〜V06）/ projectionExplanations
 │   │   ├── netMapping/            展開図と頂点・辺：netMappingGenerators（N01〜N06）/ netMappingExplanations
-│   │   └── netPuzzle/             展開図パズル：netPuzzleGenerators（C01〜C06）/ netPuzzleExplanations
+│   │   ├── netPuzzle/             展開図パズル：netPuzzleGenerators（C01〜C06）/ netPuzzleExplanations
+│   │   ├── paintedCube/           小立方体の個数・着色：paintedCubeGenerators（B01〜B08）/ paintedCubeExplanations（解説・ヒント）
+│   │   └── hints.js               既存カテゴリのヒント
 │   ├── three/                     3D 描画・操作
 │   │   ├── cubeViewer.js          3D 機能の窓口（UI はこの API だけを使う）
 │   │   ├── sceneManager.js / cubeModel.js / cubeControls.js / cubeSelection.js
@@ -282,11 +342,17 @@ cube-master/
 │   │   ├── faceDecoration.js      サイコロの目（面の装飾）の 3D 表示
 │   │   ├── cubeRotationAnimations.js  向きと 3D の同期・転がる回転・カメラ移動・回転つき正解演出
 │   │   ├── blockModel.js          積み木の 3D モデル（小立方体・境界線・影・赤い矢印・列の強調）
-│   │   └── cubeNetModel.js        展開図の 3D モデル（ちょうつがいで折りたたむパネル・点と辺の印）
+│   │   ├── cubeNetModel.js        展開図の 3D モデル（ちょうつがいで折りたたむパネル・点と辺の印）
+│   │   └── subdividedCubeModel.js 小立方体の 3D モデル（InstancedMesh・着色の板・分割／分離／強調・個数の表示）
 │   ├── ui/                        画面
 │   │   ├── homeScreen / previewScreen / helpScreen
 │   │   ├── categoryScreen / trainingSetupScreen / questionScreen / trainingResultScreen
-│   │   ├── trainingStore.js       トレーニングの進行状態（メモリのみ）
+│   │   ├── trainingStore.js       トレーニング・復習の進行状態
+│   │   ├── learningStore.js       学習記録・復習データの読み込みと保存
+│   │   ├── reviewScreen.js        復習の結果画面
+│   │   ├── learningHistoryScreen.js 学習記録画面
+│   │   ├── paintedCubeVisuals.js  小立方体の見取図の SVG
+│   │   ├── answerSplash.js / answerSound.js  回答直後の「○△×」と効果音
 │   │   ├── visualChoices.js       図（見取図 SVG・面・サイコロの目・回転の手順・見えていない面）の描画
 │   │   ├── blockVisuals.js        積み木の見取図・投影図の SVG
 │   │   ├── netVisuals.js          展開図の SVG（ラベル・候補マス・重なるマスの印）
@@ -319,7 +385,7 @@ ID は表記ゆれを正規化して扱います（`"BA"` → 辺 `AB`、`"FGCB"
 
 ## 自動テスト
 
-`npm run test` で 23 ファイル / 443 テストを実行します。
+`npm run test` で 26 ファイル / 533 テストを実行します。
 
 | ファイル | 内容 |
 |---|---|
@@ -333,7 +399,7 @@ ID は表記ゆれを正規化して扱います（`"BA"` → 辺 `AB`、`"FGCB"
 | `animationManager.test.js` | 再生・一時停止・スキップ・キャンセル・エラー時に操作ロックが残らない、90°回転デモ |
 | `cubeInteraction.test.js` | Raycaster 選択、カメラ初期位置・視点リセット・操作ロック |
 | `ui.test.js` | トップ・ヘルプ・3D プレビュー画面の結線 |
-| `trainingUi.test.js` | カテゴリ選択・設定・問題表示・回答確定とロック・正誤表示・リプレイ・次の問題・結果・途中終了・エンドレス・画面の開き直し、サイコロ・積み木の問題画面（回答前の表示・回転演出・図の選択肢・WebGL 非対応時） |
+| `trainingUi.test.js` | カテゴリ選択・設定・問題表示・回答確定とロック・正誤表示・リプレイ・次の問題・結果・途中終了・画面の開き直し、サイコロ・積み木・展開図・小立方体の問題画面、「○△×」の表示、ヒント（全カテゴリ）、1問・間違えた問題・保存した問題の復習と復習の結果、学習記録画面・開き直し・消去・保存できない環境 |
 | `cubeOrientation.test.js` | 6方向の回転の定義、4回で元に戻る・逆回転で戻る、24通りの姿勢と閉じていること、向かい合う面の関係、鏡映し、手順の探索、回転しても目が同じ面のまま、目の並びの見え方、パズルの検証 |
 | `diceProjectionQuestions.test.js` | D01〜D06 の全基準×複数シードで生成、正解が選択肢に含まれ1つだけ、提示した情報だけで答えが一意に決まる、鏡映しの判定、問題文と回転の手順の一致、図の選択肢のデータ、200問の連続出題 |
 | `cubeRotationAnimations.test.js` | 回転後の 3D の向きが数学上の向きと一致、途中経過、3回連続、スキップ・キャンセル・操作ロック、リプレイと次の問題、カメラ移動、面の装飾 |
@@ -345,6 +411,9 @@ ID は表記ゆれを正規化して扱います（`"BA"` → 辺 `AB`、`"FGCB"
 | `cubeNet.test.js` | 回転・裏返し・平行移動、6マスの図形 35 種類と展開図 11 種類、11種類の全向き・全基準で折りたためる、不成立の理由、点・辺・面の対応、向きを変えても矛盾しない |
 | `netQuestions.test.js` | N01〜N06・C01〜C06 の全基準×複数シードで生成、正解が折りたたみの対応・成立判定と一致、選択肢の重複なし、複数解、11種類がかたよらない |
 | `cubeNetModel.test.js` | 3D の折りたたみが数学の計算と一致（11種類）、平らな状態、逆再生、重なる点が集まる、演出のリプレイ・スキップ・キャンセル |
+| `paintedCube.test.js` | n 等分で n³ 個・重複なし、角・辺・面・内部の分類、着色面数が 0〜3 で公式と一致（n=2〜6）・合計が n³、一部の面だけ着色、取り除き（重なり）、B01〜B08 の全基準で生成・正解が計算と一致・選択肢4つで重複なし、演出の強調と正解の一致、連続出題、3D の位置・分離・着色の板・強調と半透明・前の問題が残らない・リプレイ／スキップ |
+| `learningData.test.js` | 保存（読み書き・こわれた値・使えない保存先・容量・CUBE MASTER のキーだけ消去）、学習記録（カテゴリ別・難易度別・ヒント・最近の結果・復習は別に数える・古い形のデータ）、復習データ（回答前の問題の復元・正解で外す・schemaVersion ちがいを除外・上限）、全カテゴリの問題を JSON で保存して復元、ヒント（全47テンプレート・答えを書かない・回答前だけ・正誤は変わらない） |
+| `answerSound.test.js` | 効果音（Web Audio がなくてもエラーにならない・正解／おしい／不正解／結果画面の音） |
 | `netVisuals.test.js` | 展開図の SVG（マス・ラベル・点のラベルの位置・候補・重なるマス・マーク）、サイコロの見取図の「上・前・右」 |
 
 ### 手動確認項目（自動テストが難しいもの）
@@ -376,6 +445,13 @@ ID は表記ゆれを正規化して扱います（`"BA"` → 辺 `AB`、`"FGCB"
 - [ ] 展開図パズル：立方体にならない図の重なるマスが、回答後に赤で示される
 - [ ] サイコロ：はじめの向きの図に「上・前・右」が書いてあり、どこが前かわかる
 - [ ] 回答すると「回答する」ボタンが同じ場所で「次の問題へ」に変わる
+- [ ] ⑦小立方体の個数・着色を選べ、B01〜B08 が遊べる。見取図の分割線・色を塗った面・取り除いた小立方体の赤い点線がわかりやすい
+- [ ] 小立方体：回答すると 3D が自然に分かれて少しはなれ、条件に合う小立方体だけが緑で光る（内側の小立方体も見える）。個数の表示が正解と一致する
+- [ ] 小立方体：「もう一度見る」「スキップ」「元に戻す／分離して見る」「視点リセット」が動き、自由に回せる
+- [ ] すべてのカテゴリで「ヒントを見る」が動き、ヒントを見たあとも回答できる
+- [ ] 「間違えた問題を復習」で同じ問題が出て、復習の結果が正しい。もとの結果は変わらない
+- [ ] 学習記録が保存され、ブラウザを開き直しても残る。保存した問題を復習でき、「学習記録を消去」で消える
+- [ ] スマホでも 3D の領域が回答操作をさまたげない
 - [ ] 開発者ツールのコンソールに警告・エラーが出ない
 
 ## GitHub Pages への公開
@@ -412,6 +488,8 @@ Actions 画面の「Run workflow」から手動実行もできます。
   `scene.orientation`（はじめの向き）、`scene.showLabels`、`scene.interaction`（回答前後の回転・ズームの可否）、
   `visuals`（問題の図）、`choices[].visual`（選択肢の図）、`choices[].labelByPosition`（ア〜エを並び順で付ける）、
   `explanation.reveal.steps`（`{ type: 'rotate', moves }`・`{ type: 'camera', direction }`・`{ type: 'pause', ms }`）
+- Phase 4 で追加：`scene.model: 'subcubes'`・`scene.subcubes`（`{ divisions, paintedFaces, removed }`）、図の種類 `subcubes`、
+  演出 `{ type: 'divide' }`・`{ type: 'separate', to }`・`{ type: 'highlightSubcubes', cubes, label }`、`hint: { text }`、`QUESTION_SCHEMA_VERSION`
 - Phase 3 で追加：`scene.model: 'net'`・`scene.net`（3D で折りたたむ展開図）・`scene.preview`（回答前に 3D の場所へ出す図）、
   図の種類 `net`、演出 `{ type: 'fold', to }`、`{ type: 'highlightBlocks', cubes }`、解説の `〔choice:ID〕`
 
@@ -429,7 +507,9 @@ Actions 画面の「Run workflow」から手動実行もできます。
 const session = new TrainingSession({ category, templates, difficulty: 1|2|3|'all', questionLimit: 10|'endless', rng });
 const q = session.nextQuestion();      // 問題（終了していれば null）
 const result = session.submit(['CD', 'EF', 'GH']); // { status: 'correct'|'partial'|'incorrect', hits, missing, wrong }
-session.hasNextQuestion(); session.finish(); session.getSummary(); // { answeredCount, correctCount, accuracy, history }
+session.hasNextQuestion(); session.finish(); session.getSummary(); // { answeredCount, correctCount, accuracy, hintUsedCount, history }
+session.useHint();                     // ヒントの文（回答前だけ。使ったことを記録）
+new TrainingSession({ category, questions: [q1, q2] }); // 決まった問題を順に出す（復習用）
 ```
 
 ### 数学（`src/core/cubeRelations.js`）
@@ -460,6 +540,7 @@ solveUnique({ values, known, oppositeSum, views }, answerOf); // 提示した情
 | 演出 | `playAnswerReveal({ wrong, correct })` `animations.play/pause/resume/skip/cancel/isPlaying` |
 | 立方体の向き（Phase 2） | `setFaceDecorations(faces｜null)` `setCubeOrientation(o)` `resetCubeOrientation()` `getCubeOrientation()` |
 | 回転演出（Phase 2） | `playCubeRotation({ direction, turns, duration })` `playCubeRotationSequence({ directions, durationPerTurn, pause })` `playQuestionReveal({ orientation, cameraPreset, steps, wrong, correct })` |
+| 小立方体（Phase 4） | `setSubcubes(spec｜null)` `getSubcubeState()` `getSubcubeSeparation()` `playSubcubeSeparation({ to, duration })` |
 | 積み木・展開図（Phase 2・3） | `setBlocks(cubes｜null, { arrows })` `highlightBlocks(cubes)` `setNet(spec｜null)` `setNetFold(t)` `getNetFold()` `playNetFold({ to, duration })` |
 | 表示 | `setFaceDisplayMode('opaque'｜'translucent'｜'wireframe')` `setLabelsVisible(bool)` |
 | イベント | `events.on('selection:change'｜'highlight:change'｜'camera:change'｜'animation:state'｜'input-lock:change', fn)` |
@@ -481,4 +562,10 @@ solveUnique({ values, known, oppositeSum, views }, answerOf); // 提示した情
   組み立て後にどの向きになるかも計算できる（`cubeFaceLabels` の向きの計算と組み合わせる）。展開図エディタやドラッグ操作にも同じデータが使える
 - **切断・内接立体**：展開図と同じく、数学データを `core` に置き、3D モデルを `three` に別モジュールで作る
 - 回転アニメーションは `createTurnSequence` / `createQuestionReveal` を使えば、どの問題からでも同じ動きで再生できる
-- 段位認定・90秒タイマー・成績の保存・効果音は後続 Phase で実装する
+- **Phase 5（90秒段位認定）への引き継ぎ**
+  - 出題は `QuestionPicker` をそのまま使える（カテゴリをまたいで出す場合は、複数カテゴリの `getTemplates()` を合わせて渡す）
+  - 結果の保存は `learningHistory` の `categories` と並べて新しい項目（例 `certification: { attempts, best, … }`）を追加し、`normalizeHistory` で確かめる。
+    形を変えるときは `HISTORY_VERSION` を上げて、古い version から移しかえる処理を `normalizeHistory` に書く
+  - ヒントの使用（`hintUsed`）は段位認定では使えないようにするか、別に数える
+  - 問題データの形を互換性のない形に変えたときは `QUESTION_SCHEMA_VERSION` を上げる（保存済みの復習問題は自動で除外される）
+- 立方体の切断・内接立体・最短経路は後続 Phase で実装する

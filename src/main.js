@@ -14,6 +14,8 @@ import { mountCategoryScreen } from './ui/categoryScreen.js';
 import { mountTrainingSetupScreen } from './ui/trainingSetupScreen.js';
 import { mountQuestionScreen } from './ui/questionScreen.js';
 import { mountTrainingResultScreen } from './ui/trainingResultScreen.js';
+import { mountReviewResultScreen } from './ui/reviewScreen.js';
+import { mountLearningHistoryScreen } from './ui/learningHistoryScreen.js';
 import { h, showToast } from './utils/dom.js';
 
 const ROUTES = {
@@ -24,6 +26,8 @@ const ROUTES = {
   setup: mountTrainingSetupScreen,
   question: mountQuestionScreen,
   result: mountTrainingResultScreen,
+  'review-result': mountReviewResultScreen,
+  history: mountLearningHistoryScreen,
 };
 
 const app = document.getElementById('app');

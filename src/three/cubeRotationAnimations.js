@@ -147,8 +147,11 @@ export function createCameraMove(controls, direction, { duration = 900, onUpdate
  *        | { type: 'pause', ms: number }
  *        | { type: 'highlightBlocks', cubes: {x,y,z}[] }   積み木の小立方体を緑にする
  *        | { type: 'fold', to: 0〜1, duration? }           展開図を折りたたむ（1）・展開図に戻す（0）
+ *        | { type: 'divide', duration? }                  小立方体の境界線が現れる（切り分ける）
+ *        | { type: 'separate', to: 0〜1, duration? }      小立方体どうしを少しはなす（1）・もとに戻す（0）
+ *        | { type: 'highlightSubcubes', cubes, label? }   条件に合う小立方体を緑に・ほかを半透明に・個数を表示
  */
-export function createQuestionReveal({ state, controls, highlights, blocks = null, net = null, onUpdate = () => {} }, spec) {
+export function createQuestionReveal({ state, controls, highlights, blocks = null, net = null, subcubes = null, onUpdate = () => {} }, spec) {
   const { orientation = INITIAL_ORIENTATION, cameraPreset = 'default', steps = [], wrong = [], correct = [] } = spec;
   const parts = [];
   if (wrong.length > 0) parts.push(createPop(highlights, wrong, { layer: 'wrong', duration: 400, onUpdate }), wait(250));
@@ -178,6 +181,36 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
         }),
         wait(300),
       );
+    } else if (step.type === 'divide' && subcubes) {
+      parts.push(tween({ duration: step.duration ?? 900, onUpdate: (t) => (subcubes.setDivision(t), onUpdate()) }), wait(250));
+    } else if (step.type === 'separate' && subcubes) {
+      let from = 0;
+      parts.push(
+        tween({
+          duration: step.duration ?? 900,
+          easing: easeInOutCubic,
+          onStart: () => {
+            from = subcubes.getSeparation();
+          },
+          onUpdate: (t) => {
+            subcubes.setSeparation(from + (step.to - from) * t);
+            onUpdate();
+          },
+        }),
+        wait(300),
+      );
+    } else if (step.type === 'highlightSubcubes' && subcubes) {
+      parts.push(
+        tween({
+          duration: 300,
+          onStart: () => {
+            subcubes.highlight(step.cubes, { label: step.label });
+            onUpdate();
+          },
+          onUpdate: () => {},
+        }),
+        wait(400),
+      );
     } else if (step.type === 'highlightBlocks' && blocks) {
       parts.push(
         tween({
@@ -201,6 +234,10 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
     highlights.clearLayer('correct');
     blocks?.clearHighlights();
     net?.setProgress(0); // 展開図は平らな状態から
+    // 小立方体は、切り分ける前の立方体から
+    subcubes?.clearHighlights();
+    subcubes?.setDivision(0);
+    subcubes?.setSeparation(0);
     state.set(orientation);
     controls.setHomeDirection(cameraPreset);
     controls.resetCamera({ animate: false });

@@ -17,7 +17,8 @@ import { ANSWER_STATUS } from '../core/answerValidator.js';
 import { difficultyLabel } from '../questions/questionRegistry.js';
 import { INITIAL_ORIENTATION } from '../core/cubeOrientation.js';
 import { renderVisual, renderChoiceContent } from './visualChoices.js';
-import { getSession, finishTraining, getReview, endReview } from './trainingStore.js';
+import { getSession, finishTraining, getReview, endReview, finishReview } from './trainingStore.js';
+import { recordReviewAnswer } from './learningStore.js';
 import { showAnswerSplash } from './answerSplash.js';
 import { playAnswerSound, playFinishSound } from './answerSound.js';
 
@@ -34,7 +35,7 @@ const INLINE_VISUALS = ['swatch', 'pip'];
 const LONG_LABEL = 9;
 
 export function mountQuestionScreen(container, { navigate, params }) {
-  // 復習（結果画面の「第◯問」から1問だけ解き直す）。もとのトレーニングの結果は変えない
+  // 復習（結果画面の「第◯問」・間違えた問題・保存した問題を解き直す）。もとのトレーニングの結果は変えない
   const isReview = params?.review !== undefined;
   const review = isReview ? getReview() : null;
   if (isReview && !review) {
@@ -62,14 +63,19 @@ export function mountQuestionScreen(container, { navigate, params }) {
 
   // ---------- 画面の骨組み ----------
   const progress = h('span', { class: 'quiz-progress' });
-  const difficulty = h('span', { class: 'badge badge--info' }, difficultyLabel(session.state.difficulty));
+  const difficulty = h('span', { class: 'badge badge--info' }, review ? '復習' : difficultyLabel(session.state.difficulty));
   const score = h('span', { class: 'quiz-score' });
   const quitButton = review
-    ? button('結果に戻る', () => backToResult(), 'btn--ghost')
+    ? review.kind === 'card'
+      ? button('結果に戻る', () => backToResult(), 'btn--ghost')
+      : button('復習をやめる', () => showReviewResult(), 'btn--ghost')
     : button(session.isEndless ? '終了する' : 'やめる', () => confirmQuit(), 'btn--ghost');
 
   const typeHint = h('p', { class: 'quiz-type' });
   const questionText = h('h2', { class: 'quiz-text', tabindex: '-1' });
+  // ヒント（回答前だけ。答えそのものは出さない）
+  const hintText = h('p', { class: 'quiz-hint', hidden: true, role: 'note' });
+  const hintButton = button('ヒントを見る', () => toggleHint(), 'btn--small btn--hint');
   const figures = h('div', { class: 'quiz-figures' });
   const viewport = h('div', { class: 'viewport viewport--quiz', 'aria-label': '3D立方体（ドラッグで回転）' });
   const legend = h(
@@ -95,7 +101,9 @@ export function mountQuestionScreen(container, { navigate, params }) {
   const skipButton = button('スキップ', () => viewer?.animations.skip(), 'btn--small btn--ghost');
   // 展開図の問題：組み立てた立方体と展開図を行き来する
   const netToggleButton = button('展開図に戻す', () => toggleNetFold(), 'btn--small');
-  const revealTools = [replayButton, skipButton, netToggleButton];
+  // 小立方体の問題：小立方体をはなす ⇄ もとに戻す
+  const separateButton = button('元に戻す', () => toggleSeparation(), 'btn--small');
+  const revealTools = [replayButton, skipButton, netToggleButton, separateButton];
   for (const b of revealTools) b.hidden = true;
   const feedback = h(
     'section',
@@ -108,7 +116,7 @@ export function mountQuestionScreen(container, { navigate, params }) {
   // 立方体の表示領域（画面に固定。答えが見えてしまう問題では回答するまで表示しない）
   // 回答前に 3D の代わりに表示する静的な図（積み木の見取図など）。回答すると同じ場所が 3D に切り替わる
   const previewEl = h('div', { class: 'quiz-preview', hidden: true });
-  const viewTools = h('div', { class: 'quiz-view__tools' }, replayButton, skipButton, netToggleButton, resetViewButton, faceModeButton);
+  const viewTools = h('div', { class: 'quiz-view__tools' }, replayButton, skipButton, netToggleButton, separateButton, resetViewButton, faceModeButton);
   const quizView = h('section', { class: 'quiz-view' }, viewport, previewEl, legend, viewTools);
   const quizRoot = h(
     'div',
@@ -122,7 +130,7 @@ export function mountQuestionScreen(container, { navigate, params }) {
       h(
         'div',
         { class: 'quiz-scroll' },
-        h('section', { class: 'quiz-question' }, typeHint, questionText, figures),
+        h('section', { class: 'quiz-question' }, typeHint, questionText, figures, h('div', { class: 'quiz-hint-row' }, hintButton), hintText),
         h('section', { class: 'quiz-answer' }, choicesEl, submitButton, feedback),
       ),
     ),
@@ -165,7 +173,9 @@ export function mountQuestionScreen(container, { navigate, params }) {
     const state = session.state;
 
     progress.textContent = review
-      ? `復習：第${review.number}問`
+      ? review.kind === 'card'
+        ? `復習：第${review.number}問`
+        : `復習 ${session.questionNumber} / ${review.total}`
       : session.isEndless
         ? `第${session.questionNumber}問`
         : `第${session.questionNumber}問 / ${state.questionLimit}問`;
@@ -189,6 +199,7 @@ export function mountQuestionScreen(container, { navigate, params }) {
       viewer.setFaceDecorations(decorated && !isBlocks ? q.scene.faces : null);
       viewer.setBlocks(isBlocks ? q.scene.blocks : null, { arrows: q.scene.arrows ?? [] });
       viewer.setNet?.(q.scene.model === 'net' ? q.scene.net : null);
+      viewer.setSubcubes?.(q.scene.model === 'subcubes' ? q.scene.subcubes : null);
       viewer.setCubeOrientation(q.scene.orientation ?? INITIAL_ORIENTATION);
       viewer.setLabelsVisible(q.scene.showLabels ?? true);
       // 色や数字の立方体は、隠れた面が透けて見えないように不透明にする
@@ -232,8 +243,14 @@ export function mountQuestionScreen(container, { navigate, params }) {
 
     feedback.hidden = true;
     submitButton.textContent = '回答する';
-    // もう一度見る・スキップ・展開図に戻すは、回答したあとだけ
+    // もう一度見る・スキップ・展開図に戻す・元に戻すは、回答したあとだけ
     for (const b of revealTools) b.hidden = true;
+    // ヒント：同じ問題では何度見ても同じ内容。ヒントのない問題ではボタンを出さない
+    hintText.hidden = true;
+    hintText.textContent = '';
+    hintButton.hidden = !q.hint?.text;
+    hintButton.textContent = 'ヒントを見る';
+    hintButton.setAttribute('aria-expanded', 'false');
     renderChoices();
     questionText.focus({ preventScroll: true });
   }
@@ -265,6 +282,10 @@ export function mountQuestionScreen(container, { navigate, params }) {
     const selected = selection.getSelected();
     selection.lock(); // 回答の変更を禁止
     const result = session.submit(selected);
+    // 回答したらヒントは閉じる（回答後は使わない）
+    hintButton.hidden = true;
+    hintText.hidden = true;
+    if (review) recordReviewAnswer(question, result.isCorrect);
     renderChoices();
     // 「○△×」を大きく出して効果音を鳴らし、消えてから正誤・解説・3D の演出を出す
     playAnswerSound(result.status);
@@ -291,9 +312,21 @@ export function mountQuestionScreen(container, { navigate, params }) {
     skipButton.hidden = !viewer;
     netToggleButton.hidden = question.scene.model !== 'net' || !viewer;
     netToggleButton.textContent = '展開図に戻す';
+    separateButton.hidden = question.scene.model !== 'subcubes' || !viewer;
+    separateButton.textContent = '元に戻す';
+    hintButton.hidden = true;
+    hintText.hidden = true;
     // 回答後にだけ見せる印（立方体にならない展開図の重なるマスなど）を表示する
     choicesEl.classList.add('choices--answered');
-    submitButton.textContent = review ? '結果に戻る' : session.hasNextQuestion() ? '次の問題へ' : '結果を見る';
+    submitButton.textContent = review
+      ? review.kind === 'card'
+        ? '結果に戻る'
+        : session.hasNextQuestion()
+          ? '次の問題へ'
+          : '復習の結果を見る'
+      : session.hasNextQuestion()
+        ? '次の問題へ'
+        : '結果を見る';
     submitButton.disabled = false;
     feedback.hidden = false;
     // スマホでは選択肢の下に結果が出るので、見える位置までスクロールする
@@ -362,6 +395,30 @@ export function mountQuestionScreen(container, { navigate, params }) {
     return text.replace(/〔choice:([^〕]+)〕/g, (_, id) => question.choices.find((c) => c.id === id)?.label ?? id);
   }
 
+  /** ヒントを見る ⇄ 隠す（回答前だけ） */
+  function toggleHint() {
+    if (!hintText.hidden) {
+      hintText.hidden = true;
+      hintButton.textContent = 'ヒントを見る';
+      hintButton.setAttribute('aria-expanded', 'false');
+      return;
+    }
+    const text = session.useHint();
+    if (!text) return;
+    hintText.textContent = `ヒント：${text}`;
+    hintText.hidden = false;
+    hintButton.textContent = 'ヒントを隠す';
+    hintButton.setAttribute('aria-expanded', 'true');
+  }
+
+  /** 小立方体をはなす ⇄ もとに戻す */
+  function toggleSeparation() {
+    if (!viewer?.playSubcubeSeparation) return;
+    const separated = viewer.getSubcubeSeparation() > 0.5;
+    viewer.playSubcubeSeparation({ to: separated ? 0 : 1 });
+    separateButton.textContent = separated ? '分離して見る' : '元に戻す';
+  }
+
   /** 組み立てた立方体 ⇄ 展開図 */
   function toggleNetFold() {
     if (!viewer?.playNetFold) return;
@@ -379,7 +436,9 @@ export function mountQuestionScreen(container, { navigate, params }) {
   function goNext() {
     viewer?.animations.cancel(); // 前問の演出を終わらせる
     if (review) {
-      backToResult();
+      if (review.kind === 'card') backToResult();
+      else if (session.hasNextQuestion()) showQuestion(session.nextQuestion());
+      else showReviewResult();
       return;
     }
     if (!session.hasNextQuestion()) {
@@ -396,6 +455,13 @@ export function mountQuestionScreen(container, { navigate, params }) {
     viewer?.animations.cancel();
     endReview();
     navigate('result');
+  }
+
+  /** 復習（間違えた問題・保存した問題）を終えて、復習の結果を見る */
+  function showReviewResult() {
+    viewer?.animations.cancel();
+    finishReview();
+    navigate('review-result');
   }
 
   async function confirmQuit() {

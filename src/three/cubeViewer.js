@@ -25,6 +25,7 @@ import { createRotationDemo, createFaceFlash, createAnswerReveal } from './cubeA
 import { createFaceDecorations } from './faceDecoration.js';
 import { createBlockModel } from './blockModel.js';
 import { createNetModel } from './cubeNetModel.js';
+import { createSubdividedCubeModel } from './subdividedCubeModel.js';
 import { tween } from './animationManager.js';
 import { createOrientationState, createTurnSequence, createQuestionReveal, DEFAULT_TURN_DURATION, DEFAULT_TURN_PAUSE } from './cubeRotationAnimations.js';
 
@@ -75,8 +76,12 @@ export function createCubeViewer(container) {
   // 展開図（展開図の問題のときだけ表示し、そのあいだ単一の立方体は隠す）
   const net = createNetModel();
   sceneManager.scene.add(net.root);
+
+  // 小立方体に分けた立方体（小立方体の個数・着色の問題のときだけ表示する）
+  const subcubes = createSubdividedCubeModel();
+  sceneManager.scene.add(subcubes.root);
   const updateCubeVisibility = () => {
-    model.root.visible = !blocks.root.visible && !net.root.visible;
+    model.root.visible = !blocks.root.visible && !net.root.visible && !subcubes.root.visible;
   };
 
   // 選択状態 → 見た目
@@ -223,6 +228,36 @@ export function createCubeViewer(container) {
         }),
       );
     },
+    // ----- 小立方体（Phase 4） -----
+    /**
+     * 小立方体に分けた立方体を表示する（null で消す）。はじめは切り分ける前の立方体
+     * @param {{ divisions: number, paintedFaces?: string[], removed?: {x,y,z}[] }|null} spec
+     */
+    setSubcubes(spec) {
+      subcubes.set(spec ?? null);
+      updateCubeVisibility();
+      render();
+    },
+    getSubcubeState: () => subcubes.getState(),
+    getSubcubeSeparation: () => subcubes.getSeparation(),
+    /** 小立方体をはなす（to = 1）・もとに戻す（to = 0）アニメーション */
+    playSubcubeSeparation: ({ to = 1, duration = 800 } = {}) => {
+      let from = 0;
+      return animations.play(
+        tween({
+          duration,
+          onStart: () => {
+            from = subcubes.getSeparation();
+            subcubes.setDivision(1);
+          },
+          onUpdate: (t) => {
+            subcubes.setSeparation(from + (to - from) * t);
+            render();
+          },
+        }),
+      );
+    },
+
     highlightBlocks(cubes) {
       blocks.highlight(cubes);
       render();
@@ -252,7 +287,7 @@ export function createCubeViewer(container) {
      * @param {{ orientation?, cameraPreset?, steps?, wrong?, correct? }} spec cubeRotationAnimations.createQuestionReveal 参照
      */
     playQuestionReveal: (spec) =>
-      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, blocks, net, onUpdate: render }, spec)),
+      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, blocks, net, subcubes, onUpdate: render }, spec)),
 
     /**
      * 回答後の正解演出（誤選択を赤 → 正解を1つずつ緑）。完了時に { status } で解決
@@ -273,6 +308,7 @@ export function createCubeViewer(container) {
       decorations.dispose();
       blocks.dispose();
       net.dispose();
+      subcubes.dispose();
       model.dispose();
       sceneManager.dispose();
       events.clear();

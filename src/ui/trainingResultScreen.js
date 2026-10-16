@@ -3,7 +3,7 @@
  */
 import { h } from '../utils/dom.js';
 import { button } from './components.js';
-import { getSummary, getSettings, startTraining, startReview, endReview } from './trainingStore.js';
+import { getSummary, getSettings, startTraining, startReview, startMistakeReview, getMistakes, endReview } from './trainingStore.js';
 import { getCategory, difficultyLabel } from '../questions/questionRegistry.js';
 
 function praise(accuracy, answered) {
@@ -23,6 +23,7 @@ export function mountTrainingResultScreen(container, { navigate }) {
   }
   endReview(); // 復習から戻ってきたとき
   const category = getCategory(summary.category);
+  const mistakes = getMistakes().length;
   const percent = Math.round(summary.accuracy * 100);
 
   const historyList = h(
@@ -81,6 +82,16 @@ export function mountTrainingResultScreen(container, { navigate }) {
       h(
         'div',
         { class: 'result-actions' },
+        // 不正解・部分正解の問題を、同じ問題のまま解き直す（0問ならボタンを出さない）
+        mistakes > 0
+          ? button(
+              `間違えた問題を復習（${mistakes}問）`,
+              () => {
+                if (startMistakeReview()) navigate('question', { review: 'mistakes' });
+              },
+              'btn--accent btn--large',
+            )
+          : null,
         button(
           'もう一度挑戦',
           () => {

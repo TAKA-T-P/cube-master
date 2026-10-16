@@ -55,8 +55,11 @@ export class QuestionPicker {
     const base = this._pickBase(template);
     const raw = template.build(base, this.rng);
     this._seq += 1;
+    // ヒント：問題が持っていなければテンプレートのヒント（文字列か、問題を受け取る関数）を付ける
+    const hintText = raw.hint?.text ?? (typeof template.hint === 'function' ? template.hint(raw) : template.hint);
     const question = assertValidQuestion({
       ...raw,
+      ...(hintText ? { hint: { text: hintText } } : {}),
       id: `${raw.category}-${raw.key.replace(':', '-')}-${String(this._seq).padStart(3, '0')}`,
       choices: shuffleChoices(raw.choices, this.rng),
     });
@@ -159,6 +162,7 @@ export class TrainingSession {
       selectedAnswers: [],
       answerLocked: false,
       lastResult: null,
+      hintUsed: false, // 今の問題でヒントを見たか（正誤判定には使わない。学習記録用）
       history: [],
       finished: false,
     };
@@ -200,7 +204,20 @@ export class TrainingSession {
     s.selectedAnswers = [];
     s.answerLocked = false;
     s.lastResult = null;
+    s.hintUsed = false;
     return s.currentQuestion;
+  }
+
+  /**
+   * ヒントを見る（回答前だけ）。同じ問題では何度見ても同じ内容
+   * @returns {string|null} ヒントの文（回答後・ヒントのない問題は null）
+   */
+  useHint() {
+    const s = this._state;
+    const text = s.currentQuestion?.hint?.text;
+    if (!text || s.answerLocked) return null;
+    s.hintUsed = true;
+    return text;
   }
 
   /** 回答中の選択を記録する（ロック後は変更しない） */
@@ -236,6 +253,7 @@ export class TrainingSession {
       correctAnswers: [...q.correctAnswers],
       status: result.status,
       isCorrect: result.isCorrect,
+      hintUsed: s.hintUsed,
       question: q, // 結果画面から同じ問題を復習するため
     });
     return result;
@@ -257,6 +275,7 @@ export class TrainingSession {
       answeredCount: s.answeredCount,
       correctCount: s.correctCount,
       accuracy: s.answeredCount === 0 ? 0 : s.correctCount / s.answeredCount,
+      hintUsedCount: s.history.filter((h) => h.hintUsed).length,
       history: [...s.history],
     };
   }

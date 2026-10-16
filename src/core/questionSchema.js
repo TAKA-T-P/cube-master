@@ -39,6 +39,14 @@
  *   scene.interaction  : { allowCameraRotationBeforeAnswer, allowZoomBeforeAnswer, allowCameraRotationAfterAnswer }
  *   visuals            : 問題文と一緒に表示する図（見取図・回転の手順・見えていない面の一覧）
  *   choices[].visual   : 選択肢の図（見取図・面・色見本）。図の選択肢は labelByPosition でア〜エを付ける
+ *
+ * Phase 4 で追加した項目（省略可）
+ *   scene.model: 'subcubes' と scene.subcubes { divisions, paintedFaces, removed }（小立方体に分けた立方体。core/subdividedCube）
+ *   図の種類 'subcubes'、演出 { type: 'divide' } { type: 'separate', to } { type: 'highlightSubcubes', cubes, label }
+ *   hint: { text }  回答前に「ヒントを見る」で表示する短いヒント（答えそのものは書かない）
+ *
+ * QUESTION_SCHEMA_VERSION：ブラウザに保存した復習用の問題が、今の形と合うかを確かめるための番号。
+ * 問題データの形を互換性のない形に変えたときは、この番号を上げる（古い保存データは読み込まずに除外する）。
  */
 import { isValidElementId } from './cubeGeometry.js';
 import { FACES } from './cubeConstants.js';
@@ -47,9 +55,12 @@ import { MOVE_IDS } from './cubeRotations.js';
 import { getBlockErrors } from './blockGeometry.js';
 import { foldNet } from './cubeNetFolding.js';
 import { PROJECTION_DIRECTIONS } from './blockProjection.js';
+import { isValidDivisions, getSubcubeListErrors, CUBE_SIDES } from './subdividedCube.js';
 
-export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube', 'blocks', 'net']);
-export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'pip', 'moves', 'faceList', 'blocks', 'projection', 'projectionPair', 'net']);
+export const QUESTION_SCHEMA_VERSION = 1;
+
+export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube', 'blocks', 'net', 'subcubes']);
+export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'pip', 'moves', 'faceList', 'blocks', 'projection', 'projectionPair', 'net', 'subcubes']);
 const INTERACTION_KEYS = ['allowCameraRotationBeforeAnswer', 'allowZoomBeforeAnswer', 'allowCameraRotationAfterAnswer'];
 
 export class QuestionValidationError extends Error {
@@ -108,6 +119,14 @@ export function getQuestionErrors(q) {
     for (const e of getBlockErrors(scene.blocks)) errors.push(`scene.blocks: ${e}`);
     if (!Array.isArray(scene.arrows) || !scene.arrows.every((a) => PROJECTION_DIRECTIONS.includes(a))) errors.push('scene.arrows が不正です');
     if (scene.preview !== undefined && !VISUAL_TYPES.includes(scene.preview?.type)) errors.push('scene.preview が不正です');
+  } else if (scene?.model === 'subcubes') {
+    const sc = scene.subcubes;
+    if (!sc || !isValidDivisions(sc.divisions)) errors.push('scene.subcubes.divisions が不正です');
+    else {
+      if (!Array.isArray(sc.paintedFaces) || !sc.paintedFaces.every((f) => CUBE_SIDES.includes(f))) errors.push('scene.subcubes.paintedFaces が不正です');
+      for (const e of getSubcubeListErrors(sc.removed ?? [], sc.divisions)) errors.push(`scene.subcubes.removed: ${e}`);
+    }
+    if (scene.preview !== undefined && !VISUAL_TYPES.includes(scene.preview?.type)) errors.push('scene.preview が不正です');
   } else if (scene && scene.model !== 'cube') {
     const faces = scene.faces ?? {};
     for (const f of FACES) {
@@ -150,9 +169,15 @@ export function getQuestionErrors(q) {
         if (!(step.to >= 0 && step.to <= 1)) errors.push('reveal の折りたたみが不正です');
       } else if (step.type === 'highlightBlocks') {
         if (!Array.isArray(step.cubes)) errors.push('reveal の強調する小立方体が不正です');
-      } else if (step.type !== 'pause') errors.push(`reveal の種類が不正です: ${step.type}`);
+      } else if (step.type === 'separate') {
+        if (!(step.to >= 0 && step.to <= 1)) errors.push('reveal の分離が不正です');
+      } else if (step.type === 'highlightSubcubes') {
+        if (!Array.isArray(step.cubes) || getSubcubeListErrors(step.cubes, scene?.subcubes?.divisions ?? 0).length > 0) errors.push('reveal の強調する小立方体が不正です');
+      } else if (step.type !== 'pause' && step.type !== 'divide') errors.push(`reveal の種類が不正です: ${step.type}`);
     }
   }
+  // ヒント
+  if (q.hint !== undefined && !isNonEmptyString(q.hint?.text)) errors.push('hint.text が空です');
   return errors;
 }
 

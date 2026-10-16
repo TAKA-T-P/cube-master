@@ -17,6 +17,10 @@ const { mountTrainingResultScreen } = await import('../src/ui/trainingResultScre
 const store = await import('../src/ui/trainingStore.js');
 const { answerSplash } = await import('../src/ui/answerSplash.js');
 const sounds = await import('../src/ui/answerSound.js');
+const learning = await import('../src/ui/learningStore.js');
+const { mountReviewResultScreen } = await import('../src/ui/reviewScreen.js');
+const { mountLearningHistoryScreen } = await import('../src/ui/learningHistoryScreen.js');
+const { createMemoryBackend } = await import('../src/core/storageManager.js');
 
 // 回答直後の「○△×」は、専用のテスト以外では出さずにすぐ結果を表示する
 const SPLASH_DURATION = answerSplash.duration;
@@ -49,13 +53,18 @@ globalThis.__createFakeViewer = () => {
     setNet: vi.fn(),
     getNetFold: vi.fn(() => 1),
     playNetFold: vi.fn(),
+    // Phase 4
+    setSubcubes: vi.fn(),
+    getSubcubeSeparation: vi.fn(() => 1),
+    playSubcubeSeparation: vi.fn(),
   };
   return viewer;
 };
 
 const buttonByText = (root, text) => [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === text);
 const choiceButtons = (root) => [...root.querySelectorAll('.choice')];
-const currentQuestion = () => store.getSession().state.currentQuestion;
+// 復習中は復習の問題、そうでなければトレーニングの問題
+const currentQuestion = () => (store.getReview()?.session ?? store.getSession()).state.currentQuestion;
 
 /** 現在の問題に答える（correct=false なら誤答を1つ選ぶ） */
 function answer(root, { correct = true } = {}) {
@@ -73,7 +82,7 @@ describe('カテゴリ選択・設定画面', () => {
     container = document.createElement('main');
   });
 
-  it('10カテゴリを表示し、遊べる5カテゴリだけを選べる', () => {
+  it('10カテゴリを表示し、遊べる6カテゴリだけを選べる', () => {
     const navigate = vi.fn();
     mountCategoryScreen(container, { navigate });
     const cards = container.querySelectorAll('.category-card');
@@ -82,7 +91,7 @@ describe('カテゴリ選択・設定画面', () => {
     // ボタンは名前だけ（説明・対象学年は書かない）
     expect(position.textContent).toBe('位置関係');
     expect(position.textContent).not.toContain('小学6年生～中学1年生');
-    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['netMapping', 'position', 'netPuzzle', 'dice', 'projection']);
+    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['netMapping', 'position', 'netPuzzle', 'dice', 'paintedCube', 'projection']);
     // はじめは下の説明と「次へ」を出さない
     const detail = container.querySelector('.category-detail');
     expect(detail.hidden).toBe(true);
@@ -804,5 +813,282 @@ describe('回答直後の「○」「△」「×」', () => {
     vi.advanceTimersByTime(2000);
     expect(container.querySelector('.answer-splash')).toBeNull();
     expect(viewer.playAnswerReveal).not.toHaveBeenCalled();
+  });
+});
+
+describe('問題画面（小立方体の個数・着色）', () => {
+  let container;
+  let screen;
+  beforeEach(() => {
+    learning.configureLearningStorage(createMemoryBackend());
+    store.resetTrainingStore();
+    container = document.createElement('main');
+    document.body.append(container);
+  });
+  afterEach(() => {
+    screen?.unmount();
+    container.remove();
+  });
+  const start = (settings = {}) => {
+    store.startTraining({ category: 'paintedCube', difficulty: 1, questionLimit: 5, ...settings }, { rng: createRng(4) });
+    screen = mountQuestionScreen(container, { navigate: vi.fn() });
+  };
+
+  it('回答前は静的な見取図（分割線・着色）、回答すると 3D に切りかわり、分割 → 分離 → 強調の演出を再生する', () => {
+    start();
+    const q = currentQuestion();
+    expect(q.scene.model).toBe('subcubes');
+    expect(viewer.setSubcubes).toHaveBeenLastCalledWith(q.scene.subcubes);
+    const preview = container.querySelector('.quiz-preview');
+    expect(preview.hidden).toBe(false);
+    expect(preview.querySelector('svg.subcube-figure')).not.toBeNull();
+    expect(preview.querySelectorAll('[data-painted]').length).toBeGreaterThan(0);
+    expect(container.querySelector('.viewport').hidden).toBe(true);
+    expect(viewer.disableRotation).toHaveBeenCalled();
+    answer(container);
+    expect(container.querySelector('.viewport').hidden).toBe(false);
+    const spec = viewer.playQuestionReveal.mock.calls.at(-1)[0];
+    expect(spec.steps.map((st) => st.type)).toEqual(['pause', 'divide', 'separate', 'highlightSubcubes']);
+    expect(viewer.enableRotation).toHaveBeenCalled();
+    // 「元に戻す」⇄「分離して見る」
+    const toggle = buttonByText(container, '元に戻す');
+    expect(toggle.hidden).toBe(false);
+    toggle.click();
+    expect(viewer.playSubcubeSeparation).toHaveBeenCalledWith({ to: 0 });
+    expect(toggle.textContent).toBe('分離して見る');
+    // 次の問題では前の問題の表示を残さない
+    buttonByText(container, '次の問題へ').click();
+    expect(viewer.setSubcubes).toHaveBeenLastCalledWith(currentQuestion().scene.subcubes);
+    expect(buttonByText(container, '分離して見る').hidden).toBe(true);
+  });
+
+  it('ほかのカテゴリに切りかえると、小立方体は消える', () => {
+    store.startTraining({ category: 'position', difficulty: 1, questionLimit: 2 }, { rng: createRng(1) });
+    screen = mountQuestionScreen(container, { navigate: vi.fn() });
+    expect(viewer.setSubcubes).toHaveBeenLastCalledWith(null);
+  });
+});
+
+describe('ヒント', () => {
+  let container;
+  let screen;
+  beforeEach(() => {
+    learning.configureLearningStorage(createMemoryBackend());
+    store.resetTrainingStore();
+    container = document.createElement('main');
+    document.body.append(container);
+  });
+  afterEach(() => {
+    screen?.unmount();
+    container.remove();
+  });
+
+  it.each(['position', 'netMapping', 'netPuzzle', 'dice', 'paintedCube', 'projection'])('%s：回答前に「ヒントを見る」で表示でき、回答すると消える', (category) => {
+    store.startTraining({ category, difficulty: 'all', questionLimit: 3 }, { rng: createRng(6) });
+    screen = mountQuestionScreen(container, { navigate: vi.fn() });
+    const q = currentQuestion();
+    const hintButton = buttonByText(container, 'ヒントを見る');
+    const hint = container.querySelector('.quiz-hint');
+    expect(hintButton.hidden).toBe(false);
+    expect(hint.hidden).toBe(true);
+    hintButton.click();
+    expect(hint.hidden).toBe(false);
+    expect(hint.textContent).toBe(`ヒント：${q.hint.text}`);
+    expect(store.getSession().state.hintUsed).toBe(true);
+    hintButton.click(); // 隠す
+    expect(hint.hidden).toBe(true);
+    hintButton.click(); // もう一度見ても同じ
+    expect(hint.textContent).toBe(`ヒント：${q.hint.text}`);
+    answer(container, { correct: true });
+    expect(container.querySelector('.feedback__title').textContent).toBe('正解！'); // ヒントを使っても正誤は同じ
+    expect(hintButton.hidden).toBe(true);
+    expect(hint.hidden).toBe(true);
+    buttonByText(container, '次の問題へ').click();
+    expect(store.getSession().state.hintUsed).toBe(false);
+    expect(buttonByText(container, 'ヒントを見る').hidden).toBe(false);
+    expect(container.querySelector('.quiz-hint').hidden).toBe(true);
+  });
+});
+
+describe('間違えた問題の復習', () => {
+  let container;
+  const screens = [];
+  beforeEach(() => {
+    learning.configureLearningStorage(createMemoryBackend());
+    store.resetTrainingStore();
+    container = document.createElement('main');
+    document.body.append(container);
+  });
+  afterEach(() => {
+    for (const sc of screens.splice(0)) sc.unmount();
+    container.remove();
+  });
+  const mount = (fn, params) => {
+    container.replaceChildren();
+    const navigate = vi.fn();
+    screens.push(fn(container, { navigate, params }));
+    return navigate;
+  };
+  function finishWith(flags, category = 'position') {
+    const session = store.startTraining({ category, difficulty: 'all', questionLimit: flags.length }, { rng: createRng(9) });
+    for (const ok of flags) {
+      const q = session.nextQuestion();
+      session.submit(ok ? q.correctAnswers : [q.choices.find((c) => !q.correctAnswers.includes(c.id)).id]);
+    }
+    store.finishTraining();
+  }
+
+  it('全問正解なら「間違えた問題を復習」を出さない', () => {
+    finishWith([true, true]);
+    mount(mountTrainingResultScreen);
+    expect([...container.querySelectorAll('button')].some((b) => b.textContent.startsWith('間違えた問題を復習'))).toBe(false);
+  });
+
+  it('不正解・部分正解の問題だけを、同じ問題のまま解き直し、復習の結果を表示する（もとの結果は変わらない）', () => {
+    finishWith([true, false, true, false]);
+    const summary = store.getSummary();
+    const wrong = summary.history.filter((h) => !h.isCorrect).map((h) => h.question);
+    let navigate = mount(mountTrainingResultScreen);
+    buttonByText(container, '間違えた問題を復習（2問）').click();
+    expect(navigate).toHaveBeenCalledWith('question', { review: 'mistakes' });
+
+    navigate = mount(mountQuestionScreen, { review: 'mistakes' });
+    expect(container.querySelector('.quiz-progress').textContent).toBe('復習 1 / 2');
+    expect(store.getReview().session.state.currentQuestion).toBe(wrong[0]);
+    answer(container, { correct: true });
+    buttonByText(container, '次の問題へ').click();
+    expect(store.getReview().session.state.currentQuestion).toBe(wrong[1]);
+    expect(container.querySelector('.quiz-progress').textContent).toBe('復習 2 / 2');
+    answer(container, { correct: false });
+    buttonByText(container, '復習の結果を見る').click();
+    expect(navigate).toHaveBeenCalledWith('review-result');
+    expect(store.getSummary()).toBe(summary); // 通常の結果は上書きしない
+    expect(summary.correctCount).toBe(2);
+
+    navigate = mount(mountReviewResultScreen);
+    expect(container.querySelector('[data-testid="review-answered"]').textContent).toBe('2問');
+    expect(container.querySelector('[data-testid="review-correct"]').textContent).toBe('1問');
+    expect(container.querySelector('[data-testid="review-rate"]').textContent).toBe('50%');
+    // まだ間違えている問題をさらに復習
+    buttonByText(container, 'まだ間違えている問題を復習（1問）').click();
+    expect(navigate).toHaveBeenCalledWith('question', { review: 'retry' });
+    expect(store.getReview().session.state.currentQuestion ?? store.getReview().session.nextQuestion()).toBe(wrong[1]);
+    store.endReview();
+    buttonByText(container, '結果に戻る').click();
+    expect(navigate).toHaveBeenCalledWith('result');
+  });
+
+  it('「復習をやめる」でも、そこまでの復習の結果を表示する', () => {
+    finishWith([false, false]);
+    store.startMistakeReview();
+    const navigate = mount(mountQuestionScreen, { review: 'mistakes' });
+    answer(container, { correct: true });
+    buttonByText(container, '復習をやめる').click();
+    expect(navigate).toHaveBeenCalledWith('review-result');
+    expect(store.getReviewSummary()).toMatchObject({ answeredCount: 1, correctCount: 1 });
+  });
+});
+
+describe('学習記録', () => {
+  let container;
+  let backend;
+  const screens = [];
+  beforeEach(() => {
+    backend = createMemoryBackend();
+    learning.configureLearningStorage(backend);
+    store.resetTrainingStore();
+    container = document.createElement('main');
+    document.body.append(container);
+  });
+  afterEach(() => {
+    for (const sc of screens.splice(0)) sc.unmount();
+    container.remove();
+  });
+  const mount = (fn, params) => {
+    container.replaceChildren();
+    const navigate = vi.fn();
+    screens.push(fn(container, { navigate, params }));
+    return navigate;
+  };
+  function finishWith(flags, category = 'dice') {
+    const session = store.startTraining({ category, difficulty: 'all', questionLimit: flags.length }, { rng: createRng(12) });
+    for (const ok of flags) {
+      const q = session.nextQuestion();
+      if (!ok) session.useHint();
+      session.submit(ok ? q.correctAnswers : [q.choices.find((c) => !q.correctAnswers.includes(c.id)).id]);
+    }
+    store.finishTraining();
+    return session;
+  }
+  const card = (id) => container.querySelector(`.history-card[data-category="${id}"]`);
+
+  it('カテゴリ選択から開け、カテゴリ別の累計・正答率・復習待ちを表示する。未プレイは「まだ記録がありません」', () => {
+    const nav = mount(mountCategoryScreen);
+    buttonByText(container, '学習記録').click();
+    expect(nav).toHaveBeenCalledWith('history');
+
+    finishWith([true, false, true]);
+    mount(mountLearningHistoryScreen);
+    const dice = card('dice');
+    expect(dice.querySelector('[data-testid="answered"]').textContent).toBe('3問');
+    expect(dice.querySelector('[data-testid="correct"]').textContent).toBe('2問');
+    expect(dice.querySelector('[data-testid="accuracy"]').textContent).toBe('67%');
+    expect(dice.querySelector('[data-testid="pending"]').textContent).toBe('復習待ち 1問');
+    expect(dice.textContent).toContain('ヒント1回');
+    expect(card('position').textContent).toContain('まだ記録がありません');
+    expect(container.querySelectorAll('.history-card')).toHaveLength(6);
+  });
+
+  it('ブラウザを開き直しても記録が残り、保存した問題を同じ問題のまま復習できる。正解すると復習待ちから外れる', () => {
+    const session = finishWith([false, true]);
+    const wrong = session.getSummary().history[0].question;
+    // 開き直し（同じ保存先から読み込みなおす）
+    learning.configureLearningStorage(backend);
+    store.resetTrainingStore();
+    let navigate = mount(mountLearningHistoryScreen);
+    expect(card('dice').querySelector('[data-testid="answered"]').textContent).toBe('2問');
+    buttonByText(card('dice'), '復習する').click();
+    expect(navigate).toHaveBeenCalledWith('question', { review: 'saved' });
+    navigate = mount(mountQuestionScreen, { review: 'saved' });
+    const q = store.getReview().session.state.currentQuestion;
+    expect(q).toEqual(JSON.parse(JSON.stringify(wrong)));
+    expect(q.correctAnswers).toEqual(wrong.correctAnswers);
+    answer(container, { correct: true });
+    buttonByText(container, '復習の結果を見る').click();
+    expect(navigate).toHaveBeenCalledWith('review-result');
+    expect(learning.getSavedReviewCount('dice')).toBe(0);
+    navigate = mount(mountReviewResultScreen);
+    buttonByText(container, '学習記録に戻る').click();
+    expect(navigate).toHaveBeenCalledWith('history');
+    // 復習の結果は、通常の累計に入れない
+    expect(learning.getLearningStats('dice')).toMatchObject({ answeredCount: 2, correctCount: 1, reviewAnswered: 1, reviewCorrect: 1 });
+  });
+
+  it('「学習記録を消去」は確認してから、CUBE MASTER のデータだけを消す', async () => {
+    backend.setItem('otherApp:keep', '1');
+    finishWith([false]);
+    mount(mountLearningHistoryScreen);
+    buttonByText(container, '学習記録を消去').click();
+    const dialog = document.querySelector('.dialog-backdrop');
+    expect(dialog.textContent).toContain('学習記録を消去しますか？');
+    buttonByText(dialog, 'やめる').click();
+    await Promise.resolve();
+    expect(learning.getLearningStats('dice')).not.toBeNull();
+    buttonByText(container, '学習記録を消去').click();
+    buttonByText(document.querySelector('.dialog-backdrop'), '消去する').click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(learning.getLearningStats('dice')).toBeNull();
+    expect(learning.getSavedReviewCount('dice')).toBe(0);
+    expect(card('dice').textContent).toContain('まだ記録がありません');
+    expect(backend.getItem('otherApp:keep')).toBe('1');
+  });
+
+  it('保存できない環境でも練習でき、その旨を表示する', () => {
+    learning.configureLearningStorage(null);
+    finishWith([true, false]);
+    expect(store.getSummary().answeredCount).toBe(2);
+    mount(mountLearningHistoryScreen);
+    expect(container.textContent).toContain('この端末では記録を保存できません');
+    expect(learning.isLearningStorageAvailable()).toBe(false);
   });
 });
