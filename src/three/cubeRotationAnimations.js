@@ -146,8 +146,9 @@ export function createCameraMove(controls, direction, { duration = 900, onUpdate
  *        | { type: 'camera', direction: number[], duration? }
  *        | { type: 'pause', ms: number }
  *        | { type: 'highlightBlocks', cubes: {x,y,z}[] }   積み木の小立方体を緑にする
+ *        | { type: 'fold', to: 0〜1, duration? }           展開図を折りたたむ（1）・展開図に戻す（0）
  */
-export function createQuestionReveal({ state, controls, highlights, blocks = null, onUpdate = () => {} }, spec) {
+export function createQuestionReveal({ state, controls, highlights, blocks = null, net = null, onUpdate = () => {} }, spec) {
   const { orientation = INITIAL_ORIENTATION, cameraPreset = 'default', steps = [], wrong = [], correct = [] } = spec;
   const parts = [];
   if (wrong.length > 0) parts.push(createPop(highlights, wrong, { layer: 'wrong', duration: 400, onUpdate }), wait(250));
@@ -162,6 +163,21 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
       parts.push(createCameraMove(controls, step.direction, { duration: step.duration ?? 900, onUpdate }), wait(300));
     } else if (step.type === 'pause') {
       parts.push(wait(step.ms));
+    } else if (step.type === 'fold' && net) {
+      let from = 0;
+      parts.push(
+        tween({
+          duration: step.duration ?? 2400,
+          onStart: () => {
+            from = net.getProgress();
+          },
+          onUpdate: (t) => {
+            net.setProgress(from + (step.to - from) * t);
+            onUpdate();
+          },
+        }),
+        wait(300),
+      );
     } else if (step.type === 'highlightBlocks' && blocks) {
       parts.push(
         tween({
@@ -184,6 +200,7 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
     highlights.clearLayer('wrong');
     highlights.clearLayer('correct');
     blocks?.clearHighlights();
+    net?.setProgress(0); // 展開図は平らな状態から
     state.set(orientation);
     controls.setHomeDirection(cameraPreset);
     controls.resetCamera({ animate: false });

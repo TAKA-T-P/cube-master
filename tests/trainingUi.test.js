@@ -39,6 +39,9 @@ globalThis.__createFakeViewer = () => {
     disableZoom: vi.fn(),
     playQuestionReveal: vi.fn(),
     setBlocks: vi.fn(),
+    setNet: vi.fn(),
+    getNetFold: vi.fn(() => 1),
+    playNetFold: vi.fn(),
   };
   return viewer;
 };
@@ -63,7 +66,7 @@ describe('カテゴリ選択・設定画面', () => {
     container = document.createElement('main');
   });
 
-  it('10カテゴリを表示し、位置関係・サイコロ・回転・積み木の見え方・投影図を選べる', () => {
+  it('10カテゴリを表示し、遊べる5カテゴリだけを選べる', () => {
     const navigate = vi.fn();
     mountCategoryScreen(container, { navigate });
     const cards = container.querySelectorAll('.category-card');
@@ -71,8 +74,8 @@ describe('カテゴリ選択・設定画面', () => {
     const position = container.querySelector('[data-category="position"]');
     expect(position.textContent).toContain('平行・垂直・ねじれ');
     expect(position.textContent).toContain('小学6年生～中学1年生');
-    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['position', 'dice', 'projection']);
-    container.querySelector('[data-category="net"]').click(); // 準備中
+    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['netMapping', 'position', 'netPuzzle', 'dice', 'projection']);
+    container.querySelector('[data-category="cutting"]').click(); // 準備中
     position.click();
     container.querySelector('[data-category="dice"]').click();
     container.querySelector('[data-category="projection"]').click();
@@ -97,7 +100,7 @@ describe('カテゴリ選択・設定画面', () => {
 
   it('遊べないカテゴリはカテゴリ選択に戻す', () => {
     const navigate = vi.fn();
-    mountTrainingSetupScreen(container, { navigate, params: { category: 'net' } });
+    mountTrainingSetupScreen(container, { navigate, params: { category: 'cutting' } });
     expect(navigate).toHaveBeenCalledWith('categories');
   });
 });
@@ -530,5 +533,112 @@ describe('問題画面（積み木の見え方・投影図）', () => {
       globalThis.__createFakeViewer = original;
       spy.mockRestore();
     }
+  });
+});
+
+describe('回答ボタンが「次の問題へ」に変わる', () => {
+  let container;
+  let screen;
+  beforeEach(() => {
+    store.resetTrainingStore();
+    container = document.createElement('main');
+    document.body.append(container);
+  });
+  afterEach(() => {
+    screen?.unmount();
+    container.remove();
+  });
+
+  it('回答すると同じボタンが「次の問題へ」になり、最後の問題では「結果を見る」になる', () => {
+    const navigate = vi.fn();
+    store.startTraining({ category: 'position', difficulty: 1, questionLimit: 2 }, { rng: createRng(3) });
+    screen = mountQuestionScreen(container, { navigate });
+    const btn = buttonByText(container, '回答する');
+    answer(container);
+    expect(btn.textContent).toBe('次の問題へ');
+    expect(btn.disabled).toBe(false);
+    expect(buttonByText(container, '回答する')).toBeUndefined();
+    expect([...container.querySelectorAll('button')].filter((b) => b.textContent === '次の問題へ')).toHaveLength(1);
+    // 選択肢のすぐ下（解説より上）にある
+    expect(btn.compareDocumentPosition(container.querySelector('.feedback')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    btn.click();
+    expect(btn.textContent).toBe('回答する');
+    expect(btn.disabled).toBe(true);
+    answer(container);
+    expect(btn.textContent).toBe('結果を見る');
+    btn.click();
+    expect(navigate).toHaveBeenCalledWith('result');
+  });
+});
+
+describe('問題画面（展開図）', () => {
+  let container;
+  let navigate;
+  let screen;
+  const start = (settings) => {
+    store.startTraining({ questionLimit: 5, ...settings }, { rng: createRng(21) });
+    screen = mountQuestionScreen(container, { navigate });
+  };
+  beforeEach(() => {
+    store.resetTrainingStore();
+    container = document.createElement('main');
+    document.body.append(container);
+    navigate = vi.fn();
+  });
+  afterEach(() => {
+    screen?.unmount();
+    container.remove();
+  });
+
+  it('回答前は 3D の場所に展開図を表示し、3D の展開図を設定する', () => {
+    start({ category: 'netMapping', difficulty: 1 });
+    const q = currentQuestion();
+    expect(viewer.setNet).toHaveBeenLastCalledWith(q.scene.net);
+    expect(container.querySelector('.quiz-preview').hidden).toBe(false);
+    expect(container.querySelector('.quiz-preview svg.net-figure')).not.toBeNull();
+    expect(container.querySelector('.viewport').hidden).toBe(true);
+  });
+
+  it('回答すると 3D に切りかわって折りたたみの演出を再生し、「展開図に戻す」で逆再生できる', () => {
+    start({ category: 'netMapping', difficulty: 2 });
+    const q = currentQuestion();
+    answer(container);
+    expect(container.querySelector('.viewport').hidden).toBe(false);
+    const call = viewer.playQuestionReveal.mock.calls.at(-1)[0];
+    expect(call.steps).toEqual(q.explanation.reveal.steps);
+    const toggle = buttonByText(container, '展開図に戻す');
+    expect(toggle.hidden).toBe(false);
+    toggle.click();
+    expect(viewer.playNetFold).toHaveBeenLastCalledWith({ to: 0, duration: 1800 });
+    expect(toggle.textContent).toBe('組み立てる');
+  });
+
+  it('展開図パズル：解説の選択肢の記号が置きかわり、立方体にならない図の重なるマスは回答後に示す', () => {
+    start({ category: 'netPuzzle', difficulty: 1 });
+    let q = currentQuestion();
+    for (let i = 0; i < 5 && q.templateId !== 'C01'; i++) {
+      answer(container);
+      buttonByText(container, '次の問題へ').click();
+      q = currentQuestion();
+    }
+    expect(q.templateId).toBe('C01');
+    expect(container.querySelector('.choices').classList).not.toContain('choices--answered');
+    answer(container);
+    expect(container.querySelector('.choices').classList).toContain('choices--answered');
+    const text = container.querySelector('.feedback__explanation').textContent;
+    expect(text).not.toContain('〔choice:');
+    expect(text).toMatch(/立方体の展開図になるのは[アイウエ・]+です/);
+  });
+
+  it('ほかのカテゴリの問題では展開図を消す', () => {
+    start({ category: 'dice', difficulty: 1 });
+    expect(viewer.setNet).toHaveBeenLastCalledWith(null);
+    expect(buttonByText(container, '展開図に戻す').hidden).toBe(true);
+  });
+
+  it('サイコロのはじめの向きの図には「上・前・右」が書いてある', () => {
+    start({ category: 'dice', difficulty: 2 });
+    const figure = container.querySelector('.quiz-figures svg');
+    expect([...figure.querySelectorAll('[data-direction-label]')].map((t) => t.textContent).sort()).toEqual(['上', '前', '右'].sort());
   });
 });

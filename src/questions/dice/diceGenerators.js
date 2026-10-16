@@ -80,7 +80,8 @@ function trackingQuestion(template, base, rng, { moves, askedDir, pose, preferSt
     finalByDir[getOppositeDirection(askedDir)], // 反対側の面
   ];
 
-  const visuals = [cubeVisual(pose, faces, { caption: 'はじめの向き' }), movesVisual(moves)];
+  // はじめの向きの図には「上・前・右」を書き添える（問題文の「前の面」などがどこかわかるように）
+  const visuals = [cubeVisual(pose, faces, { caption: 'はじめの向き', showDirections: true }), movesVisual(moves)];
   if (info === 'list') visuals.push(hiddenFacesVisual(faces, pose));
   const note = info === 'rule' ? RULE_NOTE : '';
 

@@ -5,9 +5,10 @@
 
 公開ページ：https://taka-t-p.github.io/cube-master/
 
-**現在は Phase 2（Ver.0.3.0）**：3D 立方体ビューア（Phase 0）、共通の問題エンジンと「位置関係」（Phase 1）に加えて、
-「サイコロ・回転」「積み木の見え方・投影図」の2カテゴリ（各6種類の問題テンプレート）と、立方体の回転エンジン・積み木の投影図の計算を実装しています。
-3カテゴリ・27種類の問題テンプレートで遊べます。段位認定・タイマー・成績の保存・効果音はまだありません。
+**現在は Phase 3（Ver.0.4.0）**：3D 立方体ビューア（Phase 0）、共通の問題エンジンと「位置関係」（Phase 1）、
+「サイコロ・回転」「積み木の見え方・投影図」（Phase 2）に加えて、「展開図と頂点・辺」「展開図パズル」の2カテゴリと、
+展開図の折りたたみの数学エンジン・3D 折りたたみアニメーションを実装しています。
+5カテゴリ・39種類の問題テンプレートで遊べます。段位認定・タイマー・成績の保存・効果音はまだありません。
 
 - 技術：HTML / CSS / JavaScript（ES Modules）、Vite、Three.js（OrbitControls・Raycaster・CSS2DRenderer）、Vitest
 - サーバー・データベース不要の静的サイト（GitHub Pages で公開）
@@ -40,14 +41,15 @@ npm run preview    # ビルド結果の確認 → http://localhost:4173/cube-mas
 
 ### トレーニング
 
-1. **カテゴリ選択**：10 カテゴリを表示。遊べるのは「位置関係」「サイコロ・回転」「積み木の見え方・投影図」（ほかは準備中）
+1. **カテゴリ選択**：10 カテゴリを表示。遊べるのは「①展開図と頂点・辺」「③位置関係」「④展開図パズル」「⑥サイコロ・回転」「⑩積み木の見え方・投影図」（ほかは準備中）
 2. **設定**：難易度（★1 きほん／★2 標準／★3 チャレンジ／すべて）と問題数（5／10／20／エンドレス）
-3. **問題**：問題文を読み、選択肢から答えて「回答する」
+3. **問題**：問題文を読み、選択肢から答えて「回答する」。回答すると、同じ位置のボタンが「次の問題へ」（最後の問題では「結果を見る」）に変わります
    - 問題の基準になる辺・面は **オレンジ** で表示され、正解表示中も消えません（位置関係）
    - 位置関係では立方体を自由に回せます（面は半透明で表示。「面を不透明に」で切り替え）。回答は選択肢ボタンで行います
-   - サイコロ・積み木では、答えが見えてしまわないように **回答するまで 3D を表示しません**。
+   - サイコロ・積み木・展開図では、答えが見えてしまわないように **回答するまで 3D を表示しません**。
+     展開図の問題では、3D の場所に展開図（点・辺・面のラベルつき）を表示し、回答すると 3D の展開図が折りたたまれて立方体になります。
      積み木の問題では、3D の場所に静的な見取図（見る向きを示す赤い矢印つき。矢印の根元が見る人の場所）を表示し、回答すると同じ場所が 3D に切りかわります。
-     問題文の下に、はじめの向きの見取図・回転の手順（番号・矢印・文字）・必要に応じて見えていない面の一覧を表示します。
+     サイコロの問題文の下には、はじめの向きの見取図（「上・前・右」の向きつき）・回転の手順（番号・矢印・文字）・必要に応じて見えていない面の一覧を表示します。
      回答すると、自由に回せる立方体が現れて正解演出が始まります
    - ふつうのサイコロ（向かい合う面の目の和が7）の面は数字ではなく **目（ドット）** で表示します（1の目は大きな赤い目）。
      和が7ではない配置のサイコロは、目の代わりに **マーク（〇◎×●◇◆）** で表示します。答えの選択肢も面の絵で表示します
@@ -175,6 +177,47 @@ v.setCameraPreset([-4, 3, -5]);                           // 視点を変えて�
 - 見取図（回答前）・3D モデル（回答後）・正解の投影図は、すべて同じ配置データから作ります
 - 正解演出：カメラが矢印の方向へ移動して真正面から表示します（V03 は正面 → 右、V05 は正面 → 右 → 真上）。V04 はその列の小立方体を緑にします
 
+## 展開図と頂点・辺の問題テンプレート
+
+| ID | 難易度 | 内容 | 例 | 回答 |
+|---|---|---|---|---|
+| N01 | ★1 | 重なる頂点 | 組み立てたとき、点Aと重なる点をすべて | 複数 |
+| N02 | ★1 | 向かい合う面 | 面アと向かい合う面はどれ？ | 1つ |
+| N03 | ★2 | 重なる辺 | 辺〇〇と重なる辺はどれ？ | 1つ |
+| N04 | ★2 | 組み立て後に隣り合う面 | 面アと辺を共有する面をすべて（展開図でとなり／組み立てて初めてとなり、を区別して解説） | 複数（4つ） |
+| N05 | ★3 | 完成した立方体 | この展開図を組み立てると、どの立方体になる？（マーク〇◎×●◇◆。鏡映しなどが誤答） | 1つ（見取図） |
+| N06 | ★3 | 頂点・辺の複合問題 | 点Aと重なる頂点を端にもつ辺を、選択肢の中からすべて | 複数 |
+
+- 正解は、折りたたみ計算から求めた「展開図の点・辺・マス → 立方体の頂点・辺・面」の対応（`src/core/cubeNetMapping.js`）で決めます
+- 展開図の点のラベル（A, B, …）・面のラベル（ア, イ, …）は問題ごとに付け、立方体の頂点 ID（A〜H）とは別に管理します
+- 正解演出：展開図を折りたたんで立方体にし、重なる点・辺は同じ位置に集まる様子を、面は色で示します
+
+## 展開図パズルの問題テンプレート
+
+| ID | 難易度 | 内容 | 例 | 回答 |
+|---|---|---|---|---|
+| C01 | ★1 | 立方体になる展開図 | 立方体の展開図になるものをすべて（4つの図、正解1〜3個） | 複数 |
+| C02 | ★1 | あと1マスを加える | どこに加えればよい？（候補ア〜エ・オ） | 複数 |
+| C03 | ★2 | 不要な1マス | 7マスから1マス取るなら、どれ？ | 複数 |
+| C04 | ★2 | 1マスを移動する | オレンジのマスをどこへ動かせばよい？ | 複数 |
+| C05 | ★3 | 同じ種類の展開図 | 回したり裏返したりすると同じ形になるのは？ | 1つ |
+| C06 | ★3 | 異なる種類の展開図 | 5つのうち、ほかと種類がちがうのは？ | 1つ |
+
+- 立方体になるかどうかは、すべて折りたたみ計算で判定します。立方体にならない図は、回答後に重なるマスを赤で示します
+- 解説の「〔choice:ID〕」は、表示するときに選択肢の記号（ア・イ…）に置きかわります（選択肢の並びはシャッフル後に決まるため）
+
+## 展開図の数学エンジン
+
+- **格子データ**（`src/core/cubeNet.js`）：展開図は整数格子上のマス `{ id, x, y }` の集まり（x は右、y は下）。
+  回転・裏返し・平行移動、となり合うマス、外周の辺・点、種類のキー（`getCanonicalNetKey`）。問題で表示する向きやセル ID は変えない
+- **11種類**（`src/core/cubeNetCatalog.js`）：6マスのつながった図形（35種類）をすべて作り、折りたたんで立方体になるもの（11種類：1-4-1型6・1-3-2型3・2-2-2型1・3-3型1）を登録。
+  手で書いた一覧に頼らないので、どんな 6 マスの図形でも同じ方法で判定できる
+- **折りたたみ**（`src/core/cubeNetFolding.js`）：基準のマスを上面に置き、となりのマスを共有辺を軸に 90° ずつ下へ折る（BFS）。
+  整数ベクトルだけで計算し、面の重なり・辺の食いちがい・マスの数・つながり・位置の重複を検出して、理由と問題のマスを返す
+- **3D**（`src/three/cubeNetModel.js`）：マスごとのパネルを折る順番の木どおりに入れ子にし、共有辺に置いたちょうつがいを軸に回す（紙を折るように動く）。
+  奥のマスから順に折り、平らなときは展開図全体が見える大きさ、立方体になるにつれて元の大きさへ。逆再生で展開図に正確に戻る
+- 2D の展開図・折りたたみ計算・3D モデルは、すべて同じマスのデータから作ります
+
 ### 回転の定義（`src/core/cubeRotations.js`）
 
 | ID | 言い方 | 動き |
@@ -209,6 +252,10 @@ cube-master/
 │   │   ├── cubePuzzle.js          答えが一意に決まるかの検証・鏡映しの判定
 │   │   ├── blockGeometry.js       積み木の配置（高さマップ・重なり／浮きの検査・見取図で読み取れるか・矢印の位置）
 │   │   ├── blockProjection.js     積み木の投影図（正面・右・上・左・後ろ）
+│   │   ├── cubeNet.js             展開図の格子データ（回転・裏返し・種類のキー・外周）
+│   │   ├── cubeNetCatalog.js      6マスの図形 35 種類・立方体の展開図 11 種類
+│   │   ├── cubeNetFolding.js      折りたたみの計算と成立判定
+│   │   ├── cubeNetMapping.js      展開図の点・辺・マス → 立方体の頂点・辺・面
 │   │   ├── questionSchema.js      問題データの共通スキーマとバリデーション
 │   │   ├── questionEngine.js      QuestionPicker（抽出・重複管理・シャッフル）/ TrainingSession（進行）
 │   │   ├── answerValidator.js     正誤判定（集合比較・差分）
@@ -220,9 +267,12 @@ cube-master/
 │   │   ├── questionRegistry.js    カテゴリ一覧（10）・難易度・問題数の定義
 │   │   ├── questionUtils.js       表示名・選択肢生成・初期視点の計算
 │   │   ├── decoratedCube.js       サイコロの問題の共通部品（図・目の選択肢・シーン）
+│   │   ├── netCommon.js           展開図の問題の共通部品
 │   │   ├── position/              位置関係：positionGenerators（P01〜P15）/ positionRelations / positionExplanations
 │   │   ├── dice/                  サイコロ・回転：diceGenerators（D01〜D06）/ diceExplanations
-│   │   └── projection/            積み木の見え方・投影図：projectionGenerators（V01〜V06）/ projectionExplanations
+│   │   ├── projection/            積み木の見え方・投影図：projectionGenerators（V01〜V06）/ projectionExplanations
+│   │   ├── netMapping/            展開図と頂点・辺：netMappingGenerators（N01〜N06）/ netMappingExplanations
+│   │   └── netPuzzle/             展開図パズル：netPuzzleGenerators（C01〜C06）/ netPuzzleExplanations
 │   ├── three/                     3D 描画・操作
 │   │   ├── cubeViewer.js          3D 機能の窓口（UI はこの API だけを使う）
 │   │   ├── sceneManager.js / cubeModel.js / cubeControls.js / cubeSelection.js
@@ -231,13 +281,15 @@ cube-master/
 │   │   ├── cubeAnimations.js      演出（90°回転デモ・面の色変化・正解演出）
 │   │   ├── faceDecoration.js      サイコロの目（面の装飾）の 3D 表示
 │   │   ├── cubeRotationAnimations.js  向きと 3D の同期・転がる回転・カメラ移動・回転つき正解演出
-│   │   └── blockModel.js          積み木の 3D モデル（小立方体・境界線・影・赤い矢印・列の強調）
+│   │   ├── blockModel.js          積み木の 3D モデル（小立方体・境界線・影・赤い矢印・列の強調）
+│   │   └── cubeNetModel.js        展開図の 3D モデル（ちょうつがいで折りたたむパネル・点と辺の印）
 │   ├── ui/                        画面
 │   │   ├── homeScreen / previewScreen / helpScreen
 │   │   ├── categoryScreen / trainingSetupScreen / questionScreen / trainingResultScreen
 │   │   ├── trainingStore.js       トレーニングの進行状態（メモリのみ）
 │   │   ├── visualChoices.js       図（見取図 SVG・面・サイコロの目・回転の手順・見えていない面）の描画
 │   │   ├── blockVisuals.js        積み木の見取図・投影図の SVG
+│   │   ├── netVisuals.js          展開図の SVG（ラベル・候補マス・重なるマスの印）
 │   │   └── components.js          ボタン・切替・確認ダイアログ
 │   └── utils/                     DOM ヘルパー・イージング・乱数（シード指定可）
 ├── tests/                         Vitest
@@ -267,7 +319,7 @@ ID は表記ゆれを正規化して扱います（`"BA"` → 辺 `AB`、`"FGCB"
 
 ## 自動テスト
 
-`npm run test` で 19 ファイル / 363 テストを実行します。
+`npm run test` で 23 ファイル / 443 テストを実行します。
 
 | ファイル | 内容 |
 |---|---|
@@ -290,6 +342,10 @@ ID は表記ゆれを正規化して扱います（`"BA"` → 辺 `AB`、`"FGCB"
 | `blockQuestions.test.js` | V01〜V06 の全基準×複数シードで生成、正解が1つだけ、誤答が正解と同じ形にならない、問題文と矢印の向き、3方向の図と立体の一致、見取図と 3D が同じ配置、連続出題 |
 | `blockModel.test.js` | 積み木の 3D が配置データどおり、矢印、列の強調、前の問題が残らない、視点移動・リプレイ・スキップ |
 | `blockVisuals.test.js` | 見取図の小立方体・矢印・床のマス目、投影図のマスが計算と一致、図の見出し |
+| `cubeNet.test.js` | 回転・裏返し・平行移動、6マスの図形 35 種類と展開図 11 種類、11種類の全向き・全基準で折りたためる、不成立の理由、点・辺・面の対応、向きを変えても矛盾しない |
+| `netQuestions.test.js` | N01〜N06・C01〜C06 の全基準×複数シードで生成、正解が折りたたみの対応・成立判定と一致、選択肢の重複なし、複数解、11種類がかたよらない |
+| `cubeNetModel.test.js` | 3D の折りたたみが数学の計算と一致（11種類）、平らな状態、逆再生、重なる点が集まる、演出のリプレイ・スキップ・キャンセル |
+| `netVisuals.test.js` | 展開図の SVG（マス・ラベル・点のラベルの位置・候補・重なるマス・マーク）、サイコロの見取図の「上・前・右」 |
 
 ### 手動確認項目（自動テストが難しいもの）
 
@@ -314,6 +370,12 @@ ID は表記ゆれを正規化して扱います（`"BA"` → 辺 `AB`、`"FGCB"
 - [ ] 積み木：回答すると見取図の場所が 3D に切りかわり、カメラが矢印の方向へ自然に移動して、投影図と同じ形に見える
 - [ ] 問題を続けても、前の問題の向き・視点・装飾が残らない。位置関係に切り替えるとふつうの水色の立方体に戻る
 - [ ] スマホで図の選択肢が押しやすい大きさになっている
+- [ ] 展開図：点・辺・面のラベルが読みやすく、回答前に完成形が見えない
+- [ ] 展開図：回答すると 3D の展開図が共有辺を軸に自然に折れて立方体になる（面が飛び移らない）。重なる点・辺が同じ位置に集まる
+- [ ] 展開図：「展開図に戻す」「組み立てる」「もう一度見る」「スキップ」が正しく動く。完成した立方体を自由に回せる
+- [ ] 展開図パズル：立方体にならない図の重なるマスが、回答後に赤で示される
+- [ ] サイコロ：はじめの向きの図に「上・前・右」が書いてあり、どこが前かわかる
+- [ ] 回答すると「回答する」ボタンが同じ場所で「次の問題へ」に変わる
 - [ ] 開発者ツールのコンソールに警告・エラーが出ない
 
 ## GitHub Pages への公開
@@ -350,6 +412,8 @@ Actions 画面の「Run workflow」から手動実行もできます。
   `scene.orientation`（はじめの向き）、`scene.showLabels`、`scene.interaction`（回答前後の回転・ズームの可否）、
   `visuals`（問題の図）、`choices[].visual`（選択肢の図）、`choices[].labelByPosition`（ア〜エを並び順で付ける）、
   `explanation.reveal.steps`（`{ type: 'rotate', moves }`・`{ type: 'camera', direction }`・`{ type: 'pause', ms }`）
+- Phase 3 で追加：`scene.model: 'net'`・`scene.net`（3D で折りたたむ展開図）・`scene.preview`（回答前に 3D の場所へ出す図）、
+  図の種類 `net`、演出 `{ type: 'fold', to }`、`{ type: 'highlightBlocks', cubes }`、解説の `〔choice:ID〕`
 
 ### 問題テンプレート（`src/questions/<category>/`）
 
@@ -396,6 +460,7 @@ solveUnique({ values, known, oppositeSum, views }, answerOf); // 提示した情
 | 演出 | `playAnswerReveal({ wrong, correct })` `animations.play/pause/resume/skip/cancel/isPlaying` |
 | 立方体の向き（Phase 2） | `setFaceDecorations(faces｜null)` `setCubeOrientation(o)` `resetCubeOrientation()` `getCubeOrientation()` |
 | 回転演出（Phase 2） | `playCubeRotation({ direction, turns, duration })` `playCubeRotationSequence({ directions, durationPerTurn, pause })` `playQuestionReveal({ orientation, cameraPreset, steps, wrong, correct })` |
+| 積み木・展開図（Phase 2・3） | `setBlocks(cubes｜null, { arrows })` `highlightBlocks(cubes)` `setNet(spec｜null)` `setNetFold(t)` `getNetFold()` `playNetFold({ to, duration })` |
 | 表示 | `setFaceDisplayMode('opaque'｜'translucent'｜'wireframe')` `setLabelsVisible(bool)` |
 | イベント | `events.on('selection:change'｜'highlight:change'｜'camera:change'｜'animation:state'｜'input-lock:change', fn)` |
 | 破棄 | `dispose()` |
@@ -412,7 +477,8 @@ solveUnique({ values, known, oppositeSum, views }, answerOf); // 提示した情
   選択肢ボタンと同じ回答状態を共有できる（選択肢 ID に要素 ID を使う問題）
 - **展開図・切断**など新しい 3D オブジェクトが必要になったら、`cubeModel` とは別のモジュールで生成し、
   数学データは `core` に置く。問題データの `scene.model` に新しいモデル名を追加する
-- **展開図**（Phase 3 以降）：面の装飾（`cubeFaceLabels`）と向き（`cubeOrientation`）をそのまま使い、
-  展開図の各面に面 ID を対応させれば、組み立てたときの目とその並ぶ向きを計算できる
+- **展開図のさらなる活用**（Phase 4 以降）：`foldNet` の各マスの座標（`frames`）を使えば、展開図に描いた目・矢印・線が
+  組み立て後にどの向きになるかも計算できる（`cubeFaceLabels` の向きの計算と組み合わせる）。展開図エディタやドラッグ操作にも同じデータが使える
+- **切断・内接立体**：展開図と同じく、数学データを `core` に置き、3D モデルを `three` に別モジュールで作る
 - 回転アニメーションは `createTurnSequence` / `createQuestionReveal` を使えば、どの問題からでも同じ動きで再生できる
 - 段位認定・90秒タイマー・成績の保存・効果音は後続 Phase で実装する

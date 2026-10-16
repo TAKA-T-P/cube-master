@@ -70,21 +70,22 @@ export function mountQuestionScreen(container, { navigate }) {
   const faceModeButton = button('面を不透明に', () => toggleFaceMode(), 'btn--small');
 
   const choicesEl = h('div', { class: 'choices', role: 'group', 'aria-label': '選択肢' });
-  const submitButton = button('回答する', () => submit(), 'btn--primary btn--large');
+  // 回答前は「回答する」、回答後は同じ場所のまま「次の問題へ」（最後は「結果を見る」）に変わる
+  const submitButton = button('回答する', () => (session.state.answerLocked ? goNext() : submit()), 'btn--primary btn--large');
 
   const resultTitle = h('p', { class: 'feedback__title', role: 'status' });
   const resultDetail = h('p', { class: 'feedback__detail' });
   const explanationText = h('p', { class: 'feedback__explanation' });
   const replayButton = button('もう一度見る', () => playReveal(), 'btn--small');
   const skipButton = button('スキップ', () => viewer?.animations.skip(), 'btn--small btn--ghost');
-  const nextButton = button('次の問題へ', () => goNext(), 'btn--primary btn--large');
+  // 展開図の問題：組み立てた立方体と展開図を行き来する
+  const netToggleButton = button('展開図に戻す', () => toggleNetFold(), 'btn--small');
   const feedback = h(
     'section',
     { class: 'feedback', hidden: true, 'aria-live': 'polite' },
     resultTitle,
     resultDetail,
-    h('div', { class: 'feedback__box' }, h('h3', {}, '解説'), explanationText, h('div', { class: 'feedback__tools' }, replayButton, skipButton)),
-    nextButton,
+    h('div', { class: 'feedback__box' }, h('h3', {}, '解説'), explanationText, h('div', { class: 'feedback__tools' }, replayButton, skipButton, netToggleButton)),
   );
 
   // 立方体の表示領域（画面に固定。答えが見えてしまう問題では回答するまで表示しない）
@@ -163,6 +164,7 @@ export function mountQuestionScreen(container, { navigate }) {
       viewer.clearSelection();
       viewer.setFaceDecorations(decorated && !isBlocks ? q.scene.faces : null);
       viewer.setBlocks(isBlocks ? q.scene.blocks : null, { arrows: q.scene.arrows ?? [] });
+      viewer.setNet?.(q.scene.model === 'net' ? q.scene.net : null);
       viewer.setCubeOrientation(q.scene.orientation ?? INITIAL_ORIENTATION);
       viewer.setLabelsVisible(q.scene.showLabels ?? true);
       // 色や数字の立方体は、隠れた面が透けて見えないように不透明にする
@@ -205,7 +207,8 @@ export function mountQuestionScreen(container, { navigate }) {
     );
 
     feedback.hidden = true;
-    submitButton.hidden = false;
+    submitButton.textContent = '回答する';
+    netToggleButton.hidden = true; // 展開図に戻すボタンは、展開図の問題に回答したあとだけ
     renderChoices();
     questionText.focus({ preventScroll: true });
   }
@@ -227,7 +230,8 @@ export function mountQuestionScreen(container, { navigate }) {
         el.querySelector('.choice__mark').textContent = isCorrect ? '○' : selected ? '×' : '';
       }
     }
-    submitButton.disabled = !selection.canSubmit();
+    // 回答後は「次の問題へ」として押せる。回答前は選んでいるときだけ押せる
+    submitButton.disabled = result ? false : !selection.canSubmit();
   }
 
   // ---------- 回答 ----------
@@ -245,9 +249,13 @@ export function mountQuestionScreen(container, { navigate }) {
     resultTitle.textContent = RESULT_TITLES[result.status];
     resultTitle.className = `feedback__title feedback__title--${result.status}`;
     resultDetail.textContent = resultDetailText(result);
-    explanationText.textContent = question.explanation.text;
-    nextButton.textContent = session.hasNextQuestion() ? '次の問題へ' : '結果を見る';
-    submitButton.hidden = true;
+    explanationText.textContent = resolveChoiceRefs(question.explanation.text);
+    netToggleButton.hidden = question.scene.model !== 'net' || !viewer;
+    netToggleButton.textContent = '展開図に戻す';
+    // 回答後にだけ見せる印（立方体にならない展開図の重なるマスなど）を表示する
+    choicesEl.classList.add('choices--answered');
+    submitButton.textContent = session.hasNextQuestion() ? '次の問題へ' : '結果を見る';
+    submitButton.disabled = false;
     feedback.hidden = false;
     // スマホでは選択肢の下に結果が出るので、見える位置までスクロールする
     resultTitle.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
@@ -308,6 +316,19 @@ export function mountQuestionScreen(container, { navigate }) {
     else viewer.disableRotation();
     if (zoom) viewer.enableZoom();
     else viewer.disableZoom();
+  }
+
+  /** 解説の〔choice:ID〕を、選択肢の記号（ア・イ…）に置きかえる */
+  function resolveChoiceRefs(text) {
+    return text.replace(/〔choice:([^〕]+)〕/g, (_, id) => question.choices.find((c) => c.id === id)?.label ?? id);
+  }
+
+  /** 組み立てた立方体 ⇄ 展開図 */
+  function toggleNetFold() {
+    if (!viewer?.playNetFold) return;
+    const folded = viewer.getNetFold() > 0.5;
+    viewer.playNetFold({ to: folded ? 0 : 1, duration: 1800 });
+    netToggleButton.textContent = folded ? '組み立てる' : '展開図に戻す';
   }
 
   function updateScore() {

@@ -24,6 +24,8 @@ import { AnimationManager } from './animationManager.js';
 import { createRotationDemo, createFaceFlash, createAnswerReveal } from './cubeAnimations.js';
 import { createFaceDecorations } from './faceDecoration.js';
 import { createBlockModel } from './blockModel.js';
+import { createNetModel } from './cubeNetModel.js';
+import { tween } from './animationManager.js';
 import { createOrientationState, createTurnSequence, createQuestionReveal, DEFAULT_TURN_DURATION, DEFAULT_TURN_PAUSE } from './cubeRotationAnimations.js';
 
 /**
@@ -69,6 +71,13 @@ export function createCubeViewer(container) {
   // 積み木（積み木の問題のときだけ表示し、そのあいだ単一の立方体は隠す）
   const blocks = createBlockModel();
   sceneManager.scene.add(blocks.root);
+
+  // 展開図（展開図の問題のときだけ表示し、そのあいだ単一の立方体は隠す）
+  const net = createNetModel();
+  sceneManager.scene.add(net.root);
+  const updateCubeVisibility = () => {
+    model.root.visible = !blocks.root.visible && !net.root.visible;
+  };
 
   // 選択状態 → 見た目
   const offSelection = selection.onChange((event) => {
@@ -178,8 +187,41 @@ export function createCubeViewer(container) {
      */
     setBlocks(cubes, options) {
       blocks.set(cubes ?? null, options);
-      model.root.visible = !blocks.root.visible;
+      updateCubeVisibility();
       render();
+    },
+
+    // ----- 展開図 -----
+    /**
+     * 展開図を表示する（null で消す）。はじめは平らな展開図
+     * @param {object|null} spec three/cubeNetModel の set を参照
+     */
+    setNet(spec) {
+      net.set(spec ?? null);
+      updateCubeVisibility();
+      render();
+    },
+    /** 折りたたみの進み具合をすぐに変える（0 = 展開図、1 = 立方体） */
+    setNetFold(t) {
+      net.setProgress(t);
+      render();
+    },
+    getNetFold: () => net.getProgress(),
+    /** 折りたたむ・展開図に戻すアニメーション（to = 1 で組み立て、0 で展開図に戻す） */
+    playNetFold: ({ to = 1, duration = 2400 } = {}) => {
+      let from = 0;
+      return animations.play(
+        tween({
+          duration,
+          onStart: () => {
+            from = net.getProgress();
+          },
+          onUpdate: (t) => {
+            net.setProgress(from + (to - from) * t);
+            render();
+          },
+        }),
+      );
     },
     highlightBlocks(cubes) {
       blocks.highlight(cubes);
@@ -210,7 +252,7 @@ export function createCubeViewer(container) {
      * @param {{ orientation?, cameraPreset?, steps?, wrong?, correct? }} spec cubeRotationAnimations.createQuestionReveal 参照
      */
     playQuestionReveal: (spec) =>
-      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, blocks, onUpdate: render }, spec)),
+      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, blocks, net, onUpdate: render }, spec)),
 
     /**
      * 回答後の正解演出（誤選択を赤 → 正解を1つずつ緑）。完了時に { status } で解決
@@ -230,6 +272,7 @@ export function createCubeViewer(container) {
       highlights.dispose();
       decorations.dispose();
       blocks.dispose();
+      net.dispose();
       model.dispose();
       sceneManager.dispose();
       events.clear();

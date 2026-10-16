@@ -26,12 +26,13 @@ export const CHOICE_MARKS = Object.freeze(['ア', 'イ', 'ウ', 'エ', 'オ', '�
  * @param {Record<string, object>} faces 面 ID → 装飾
  * @param {{ caption?: string, viewDirection?: number[] }} [options]
  */
-export const cubeVisual = (orientation, faces, { caption, viewDirection = DEFAULT_VIEW_DIRECTION } = {}) => ({
+export const cubeVisual = (orientation, faces, { caption, viewDirection = DEFAULT_VIEW_DIRECTION, showDirections = false } = {}) => ({
   type: 'cube',
   orientation: { ...orientation },
   faces: { ...faces },
   viewDirection: [...viewDirection],
   ...(caption ? { caption } : {}),
+  ...(showDirections ? { showDirections: true } : {}),
 });
 
 /**

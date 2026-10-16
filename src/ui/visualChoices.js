@@ -6,12 +6,13 @@
  * 見取図は 3D 本体と同じ「向き・装飾・カメラの向き」のデータから、正射影で描くので 3D と食いちがわない。
  */
 import { h } from '../utils/dom.js';
-import { DIRECTIONS, DIRECTION_VECTORS, applyMatrix } from '../core/cubeRotations.js';
+import { DIRECTIONS, DIRECTION_VECTORS, DIRECTION_LABELS, applyMatrix } from '../core/cubeRotations.js';
 import { orientationToMatrix } from '../core/cubeOrientation.js';
 import { FACE_UP, ARROW_LABELS, PIP_LAYOUTS, pipRadius, pipColor } from '../core/cubeFaceLabels.js';
 import { FACES } from '../core/cubeConstants.js';
 import { vecCross, vecDot } from '../core/cubeGeometry.js';
 import { renderBlockVisual } from './blockVisuals.js';
+import { renderNetVisual } from './netVisuals.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -84,7 +85,7 @@ function labelText(face, x, y, scale) {
  * 立方体の見取図（3面が見える斜めの図）
  * @param {{ orientation: object, faces: Record<string, object>, viewDirection: number[] }} visual
  */
-export function renderCubeSvg({ orientation, faces, viewDirection }) {
+export function renderCubeSvg({ orientation, faces, viewDirection, showDirections = false }) {
   const v = normalize(viewDirection);
   const right = normalize(vecCross([0, 1, 0], v));
   const up = vecCross(v, right);
@@ -95,9 +96,17 @@ export function renderCubeSvg({ orientation, faces, viewDirection }) {
   // 見えている面（カメラ側を向いている面）
   const visible = DIRECTIONS.filter((d) => vecDot(DIRECTION_VECTORS[d], v) > 1e-9);
   const corners = [-1, 1].flatMap((x) => [-1, 1].flatMap((y) => [-1, 1].map((z) => P([x, y, z]))));
+  // 向きの文字（上・前・右）は、図の中心から面の中心へ向かう方向に、立方体の輪郭の外まで出して置く
+  const outline = Math.max(...corners.map(([x, y]) => Math.hypot(x, y))) + 11;
+  const labelAt = (d) => {
+    const [x, y] = P(DIRECTION_VECTORS[d]);
+    const len = Math.hypot(x, y) || 1;
+    return [(x / len) * outline, (y / len) * outline];
+  };
+  if (showDirections) for (const d of visible) corners.push(labelAt(d));
   const xs = corners.map((c) => c[0]);
   const ys = corners.map((c) => c[1]);
-  const pad = 6;
+  const pad = showDirections ? 10 : 6;
   const viewBox = [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) - Math.min(...xs) + pad * 2, Math.max(...ys) - Math.min(...ys) + pad * 2];
 
   const groups = visible.map((d) => {
@@ -123,7 +132,18 @@ export function renderCubeSvg({ orientation, faces, viewDirection }) {
     return svg('g', { 'data-direction': d, 'data-face': faceId }, tile, label);
   });
 
-  return svg('svg', { viewBox: viewBox.join(' '), class: 'figure-svg', role: 'img', 'aria-hidden': 'true' }, groups);
+  // 見えている面がどの向きかを、面の外側に書く（どこが「前」かわかるように）
+  const directionLabels = showDirections
+    ? visible.map((d) => {
+        const [x, y] = labelAt(d);
+        return svg(
+          'text',
+          { x, y, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': 13, 'font-weight': 800, fill: '#c2410c', 'data-direction-label': d },
+          document.createTextNode(DIRECTION_LABELS[d]),
+        );
+      })
+    : [];
+  return svg('svg', { viewBox: viewBox.join(' '), class: 'figure-svg', role: 'img', 'aria-hidden': 'true' }, groups, directionLabels);
 }
 
 /** 正面から見た1つの面（矢印の向き・目の並びの回転は画面の向き） */
@@ -141,6 +161,9 @@ export function renderVisual(visual) {
   // 積み木の見取図・投影図
   const block = renderBlockVisual(visual);
   if (block) return block;
+  // 展開図
+  const net = renderNetVisual(visual);
+  if (net) return net;
   switch (visual.type) {
     case 'cube':
       return h(

@@ -795,3 +795,29 @@ ul.setup-note {
     min-height: 0;
   }
 }
+
+/* ----- 展開図 ----- */
+.net-conflict {
+  display: none;
+}
+
+/* 立方体にならない展開図の重なるマスは、回答後にだけ示す */
+.choices--answered .net-conflict {
+  display: inline;
+}
+
+.figure--net .figure-svg {
+  max-height: 150px;
+}
+
+.choice--figure .figure--net {
+  width: min(100%, 150px);
+}
+
+.quiz-preview .figure--net .figure-svg {
+  max-height: 100%;
+}
+
+.feedback__tools .btn[hidden] {
+  display: none;
+}
