@@ -10,14 +10,14 @@
 }
 
 .btn--large {
-  min-height: 52px;
-  font-size: 18px;
-  padding-inline: 24px;
+  min-height: 38px;
+  font-size: 17px;
+  padding: 4px 24px;
 }
 
 .btn--small {
-  min-height: 40px;
-  padding: 4px 12px;
+  min-height: 28px;
+  padding: 2px 12px;
   font-size: 14px;
 }
 
@@ -255,7 +255,7 @@ ul.setup-note {
 .quiz {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  height: 100%;
 }
 
 .quiz-header {
@@ -278,32 +278,44 @@ ul.setup-note {
   color: var(--color-success);
 }
 
-/* スマホ（既定）：問題文 → 3D → 選択肢 → 回答ボタン */
+/*
+ * スマホ（既定）：立方体は画面に固定し、その下（問題文・図・選択肢・回答・解説）だけがスクロールする。
+ * 回答前に立方体を見せない問題では、立方体の領域ごと表示しない。
+ */
 .quiz-body {
-  display: grid;
-  grid-template-areas:
-    'question'
-    'view'
-    'answer';
-  gap: 12px;
-  padding: 0 var(--gutter) var(--gutter);
-}
-
-.quiz-question {
-  grid-area: question;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 var(--gutter);
 }
 
 .quiz-view {
-  grid-area: view;
+  flex: none;
   position: relative;
   display: grid;
-  gap: 6px;
+  gap: 4px;
+}
+
+.quiz-view[hidden] {
+  display: none;
+}
+
+.quiz-scroll {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 2px var(--gutter);
 }
 
 .quiz-answer {
-  grid-area: answer;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-content: start;
 }
 
@@ -323,7 +335,7 @@ ul.setup-note {
 }
 
 .viewport--quiz {
-  height: clamp(240px, min(100vw - 2 * var(--gutter), 46dvh), 560px);
+  height: clamp(150px, min((100vw - 2 * var(--gutter)) * 0.6, 28dvh), 340px);
 }
 
 .quiz-view__tools {
@@ -386,13 +398,13 @@ ul.setup-note {
 .choice {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 52px;
-  padding: 8px 12px;
+  gap: 8px;
+  min-height: 36px;
+  padding: 3px 10px;
   border: 2px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
@@ -406,11 +418,11 @@ ul.setup-note {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border: 2px solid #9fb3c8;
-  border-radius: 6px;
-  font-size: 15px;
+  border-radius: 5px;
+  font-size: 13px;
   font-weight: 900;
 }
 
@@ -517,21 +529,17 @@ ul.setup-note {
   flex-wrap: wrap;
 }
 
-/* PC・タブレット横：3D を左、問題文と回答を右に */
+/* PC・タブレット横：3D を左、問題文と回答を右に（右側だけスクロール） */
 @media (min-width: 900px), (orientation: landscape) and (min-width: 640px) {
-  .quiz {
-    height: 100dvh;
-    min-height: 0;
+  .quiz-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 38vw, 460px);
+    padding-bottom: var(--gutter);
   }
 
-  .quiz-body {
-    flex: 1;
-    min-height: 0;
-    grid-template-columns: minmax(0, 1fr) clamp(300px, 38vw, 460px);
-    grid-template-rows: auto minmax(0, 1fr);
-    grid-template-areas:
-      'view question'
-      'view answer';
+  .quiz--no-view .quiz-body {
+    grid-template-columns: minmax(0, 720px);
+    justify-content: center;
   }
 
   .quiz-view {
@@ -543,11 +551,8 @@ ul.setup-note {
     height: 100%;
   }
 
-  .quiz-answer {
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding: 2px;
+  .quiz-scroll {
+    padding-bottom: 2px;
   }
 }
 
@@ -663,17 +668,6 @@ ul.setup-note {
   gap: 4px;
 }
 
-.quiz-view__note {
-  margin-right: auto;
-  align-self: center;
-  font-size: 13px;
-  color: var(--color-text-sub);
-}
-
-.quiz-view__note[hidden] {
-  display: none;
-}
-
 /* 図の選択肢：2列。スマホでも押しやすい大きさ */
 .choices--figures {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -683,15 +677,15 @@ ul.setup-note {
   position: relative;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-height: 120px;
-  padding: 8px;
+  gap: 2px;
+  min-height: 84px;
+  padding: 5px;
 }
 
 .choice--figure .choice__mark {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: 5px;
+  left: 5px;
 }
 
 .choice__label--mark {

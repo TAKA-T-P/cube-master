@@ -70,22 +70,23 @@ describe('Raycaster による選択', () => {
 
   it('見えている頂点・辺・面を正しい ID で選べる', () => {
     picker.setMode('vertex');
-    for (const id of ['A', 'B', 'C', 'E', 'F', 'G', 'H']) expect(pickAt(id)).toBe(id);
+    for (const id of ['A', 'B', 'C', 'D', 'E', 'F', 'G']) expect(pickAt(id)).toBe(id);
     picker.setMode('edge');
-    for (const id of ['AB', 'BC', 'EF', 'FG', 'GH', 'HE', 'AE', 'BF', 'CG']) expect(pickAt(id)).toBe(id);
+    for (const id of ['AB', 'BC', 'CD', 'DA', 'EF', 'FG', 'AE', 'BF', 'CG']) expect(pickAt(id)).toBe(id);
     picker.setMode('face');
-    for (const id of ['ABFE', 'BCGF', 'EFGH']) expect(pickAt(id)).toBe(id);
+    for (const id of ['ABFE', 'BCGF', 'ABCD']) expect(pickAt(id)).toBe(id);
   });
 
   it('不透明のときは裏に隠れた頂点・辺を選べず、半透明なら選べる', () => {
+    // 上面 ABCD・前 ABFE・右 BCGF が見える向きでは、底面の奥の左の頂点 H が隠れる
     picker.setMode('vertex');
-    expect(pickAt('D')).toBeNull();
+    expect(pickAt('H')).toBeNull();
     picker.setMode('edge');
-    for (const id of ['CD', 'DA']) expect(pickAt(id)).toBeNull();
+    for (const id of ['GH', 'HE']) expect(pickAt(id)).toBeNull();
     model.setFaceDisplayMode(FACE_DISPLAY_MODES.TRANSLUCENT);
-    for (const id of ['CD', 'DA']) expect(pickAt(id)).toBe(id);
+    for (const id of ['GH', 'HE']) expect(pickAt(id)).toBe(id);
     picker.setMode('vertex');
-    expect(pickAt('D')).toBe('D');
+    expect(pickAt('H')).toBe('H');
   });
 
   it('ワイヤーフレームでは面を選べない', () => {

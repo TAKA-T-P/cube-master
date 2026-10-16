@@ -13,8 +13,8 @@ describe('cubeModel', () => {
     expect(edgesGroup.children).toHaveLength(24); // 表示用 + 判定用
     expect(verticesGroup.children).toHaveLength(16);
 
-    expect(model.getElement('G').mesh.position.toArray()).toEqual([1, 1, -1]);
-    expect(model.getElement('BA').mesh.position.toArray()).toEqual([0, -1, 1]);
+    expect(model.getElement('G').mesh.position.toArray()).toEqual([1, -1, -1]);
+    expect(model.getElement('BA').mesh.position.toArray()).toEqual([0, 1, 1]);
     const face = model.getElement('BCGF').mesh;
     expect(face.position.toArray()).toEqual([1, 0, 0]);
     expect(face.userData).toEqual({ elementType: 'face', elementId: 'BCGF' });

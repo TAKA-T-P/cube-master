@@ -351,25 +351,27 @@ describe('問題画面（Phase 2：サイコロ・見え方）', () => {
     container.remove();
   });
 
-  it('サイコロ：装飾・向きを 3D に設定し、回答前は回転を止め、図を表示する', () => {
+  it('サイコロ：装飾・向きを 3D に設定し、回答前は立方体を表示せず、図だけを表示する', () => {
     start({ category: 'dice', difficulty: 1, questionLimit: 5 });
     const q = currentQuestion();
     expect(viewer.setFaceDecorations).toHaveBeenLastCalledWith(q.scene.faces);
     expect(viewer.setCubeOrientation).toHaveBeenLastCalledWith(q.scene.orientation);
     expect(viewer.setLabelsVisible).toHaveBeenLastCalledWith(false);
     expect(viewer.disableRotation).toHaveBeenCalled();
-    expect(container.querySelector('.quiz-view__note').hidden).toBe(false);
+    expect(container.querySelector('.quiz-view').hidden).toBe(true);
+    expect(container.querySelector('.quiz').classList).toContain('quiz--no-view');
     expect(container.querySelectorAll('.quiz-figures svg').length).toBeGreaterThanOrEqual(1);
     if (q.templateId === 'D01') expect(container.querySelector('.moves')).not.toBeNull();
   });
 
-  it('回答すると回転の演出を再生し、そのあとは自由に回せる。リプレイも同じ演出', () => {
+  it('回答すると立方体が現れて回転の演出を再生し、そのあとは自由に回せる。リプレイも同じ演出', () => {
     start({ category: 'dice', difficulty: 2, questionLimit: 5 });
     const q = currentQuestion();
     viewer.enableRotation.mockClear();
     answer(container, { correct: false });
     expect(viewer.enableRotation).toHaveBeenCalled();
-    expect(container.querySelector('.quiz-view__note').hidden).toBe(true);
+    expect(container.querySelector('.quiz-view').hidden).toBe(false);
+    expect(container.querySelector('.quiz').classList).not.toContain('quiz--no-view');
     const call = viewer.playQuestionReveal.mock.calls.at(-1)[0];
     expect(call).toMatchObject({ orientation: q.scene.orientation, cameraPreset: q.scene.cameraPreset, steps: q.explanation.reveal.steps });
     expect(call.correct).toEqual(q.explanation.highlightElements);
@@ -394,6 +396,11 @@ describe('問題画面（Phase 2：サイコロ・見え方）', () => {
     start({ category: 'projection', difficulty: 1, questionLimit: 5 });
     const choice = choiceButtons(container)[0];
     expect(choice.querySelector('.swatch')).not.toBeNull();
+    // 次の問題へ進むと、回答前の問題では立方体がまた隠れる
+    answer(container);
+    expect(container.querySelector('.quiz-view').hidden).toBe(false);
+    buttonByText(container, '次の問題へ').click();
+    expect(container.querySelector('.quiz-view').hidden).toBe(true);
     expect(choice.querySelector('.choice__label').textContent.length).toBeGreaterThan(0);
   });
 
@@ -402,7 +409,7 @@ describe('問題画面（Phase 2：サイコロ・見え方）', () => {
     expect(viewer.setFaceDecorations).toHaveBeenLastCalledWith(null);
     expect(viewer.setLabelsVisible).toHaveBeenLastCalledWith(true);
     expect(viewer.enableRotation).toHaveBeenCalled();
-    expect(container.querySelector('.quiz-view__note').hidden).toBe(true);
+    expect(container.querySelector('.quiz-view').hidden).toBe(false); // 位置関係は回答前から立方体を表示
     answer(container);
     expect(viewer.playAnswerReveal).toHaveBeenCalled();
     expect(viewer.playQuestionReveal).not.toHaveBeenCalled();

@@ -48,7 +48,7 @@ describe('そのほかの図', () => {
   });
 
   it('見えていない面の一覧', () => {
-    const cf = colorFaces({ EFGH: 'red', ABCD: 'blue', ABFE: 'yellow', CDHG: 'green', BCGF: 'purple', DAEH: 'orange' });
+    const cf = colorFaces({ ABCD: 'red', EFGH: 'blue', ABFE: 'yellow', CDHG: 'green', BCGF: 'purple', DAEH: 'orange' });
     const el = renderVisual(hiddenFacesVisual(cf, INITIAL_ORIENTATION));
     for (const text of ['下：青', '後ろ：緑', '左：オレンジ']) expect(el.textContent).toContain(text);
   });

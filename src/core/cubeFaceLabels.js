@@ -15,7 +15,7 @@ import { vecCross, vecDot } from './cubeGeometry.js';
 import { shuffle } from '../utils/random.js';
 
 /** ふつうのサイコロ（向かい合う面の和が 7。1 が上・2 が前・3 が右） */
-export const STANDARD_DICE = Object.freeze({ EFGH: 1, ABCD: 6, ABFE: 2, CDHG: 5, BCGF: 3, DAEH: 4 });
+export const STANDARD_DICE = Object.freeze({ ABCD: 1, EFGH: 6, ABFE: 2, CDHG: 5, BCGF: 3, DAEH: 4 });
 
 /** 6色（色名と文字色つき） */
 export const FACE_COLORS = Object.freeze([
@@ -75,14 +75,15 @@ export function byDirection(byFace, orientation) {
  * はじめの向きでの、各面の「上」（ワールド座標）。
  * その面を正面から見たときに上を向く方向にそろえてある（上面は「前を下にして真上から」見たとき）。
  */
-export const FACE_UP = Object.freeze({
-  EFGH: Object.freeze([0, 0, -1]),
-  ABCD: Object.freeze([0, 0, 1]),
-  ABFE: Object.freeze([0, 1, 0]),
-  CDHG: Object.freeze([0, 1, 0]),
-  BCGF: Object.freeze([0, 1, 0]),
-  DAEH: Object.freeze([0, 1, 0]),
-});
+export const FACE_UP = Object.freeze(
+  Object.fromEntries(
+    FACES.map((f) => {
+      // 上面は -Z（奥）、底面は +Z（手前）、側面は +Y を「上」にする
+      const up = f.normal[1] === 1 ? [0, 0, -1] : f.normal[1] === -1 ? [0, 0, 1] : [0, 1, 0];
+      return [f.id, Object.freeze(up)];
+    }),
+  ),
+);
 
 /** 面を正面から見たときの、画面の右と上（ワールド座標） */
 export const VIEW_FRAMES = Object.freeze({

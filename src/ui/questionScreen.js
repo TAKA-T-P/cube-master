@@ -54,7 +54,6 @@ export function mountQuestionScreen(container, { navigate }) {
   const typeHint = h('p', { class: 'quiz-type' });
   const questionText = h('h2', { class: 'quiz-text', tabindex: '-1' });
   const figures = h('div', { class: 'quiz-figures' });
-  const viewNote = h('p', { class: 'quiz-view__note', hidden: true }, '回答するまで、立方体は回せません。');
   const viewport = h('div', { class: 'viewport viewport--quiz', 'aria-label': '3D立方体（ドラッグで回転）' });
   const legend = h(
     'div',
@@ -85,20 +84,26 @@ export function mountQuestionScreen(container, { navigate }) {
     nextButton,
   );
 
-  container.append(
+  // 立方体の表示領域（画面に固定。答えが見えてしまう問題では回答するまで表示しない）
+  const quizView = h('section', { class: 'quiz-view' }, viewport, legend, h('div', { class: 'quiz-view__tools' }, resetViewButton, faceModeButton));
+  const quizRoot = h(
+    'div',
+    { class: 'quiz' },
+    h('header', { class: 'quiz-header' }, quitButton, progress, difficulty, score),
     h(
       'div',
-      { class: 'quiz' },
-      h('header', { class: 'quiz-header' }, quitButton, progress, difficulty, score),
+      { class: 'quiz-body' },
+      quizView,
+      // 立方体の下（PC では右）の、スクロールする領域
       h(
         'div',
-        { class: 'quiz-body' },
+        { class: 'quiz-scroll' },
         h('section', { class: 'quiz-question' }, typeHint, questionText, figures),
-        h('section', { class: 'quiz-view' }, viewport, legend, h('div', { class: 'quiz-view__tools' }, viewNote, resetViewButton, faceModeButton)),
         h('section', { class: 'quiz-answer' }, choicesEl, submitButton, feedback),
       ),
     ),
   );
+  container.append(quizRoot);
 
   // ---------- 3D ビューア ----------
   let viewer = null;
@@ -234,6 +239,8 @@ export function mountQuestionScreen(container, { navigate }) {
     nextButton.textContent = session.hasNextQuestion() ? '次の問題へ' : '結果を見る';
     submitButton.hidden = true;
     feedback.hidden = false;
+    // スマホでは選択肢の下に結果が出るので、見える位置までスクロールする
+    resultTitle.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
     updateScore();
     renderChoices();
   }
@@ -268,12 +275,18 @@ export function mountQuestionScreen(container, { navigate }) {
     }
   }
 
-  /** 問題ごとの 3D 操作の制限（回答前は答えが見えないように回転を止める問題がある） */
+  /**
+   * 問題ごとの 3D 操作の制限
+   * 回答前に回転できない問題（サイコロ・見え方）は、回答するまで立方体そのものを表示せず、
+   * 問題文の図だけで考える。回答すると、操作できる立方体が現れて正解演出が始まる。
+   */
   function applyInteraction(q, phase) {
     const i = q.scene.interaction ?? {};
     const rotation = phase === 'before' ? (i.allowCameraRotationBeforeAnswer ?? true) : (i.allowCameraRotationAfterAnswer ?? true);
     const zoom = phase === 'before' ? (i.allowZoomBeforeAnswer ?? true) : true;
-    viewNote.hidden = rotation || !viewer;
+    const hideView = phase === 'before' && !rotation;
+    quizView.hidden = hideView;
+    quizRoot.classList.toggle('quiz--no-view', hideView);
     if (!viewer) return;
     if (rotation) viewer.enableRotation();
     else viewer.disableRotation();

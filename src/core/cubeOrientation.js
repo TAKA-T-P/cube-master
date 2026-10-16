@@ -2,7 +2,7 @@
  * 立方体の向き（CubeOrientation。Three.js・DOM 非依存）
  *
  * 向き = 「各方向にどの面 ID があるか」の対応表。
- *   { top: 'EFGH', bottom: 'ABCD', front: 'ABFE', back: 'CDHG', right: 'BCGF', left: 'DAEH' }
+ *   { top: 'ABCD', bottom: 'EFGH', front: 'ABFE', back: 'CDHG', right: 'BCGF', left: 'DAEH' }
  * 面 ID は回転しても変わらない。変わるのは、各面がどの方向を向いているかだけ。
  * 立方体の向きは全部で 24 通り（鏡映しは含まない）。
  */
@@ -42,7 +42,7 @@ export function isValidOrientation(orientation) {
 
 /**
  * 向き → 回転行列（はじめの向きからこの向きへの回転。3D モデルの回転と一致する）
- * 行列の各列は、X・Y・Z 方向を向いていた面（BCGF・EFGH・ABFE）がいま向いている方向
+ * 行列の各列は、X・Y・Z 方向を向いていた面（BCGF・ABCD・ABFE）がいま向いている方向
  */
 export function orientationToMatrix(orientation) {
   const dirOf = (faceId) => DIRECTIONS.find((d) => orientation[d] === faceId);

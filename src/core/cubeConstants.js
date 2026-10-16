@@ -32,18 +32,18 @@ export const ELEMENT_TYPE_LABELS = Object.freeze({
 const freezeVec = (x, y, z) => Object.freeze([x, y, z]);
 
 /**
- * 頂点（底面 ABCD・上面 EFGH）
+ * 頂点（上面 ABCD・底面 EFGH。A の真下が E、B の真下が F …）
  * 配列の並び順が ID の標準順序になる。
  */
 export const VERTICES = Object.freeze([
-  Object.freeze({ id: 'A', position: freezeVec(-1, -1, +1) }),
-  Object.freeze({ id: 'B', position: freezeVec(+1, -1, +1) }),
-  Object.freeze({ id: 'C', position: freezeVec(+1, -1, -1) }),
-  Object.freeze({ id: 'D', position: freezeVec(-1, -1, -1) }),
-  Object.freeze({ id: 'E', position: freezeVec(-1, +1, +1) }),
-  Object.freeze({ id: 'F', position: freezeVec(+1, +1, +1) }),
-  Object.freeze({ id: 'G', position: freezeVec(+1, +1, -1) }),
-  Object.freeze({ id: 'H', position: freezeVec(-1, +1, -1) }),
+  Object.freeze({ id: 'A', position: freezeVec(-1, +1, +1) }),
+  Object.freeze({ id: 'B', position: freezeVec(+1, +1, +1) }),
+  Object.freeze({ id: 'C', position: freezeVec(+1, +1, -1) }),
+  Object.freeze({ id: 'D', position: freezeVec(-1, +1, -1) }),
+  Object.freeze({ id: 'E', position: freezeVec(-1, -1, +1) }),
+  Object.freeze({ id: 'F', position: freezeVec(+1, -1, +1) }),
+  Object.freeze({ id: 'G', position: freezeVec(+1, -1, -1) }),
+  Object.freeze({ id: 'H', position: freezeVec(-1, -1, -1) }),
 ]);
 
 /**
@@ -52,12 +52,12 @@ export const VERTICES = Object.freeze([
  */
 export const EDGES = Object.freeze(
   [
-    // 底面
+    // 上面
     ['A', 'B'],
     ['B', 'C'],
     ['C', 'D'],
     ['D', 'A'],
-    // 上面
+    // 底面
     ['E', 'F'],
     ['F', 'G'],
     ['G', 'H'],
@@ -75,8 +75,8 @@ export const EDGES = Object.freeze(
  * normal は立方体の外向き単位法線。
  */
 export const FACES = Object.freeze([
-  Object.freeze({ id: 'ABCD', vertices: Object.freeze(['A', 'B', 'C', 'D']), normal: freezeVec(0, -1, 0) }),
-  Object.freeze({ id: 'EFGH', vertices: Object.freeze(['E', 'F', 'G', 'H']), normal: freezeVec(0, +1, 0) }),
+  Object.freeze({ id: 'ABCD', vertices: Object.freeze(['A', 'B', 'C', 'D']), normal: freezeVec(0, +1, 0) }),
+  Object.freeze({ id: 'EFGH', vertices: Object.freeze(['E', 'F', 'G', 'H']), normal: freezeVec(0, -1, 0) }),
   Object.freeze({ id: 'ABFE', vertices: Object.freeze(['A', 'B', 'F', 'E']), normal: freezeVec(0, 0, +1) }),
   Object.freeze({ id: 'BCGF', vertices: Object.freeze(['B', 'C', 'G', 'F']), normal: freezeVec(+1, 0, 0) }),
   Object.freeze({ id: 'CDHG', vertices: Object.freeze(['C', 'D', 'H', 'G']), normal: freezeVec(0, 0, -1) }),

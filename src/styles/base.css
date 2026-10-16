@@ -19,7 +19,7 @@
   --shadow-sm: 0 1px 2px rgb(27 42 65 / 8%);
   --shadow-md: 0 6px 20px rgb(31 78 156 / 12%);
 
-  --tap-size: 44px; /* タッチ操作で押しやすい最小サイズ */
+  --tap-size: 31px; /* ボタンの最小の高さ（スマホでも縦に詰めて表示できるように低めにする） */
   --gutter: 16px;
 
   --font-sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'BIZ UDPGothic', 'Yu Gothic UI', 'Meiryo', system-ui, sans-serif;
@@ -74,7 +74,7 @@ button {
   justify-content: center;
   gap: 8px;
   min-height: var(--tap-size);
-  padding: 8px 16px;
+  padding: 4px 14px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);

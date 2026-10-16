@@ -21,8 +21,8 @@ import { canMatchView, mirrorView, viewOf, enumerateLabelings, solveUnique, canS
 const I = INITIAL_ORIENTATION;
 
 describe('はじめの向き', () => {
-  it('上 EFGH・下 ABCD・前 ABFE・後ろ CDHG・右 BCGF・左 DAEH', () => {
-    expect(I).toEqual({ top: 'EFGH', bottom: 'ABCD', front: 'ABFE', back: 'CDHG', right: 'BCGF', left: 'DAEH' });
+  it('上 ABCD・下 EFGH・前 ABFE・後ろ CDHG・右 BCGF・左 DAEH', () => {
+    expect(I).toEqual({ top: 'ABCD', bottom: 'EFGH', front: 'ABFE', back: 'CDHG', right: 'BCGF', left: 'DAEH' });
     expect(isValidOrientation(I)).toBe(true);
   });
 });
@@ -31,19 +31,19 @@ describe('90° 回転', () => {
   it('1回の回転で面の向きが仕様どおりに変わる', () => {
     const after = (m) => rotateOrientation(I, m);
     // 右へ：元の上面が右側面に
-    expect(getDirectionOfFace(after('right'), 'EFGH')).toBe('right');
+    expect(getDirectionOfFace(after('right'), 'ABCD')).toBe('right');
     expect(after('right').top).toBe('DAEH'); // 元の左面が上に
     // 左へ：元の上面が左側面に
-    expect(getDirectionOfFace(after('left'), 'EFGH')).toBe('left');
+    expect(getDirectionOfFace(after('left'), 'ABCD')).toBe('left');
     // 前へ（手前）：元の上面が前面に
-    expect(getDirectionOfFace(after('forward'), 'EFGH')).toBe('front');
+    expect(getDirectionOfFace(after('forward'), 'ABCD')).toBe('front');
     expect(after('forward').top).toBe('CDHG'); // 元の後ろの面が上に
     // 後ろへ（奥）：元の上面が後面に
-    expect(getDirectionOfFace(after('backward'), 'EFGH')).toBe('back');
+    expect(getDirectionOfFace(after('backward'), 'ABCD')).toBe('back');
     // 水平に右へ：元の前面が右側面に。上下は変わらない
     expect(getDirectionOfFace(after('turnRight'), 'ABFE')).toBe('right');
-    expect(after('turnRight').top).toBe('EFGH');
-    expect(after('turnRight').bottom).toBe('ABCD');
+    expect(after('turnRight').top).toBe('ABCD');
+    expect(after('turnRight').bottom).toBe('EFGH');
     // 水平に左へ：元の前面が左側面に
     expect(getDirectionOfFace(after('turnLeft'), 'ABFE')).toBe('left');
     // 転がす向きの軸の面は動かない
@@ -90,7 +90,7 @@ describe('24通りの姿勢', () => {
   });
 
   it('上下・左右・前後の向かい合う面の関係が保たれる', () => {
-    const opposite = { EFGH: 'ABCD', ABCD: 'EFGH', ABFE: 'CDHG', CDHG: 'ABFE', BCGF: 'DAEH', DAEH: 'BCGF' };
+    const opposite = { ABCD: 'EFGH', EFGH: 'ABCD', ABFE: 'CDHG', CDHG: 'ABFE', BCGF: 'DAEH', DAEH: 'BCGF' };
     for (const o of ALL_ORIENTATIONS) for (const d of DIRECTIONS) expect(o[getOppositeDirection(d)]).toBe(opposite[o[d]]);
   });
 
@@ -100,7 +100,7 @@ describe('24通りの姿勢', () => {
 
   it('鏡映しの配置は正しい向きとして扱わない', () => {
     expect(isValidOrientation({ ...I, right: 'DAEH', left: 'BCGF' })).toBe(false);
-    expect(isValidOrientation({ ...I, right: 'EFGH' })).toBe(false); // 面の重複
+    expect(isValidOrientation({ ...I, right: 'ABCD' })).toBe(false); // 面の重複
     expect(isValidOrientation(null)).toBe(false);
   });
 
@@ -115,7 +115,7 @@ describe('24通りの姿勢', () => {
   });
 
   it('面の取得・方向の取得・無効な値', () => {
-    expect(getFaceAtDirection(I, 'top')).toBe('EFGH');
+    expect(getFaceAtDirection(I, 'top')).toBe('ABCD');
     expect(getDirectionOfFace(I, 'BCGF')).toBe('right');
     expect(getOppositeDirection('front')).toBe('back');
     expect(() => getFaceAtDirection(I, 'up')).toThrow();
@@ -141,11 +141,11 @@ describe('面の装飾と回転', () => {
   it('矢印の見え方：はじめの向きでは描いた向き、水平に右へ回すと上面の矢印は左向きに見える', () => {
     for (const d of DIRECTIONS) for (const a of ARROWS) expect(arrowAsSeen(I[d], a, I, d)).toBe(a);
     const turned = rotateOrientation(I, 'turnRight');
-    expect(arrowAsSeen('EFGH', 'up', turned, 'top')).toBe('left');
+    expect(arrowAsSeen('ABCD', 'up', turned, 'top')).toBe('left');
     // 前の面を右へ回すと右の面になり、右から見ても矢印は上向きのまま
     expect(arrowAsSeen('ABFE', 'up', turned, 'right')).toBe('up');
     // 見えない方向を指定するとエラー
-    expect(() => arrowAsSeen('EFGH', 'up', I, 'front')).toThrow();
+    expect(() => arrowAsSeen('ABCD', 'up', I, 'front')).toThrow();
   });
 });
 
