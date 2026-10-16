@@ -7,6 +7,7 @@
 import './styles/base.css';
 import './styles/layout.css';
 import './styles/training.css';
+import './styles/certification.css';
 import { mountHomeScreen } from './ui/homeScreen.js';
 import { mountPreviewScreen } from './ui/previewScreen.js';
 import { mountHelpScreen } from './ui/helpScreen.js';
@@ -16,6 +17,10 @@ import { mountQuestionScreen } from './ui/questionScreen.js';
 import { mountTrainingResultScreen } from './ui/trainingResultScreen.js';
 import { mountReviewResultScreen } from './ui/reviewScreen.js';
 import { mountLearningHistoryScreen } from './ui/learningHistoryScreen.js';
+import { mountCertificationSetupScreen } from './ui/certificationSetupScreen.js';
+import { mountCertificationQuestionScreen } from './ui/certificationQuestionScreen.js';
+import { mountCertificationResultScreen } from './ui/certificationResultScreen.js';
+import { mountCertificationRecordsScreen } from './ui/certificationRecordsScreen.js';
 import { h, showToast } from './utils/dom.js';
 
 const ROUTES = {
@@ -28,6 +33,10 @@ const ROUTES = {
   result: mountTrainingResultScreen,
   'review-result': mountReviewResultScreen,
   history: mountLearningHistoryScreen,
+  certification: mountCertificationSetupScreen,
+  'certification-play': mountCertificationQuestionScreen,
+  'certification-result': mountCertificationResultScreen,
+  'certification-records': mountCertificationRecordsScreen,
 };
 
 const app = document.getElementById('app');

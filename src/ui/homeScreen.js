@@ -6,9 +6,9 @@
 import { h } from '../utils/dom.js';
 
 export const MENU_ITEMS = [
-  { id: 'preview', label: '3D立方体をためす', route: 'preview', enabled: true, primary: true },
-  { id: 'training', label: 'トレーニング', route: 'categories', enabled: true },
-  { id: 'certification', label: '段位認定', route: 'certification', enabled: false },
+  { id: 'training', label: 'トレーニング', route: 'categories', enabled: true, primary: true },
+  { id: 'certification', label: '段位認定', route: 'certification', enabled: true, primary: true },
+  { id: 'preview', label: '3D立方体をためす', route: 'preview', enabled: true },
   { id: 'help', label: 'あそびかた', route: 'help', enabled: true },
 ];
 

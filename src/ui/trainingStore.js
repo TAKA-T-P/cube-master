@@ -9,6 +9,7 @@
  *   kind: 'card'     結果画面の「第◯問」から1問だけ（解いたら結果画面へ戻る）
  *         'mistakes' 結果画面の「間違えた問題を復習」（不正解・部分正解の問題すべて）
  *         'saved'    学習記録の「復習する」（ブラウザに保存した、前に間違えた問題）
+ *         'cert'     段位認定の結果の「間違えた問題をトレーニングで復習」（いろいろなカテゴリの問題）
  */
 import { TrainingSession } from '../core/questionEngine.js';
 import { getCategory, getTemplates, DEFAULT_SETTINGS } from '../questions/questionRegistry.js';
@@ -86,6 +87,9 @@ export const startMistakeReview = () => (state.summary ? beginReview('mistakes',
 
 /** ブラウザに保存した、前に間違えた問題を復習する */
 export const startSavedReview = (category) => beginReview('saved', category, getSavedReviewQuestions(category));
+
+/** 段位認定で間違えた問題を、トレーニングと同じ画面でじっくり解き直す（時間制限・得点なし） */
+export const startCertificationReview = (questions) => beginReview('cert', 'certification', questions);
 
 /** 復習の結果画面から、まだ間違えている問題をもう一度 */
 export function startRetryReview() {

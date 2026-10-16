@@ -40,6 +40,19 @@ export class AnimationManager {
     this._inputLock = inputLock;
     this._onStateChange = onStateChange;
     this._current = null;
+    this._speed = 1;
+  }
+
+  /**
+   * 再生の速さ（1 = ふつう。2.5 なら 2.5 倍速）。途中の動きは省かず、時間だけを短くする（段位認定の短い演出用）
+   * @param {number} speed
+   */
+  setSpeed(speed) {
+    this._speed = Number.isFinite(speed) && speed > 0 ? speed : 1;
+  }
+
+  getSpeed() {
+    return this._speed;
   }
 
   /**
@@ -82,7 +95,7 @@ export class AnimationManager {
     const current = this._current;
     if (!current || current.paused) return false;
     if (current.lastTime === null) current.lastTime = time;
-    current.elapsed += Math.min(MAX_FRAME_DELTA, Math.max(0, time - current.lastTime));
+    current.elapsed += Math.min(MAX_FRAME_DELTA, Math.max(0, time - current.lastTime)) * this._speed;
     current.lastTime = time;
 
     const progress = current.duration === 0 ? 1 : Math.min(1, current.elapsed / current.duration);

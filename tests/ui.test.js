@@ -61,7 +61,7 @@ const button = (root, text) => [...root.querySelectorAll('button')].find((b) => 
 const switchInput = (root, text) => [...root.querySelectorAll('.switch')].find((s) => s.textContent.includes(text)).querySelector('input');
 
 describe('トップ画面', () => {
-  it('タイトル・バージョン・準備中ボタンを表示し、有効なボタンで移動する', () => {
+  it('タイトル・バージョン・メニューを表示し、ボタンで移動する', () => {
     const container = document.createElement('main');
     const navigate = vi.fn();
     mountHomeScreen(container, { navigate, version: '0.2.0' });
@@ -69,18 +69,19 @@ describe('トップ画面', () => {
     expect(container.textContent).toContain('立方体を極める！空間認識トレーニング');
     expect(container.textContent).toContain('Ver.0.2.0');
 
-    // Phase 1：トレーニングは選べる・段位認定は準備中のまま
+    // Phase 5：トレーニング・段位認定・3D立方体をためす・あそびかたの順で、どれも選べる
+    expect([...container.querySelectorAll('[data-menu]')].map((b) => b.dataset.menu)).toEqual(['training', 'certification', 'preview', 'help']);
     const training = container.querySelector('[data-menu="training"]');
     const cert = container.querySelector('[data-menu="certification"]');
     expect(training.disabled).toBe(false);
-    expect(cert.disabled).toBe(true);
-    expect(cert.textContent).toContain('準備中');
+    expect(cert.disabled).toBe(false);
+    expect(container.textContent).not.toContain('準備中');
 
     container.querySelector('[data-menu="preview"]').click();
     container.querySelector('[data-menu="help"]').click();
     training.click();
     cert.click();
-    expect(navigate.mock.calls).toEqual([['preview'], ['help'], ['categories']]);
+    expect(navigate.mock.calls).toEqual([['preview'], ['help'], ['categories'], ['certification']]);
   });
 });
 

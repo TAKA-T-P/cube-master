@@ -35,9 +35,10 @@ const MARKS = {
  * @param {HTMLElement} parent  表示する場所（画面を閉じると一緒に消える）
  * @param {'correct'|'partial'|'incorrect'} status
  * @param {() => void} onDone
+ * @param {{ duration?: number }} [options] 表示する時間（段位認定では短くする）
  * @returns {{ close: () => void, cancel: () => void }} close：すぐ閉じて onDone、cancel：onDone を呼ばずに消す
  */
-export function showAnswerSplash(parent, status, onDone) {
+export function showAnswerSplash(parent, status, onDone, { duration = answerSplash.duration } = {}) {
   const mark = MARKS[status] ?? MARKS.incorrect;
   let finished = false;
   let timer = null;
@@ -49,7 +50,8 @@ export function showAnswerSplash(parent, status, onDone) {
     el?.remove();
     if (callDone) onDone();
   };
-  if (!(answerSplash.duration > 0)) {
+  // answerSplash.duration が 0 のとき（テスト）は、指定があっても表示しない
+  if (!(answerSplash.duration > 0 && duration > 0)) {
     finish(true);
     return { close() {}, cancel() {} };
   }
@@ -61,8 +63,8 @@ export function showAnswerSplash(parent, status, onDone) {
     icon,
     h('span', { class: 'answer-splash__label' }, mark.label),
   );
-  el.style.setProperty('--splash-duration', `${answerSplash.duration}ms`);
+  el.style.setProperty('--splash-duration', `${duration}ms`);
   parent.append(el);
-  timer = setTimeout(() => finish(true), answerSplash.duration);
+  timer = setTimeout(() => finish(true), duration);
   return { close: () => finish(true), cancel: () => finish(false) };
 }

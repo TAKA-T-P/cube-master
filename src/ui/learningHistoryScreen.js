@@ -81,7 +81,7 @@ export function mountLearningHistoryScreen(container, { navigate }) {
   async function confirmClear() {
     const dialog = confirmDialog({
       title: '学習記録を消去しますか？',
-      message: 'この端末に保存した CUBE MASTER の学習記録と復習待ちの問題を、すべて消します。もとに戻せません。',
+      message: 'この端末に保存した CUBE MASTER の学習記録・復習待ちの問題・段位認定の記録を、すべて消します。もとに戻せません。',
       okLabel: '消去する',
       cancelLabel: 'やめる',
     });

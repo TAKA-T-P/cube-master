@@ -6,6 +6,11 @@
  * - 回答の選択状態 : AnswerSelection（core/answerSelection）… 選択肢ボタンはこの状態を表示するだけ
  * - 3D 表示       : cubeViewer（基準要素は reference レイヤー、正誤は wrong / correct レイヤー）
  *
+ * 段位認定（mode.kind === 'certification'）でも同じ画面を使う。そのときは
+ *   - 進行は mode.session（core/certificationSession）。ヒント・もう一度見る・自由に観察する操作は出さない
+ *   - 「○△×」は短く、3D の演出は速く再生し、終わったら自動で次の問題へ進む（その間タイマーは止まっている）
+ *   - 問題を表示して回答できるようになったら mode.onQuestionShown()、時間切れ・最後の問題のあとは mode.onFinish() を呼ぶ
+ *
  * 3D ビューアは画面を開いている間 1つだけ作り、問題ごとに作り直さない。
  * WebGL が使えない端末でも、3D なしで問題に答えられる。
  */
@@ -34,20 +39,22 @@ const INLINE_VISUALS = ['swatch', 'pip'];
 /** 選択肢の文字数がこれより長ければ1列で表示する */
 const LONG_LABEL = 9;
 
-export function mountQuestionScreen(container, { navigate, params }) {
+export function mountQuestionScreen(container, { navigate, params, mode = null }) {
+  // 段位認定のモード（ui/certificationQuestionScreen が渡す）
+  const cert = mode?.kind === 'certification' ? mode : null;
   // 復習（結果画面の「第◯問」・間違えた問題・保存した問題を解き直す）。もとのトレーニングの結果は変えない
-  const isReview = params?.review !== undefined;
+  const isReview = !cert && params?.review !== undefined;
   const review = isReview ? getReview() : null;
   if (isReview && !review) {
-    navigate('result');
+    navigate(params?.review === 'cert' ? 'certification-result' : 'result');
     return { unmount() {} };
   }
-  const session = review?.session ?? getSession();
+  const session = cert?.session ?? review?.session ?? getSession();
   if (!session) {
     navigate('categories');
     return { unmount() {} };
   }
-  if (session.isComplete() && !session.state.currentQuestion) {
+  if (!cert && session.isComplete() && !session.state.currentQuestion) {
     navigate('result');
     return { unmount() {} };
   }
@@ -60,12 +67,16 @@ export function mountQuestionScreen(container, { navigate, params }) {
   // 回答してから「○△×」が消えるまでは false（その間は正誤・解説を出さない）
   let revealed = false;
   let splash = null;
+  // 段位認定：自動で次の問題へ進むタイマー
+  let advanceTimer = null;
 
   // ---------- 画面の骨組み ----------
   const progress = h('span', { class: 'quiz-progress' });
   const difficulty = h('span', { class: 'badge badge--info' }, review ? '復習' : difficultyLabel(session.state.difficulty));
   const score = h('span', { class: 'quiz-score' });
-  const quitButton = review
+  const quitButton = cert
+    ? button('やめる', () => cert.onQuit(), 'btn--ghost')
+    : review
     ? review.kind === 'card'
       ? button('結果に戻る', () => backToResult(), 'btn--ghost')
       : button('復習をやめる', () => showReviewResult(), 'btn--ghost')
@@ -121,7 +132,7 @@ export function mountQuestionScreen(container, { navigate, params }) {
   const quizRoot = h(
     'div',
     { class: 'quiz' },
-    h('header', { class: 'quiz-header' }, quitButton, progress, difficulty, score),
+    h('header', { class: `quiz-header ${cert ? 'quiz-header--certification' : ''}` }, quitButton, ...(cert ? cert.headerItems : [progress, difficulty, score])),
     h(
       'div',
       { class: 'quiz-body' },
@@ -149,6 +160,8 @@ export function mountQuestionScreen(container, { navigate, params }) {
         replayButton.disabled = playing;
       }),
     );
+    // 段位認定：演出は途中の動きを省かずに速く再生する
+    if (cert) viewer.animations.setSpeed?.(cert.revealSpeed ?? 1);
     window.cubeMaster = { viewer, session };
   } catch (err) {
     console.error(err);
@@ -168,6 +181,8 @@ export function mountQuestionScreen(container, { navigate, params }) {
   function showQuestion(q) {
     question = q;
     revealed = false;
+    clearTimeout(advanceTimer);
+    advanceTimer = null;
     splash?.cancel();
     splash = null;
     const state = session.state;
@@ -248,11 +263,12 @@ export function mountQuestionScreen(container, { navigate, params }) {
     // ヒント：同じ問題では何度見ても同じ内容。ヒントのない問題ではボタンを出さない
     hintText.hidden = true;
     hintText.textContent = '';
-    hintButton.hidden = !q.hint?.text;
+    hintButton.hidden = Boolean(cert) || !q.hint?.text; // 段位認定ではヒントを使えない
     hintButton.textContent = 'ヒントを見る';
     hintButton.setAttribute('aria-expanded', 'false');
     renderChoices();
     questionText.focus({ preventScroll: true });
+    cert?.onQuestionShown();
   }
 
   /** 選択状態・正誤をボタンに反映する */
@@ -282,6 +298,12 @@ export function mountQuestionScreen(container, { navigate, params }) {
     const selected = selection.getSelected();
     selection.lock(); // 回答の変更を禁止
     const result = session.submit(selected);
+    if (!result) {
+      // 段位認定：時間切れ（確定した時刻に時間が残っていなかった）。この回答は数えない
+      cert?.onFinish();
+      return;
+    }
+    cert?.onAnswered(result);
     // 回答したらヒントは閉じる（回答後は使わない）
     hintButton.hidden = true;
     hintText.hidden = true;
@@ -289,18 +311,45 @@ export function mountQuestionScreen(container, { navigate, params }) {
     renderChoices();
     // 「○△×」を大きく出して効果音を鳴らし、消えてから正誤・解説・3D の演出を出す
     playAnswerSound(result.status);
-    splash = showAnswerSplash(quizRoot, result.status, () => {
-      splash = null;
-      if (disposed) return;
-      revealResult(result);
-    });
+    splash = showAnswerSplash(
+      quizRoot,
+      result.status,
+      () => {
+        splash = null;
+        if (disposed) return;
+        revealResult(result);
+      },
+      cert ? { duration: cert.splashMs } : undefined,
+    );
   }
 
   function revealResult(result) {
     revealed = true;
     showResult(result);
     applyInteraction(question, 'after');
-    playReveal();
+    const done = playReveal();
+    if (cert) scheduleAdvance(done);
+  }
+
+  /**
+   * 段位認定：3D の演出が終わったら（長すぎるときは revealMaxMs で最終状態にして）、少し待って次の問題へ
+   * 演出が失敗しても、タイマーは止めたまま次の問題へ進む
+   */
+  function scheduleAdvance(done) {
+    const q = question;
+    const maxMs = cert.revealMaxMs ?? 3000;
+    const limit = new Promise((resolve) => {
+      const t = setTimeout(resolve, maxMs);
+      cleanups.push(() => clearTimeout(t));
+    });
+    Promise.race([Promise.resolve(done).catch(() => {}), limit]).then(() => {
+      if (disposed || question !== q) return;
+      viewer?.animations.skip();
+      advanceTimer = setTimeout(() => {
+        advanceTimer = null;
+        if (!disposed && question === q) goNext();
+      }, cert.advanceDelayMs ?? 500);
+    });
   }
 
   function showResult(result) {
@@ -308,17 +357,24 @@ export function mountQuestionScreen(container, { navigate, params }) {
     resultTitle.className = `feedback__title feedback__title--${result.status}`;
     resultDetail.textContent = resultDetailText(result);
     explanationText.textContent = resolveChoiceRefs(question.explanation.text);
-    replayButton.hidden = !viewer;
+    // 段位認定：くわしい解説は出さず（結果画面から復習できる）、得点・ペナルティを短く出す
+    feedback.classList.toggle('feedback--certification', Boolean(cert));
+    if (cert) resultDetail.textContent = [resultDetailText(result), cert.scoreText?.()].filter(Boolean).join(' ');
+    replayButton.hidden = !viewer || Boolean(cert);
     skipButton.hidden = !viewer;
-    netToggleButton.hidden = question.scene.model !== 'net' || !viewer;
+    netToggleButton.hidden = question.scene.model !== 'net' || !viewer || Boolean(cert);
     netToggleButton.textContent = '展開図に戻す';
-    separateButton.hidden = question.scene.model !== 'subcubes' || !viewer;
+    separateButton.hidden = question.scene.model !== 'subcubes' || !viewer || Boolean(cert);
     separateButton.textContent = '元に戻す';
     hintButton.hidden = true;
     hintText.hidden = true;
     // 回答後にだけ見せる印（立方体にならない展開図の重なるマスなど）を表示する
     choicesEl.classList.add('choices--answered');
-    submitButton.textContent = review
+    submitButton.textContent = cert
+      ? session.hasNextQuestion()
+        ? '次の問題へ'
+        : '結果へ'
+      : review
       ? review.kind === 'card'
         ? '結果に戻る'
         : session.hasNextQuestion()
@@ -344,25 +400,24 @@ export function mountQuestionScreen(container, { navigate, params }) {
     return `正解は「${question.correctAnswers.map(labelOf).join('」「')}」です。`;
   }
 
-  /** 正解演出（誤選択を赤 → 正解を緑で1つずつ） */
+  /** 正解演出（誤選択を赤 → 正解を緑で1つずつ）。終了で解決する Promise（3D がなければ undefined） */
   function playReveal() {
     const result = session.state.lastResult;
-    if (!viewer || !result) return;
+    if (!viewer || !result) return undefined;
     const wrong = result.wrong.map((id) => question.choices.find((c) => c.id === id)?.elementId).filter(Boolean);
     const correct = question.explanation.highlightElements;
     const reveal = question.explanation.reveal;
     if (reveal) {
       // 回転・視点移動つきの演出（はじめの向きに戻してから再生）
-      viewer.playQuestionReveal({
+      return viewer.playQuestionReveal({
         orientation: question.scene.orientation ?? INITIAL_ORIENTATION,
         cameraPreset: question.scene.cameraPreset,
         steps: reveal.steps,
         wrong,
         correct,
       });
-    } else {
-      viewer.playAnswerReveal({ wrong, correct });
     }
+    return viewer.playAnswerReveal({ wrong, correct });
   }
 
   /**
@@ -429,11 +484,23 @@ export function mountQuestionScreen(container, { navigate, params }) {
 
   function updateScore() {
     const s = session.state;
+    if (cert) return cert.onScore?.();
     score.textContent = review ? '' : `正解 ${s.correctCount}`;
   }
 
   // ---------- 次の問題・終了 ----------
   function goNext() {
+    if (cert) {
+      // 段位認定：回答した問題のあとだけ進める（連打で2回進まない）
+      if (!session.state.answerLocked || disposed) return;
+      clearTimeout(advanceTimer);
+      advanceTimer = null;
+      viewer?.animations.cancel();
+      const next = session.hasNextQuestion() ? session.nextQuestion() : null;
+      if (next) showQuestion(next);
+      else cert.onFinish();
+      return;
+    }
     viewer?.animations.cancel(); // 前問の演出を終わらせる
     if (review) {
       if (review.kind === 'card') backToResult();
@@ -480,7 +547,11 @@ export function mountQuestionScreen(container, { navigate, params }) {
 
   // ---------- 開始（画面を開き直した場合は、続きから表示） ----------
   const current = session.state.currentQuestion;
-  if (current) {
+  if (cert) {
+    const first = session.nextQuestion();
+    if (first) showQuestion(first);
+    else cert.onFinish();
+  } else if (current) {
     showQuestion(current);
     const result = session.state.lastResult;
     if (session.state.answerLocked && result) {
@@ -496,6 +567,7 @@ export function mountQuestionScreen(container, { navigate, params }) {
     unmount() {
       disposed = true;
       splash?.cancel();
+      clearTimeout(advanceTimer);
       for (const off of cleanups) off();
       viewer?.dispose();
       if (window.cubeMaster?.viewer === viewer) delete window.cubeMaster;
