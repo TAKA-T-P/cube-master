@@ -7,12 +7,13 @@ import { createRng } from '../src/utils/random.js';
 import { rotateOrientation, rotateOrientationSequence, isValidOrientation } from '../src/core/cubeOrientation.js';
 import { rotateLabeling, DIRECTIONS, DIRECTION_VECTORS, MOVE_IDS } from '../src/core/cubeRotations.js';
 import { sequenceMatrix } from '../src/core/cubeOrientation.js';
-import { byDirection, pipTurnAsSeen, pipLabel, ORIENTED_PIPS } from '../src/core/cubeFaceLabels.js';
+import { byDirection, pipTurnAsSeen, markLabel, ORIENTED_PIPS, FACE_MARKS } from '../src/core/cubeFaceLabels.js';
 import { solveUnique, canMatchView, canSatisfyConditions, viewOf, viewKey } from '../src/core/cubePuzzle.js';
 import { movesPhrase } from '../src/questions/dice/diceExplanations.js';
 
 const SEEDS = [1, 2, 3];
-const ALL = [...DICE_TEMPLATES, ...PROJECTION_TEMPLATES];
+// サイコロ（D01〜D06）の共通の検証。積み木の V01〜V06 は blockQuestions.test.js
+const ALL = [...DICE_TEMPLATES];
 const byId = Object.fromEntries(ALL.map((t) => [t.id, t]));
 
 /** すべての基準 × いくつかのシードで問題を作る */
@@ -43,9 +44,9 @@ const hasRule = (q) => q.question.includes('向かい合う面の目の数の和
 const hasHiddenList = (q) => (q.visuals ?? []).some((v) => v.type === 'faceList');
 const movesOf = (q) => q.visuals.find((v) => v.type === 'moves')?.moves.map((m) => m.id);
 const ASKED = { 上の面: 'top', 前の面: 'front', 右の面: 'right' };
-const askedOf = (q) => ASKED[Object.keys(ASKED).find((k) => q.question.includes(`${k}の目はいくつ`))];
+const askedOf = (q) => ASKED[Object.keys(ASKED).find((k) => q.question.includes(`${k}の目はいくつ`) || q.question.includes(`${k}のマークはどれ`))];
 
-describe('D01〜D06・V01〜V06 の生成', () => {
+describe('D01〜D06 の生成', () => {
   it('テンプレートと難易度', () => {
     expect(DICE_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['D01:1', 'D02:1', 'D03:2', 'D04:2', 'D05:3', 'D06:3']);
     expect(PROJECTION_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['V01:1', 'V02:1', 'V03:2', 'V04:2', 'V05:3', 'V06:3']);
@@ -104,7 +105,7 @@ describe('サイコロ：正解が数学的に正しく、提示した情報だ�
       // 正解演出の回転は問題の手順と同じ
       expect(q.explanation.reveal.steps[0].moves).toEqual(moves);
       // 提示した情報（見えている3面 ＋ ルール文 または 見えない面の一覧）だけで答えが1つに決まる
-      const info = { values: [1, 2, 3, 4, 5, 6], known: hasHiddenList(q) ? fullOf(q) : visibleOf(q), oppositeSum: hasRule(q) ? 7 : null };
+      const info = { values: Object.values(values(q.scene.faces)), known: hasHiddenList(q) ? fullOf(q) : visibleOf(q), oppositeSum: hasRule(q) ? 7 : null };
       const m = sequenceMatrix(moves);
       const result = solveUnique(info, (l) => rotateLabeling(l, m)[asked]);
       expect(result.unique).toBe(true);
@@ -116,14 +117,23 @@ describe('サイコロ：正解が数学的に正しく、提示した情報だ�
     for (const { q } of questionsOf('D03')) expect(hasRule(q) || hasHiddenList(q)).toBe(true);
   });
 
-  it('すべてのサイコロが通常配置とは限らない（ランダム配置では和7のルールを使わない）', () => {
-    const qs = questionsOf('D01').map(({ q }) => q);
-    const nonStandard = qs.filter((q) => {
-      const v = values(q.scene.faces);
-      return v.EFGH + v.ABCD !== 7 || v.ABFE + v.CDHG !== 7 || v.BCGF + v.DAEH !== 7;
-    });
-    expect(nonStandard.length).toBeGreaterThan(0);
-    for (const q of nonStandard) expect(hasRule(q)).toBe(false);
+  it('ふつうのサイコロは目、和が7ではない配置はマーク（〇◎×●◇◆）で表し、マークでは和7のルールを使わない', () => {
+    for (const id of ['D01', 'D03', 'D04', 'D06']) {
+      const qs = questionsOf(id).map(({ q }) => q);
+      const kinds = (q) => new Set(Object.values(q.scene.faces).map((f) => f.kind));
+      const marked = qs.filter((q) => kinds(q).has('symbol'));
+      expect(marked.length).toBeGreaterThan(0);
+      for (const q of qs) expect(kinds(q).size).toBe(1); // 目とマークは混ざらない
+      for (const q of marked) {
+        expect(hasRule(q)).toBe(false);
+        expect(Object.values(values(q.scene.faces)).sort()).toEqual([...FACE_MARKS].sort());
+      }
+      // 目のサイコロは、向かい合う面の和がいつも 7
+      for (const q of qs.filter((x) => kinds(x).has('number'))) {
+        const v = values(q.scene.faces);
+        expect([v.ABCD + v.EFGH, v.ABFE + v.CDHG, v.BCGF + v.DAEH]).toEqual([7, 7, 7]);
+      }
+    }
   });
 
   it('D02：別の向きの図を合わせると、向かい合う面が1つに決まる', () => {
@@ -133,13 +143,13 @@ describe('サイコロ：正解が数学的に正しく、提示した情報だ�
       const known = visibleOf(q);
       const views = others.map((v) => viewOf(byDirection(values(v.faces), v.orientation)));
       const targetLabel = q.question.match(/^(.+?)の面と向かい合う/)[1];
-      const targetDir = DIRECTIONS.find((d) => pipLabel(q.scene.faces[q.scene.orientation[d]].value) === targetLabel);
+      const targetDir = DIRECTIONS.find((d) => markLabel(q.scene.faces[q.scene.orientation[d]].value) === targetLabel);
       const opposite = { top: 'bottom', front: 'back', right: 'left' }[targetDir];
       const result = solveUnique({ values: Object.values(values(q.scene.faces)), known, views }, (l) => l[opposite]);
       expect(result.unique).toBe(true);
       expect(result.answers.map(String)).toEqual(q.correctAnswers);
-      // 和が7のルールでは解けない（ふつうでない配置で、問題文にもそう書く）
-      expect(q.question).toContain('和が7とはかぎりません');
+      // 和が7のルールが使えない配置なので、目ではなくマークで表す
+      expect(Object.values(q.scene.faces).every((f) => f.kind === 'symbol')).toBe(true);
     }
   });
 
@@ -158,65 +168,7 @@ describe('サイコロ：正解が数学的に正しく、提示した情報だ�
   });
 });
 
-describe('見え方：正解が数学的に正しい', () => {
-  it.each(['V01', 'V02'])('%s：答えの方向の面の目で、その面はカメラから見えている', (id) => {
-    for (const { q } of questionsOf(id)) {
-      const dir = DIRECTIONS.find((d) => String(q.scene.faces[q.scene.orientation[d]].value) === q.correctAnswers[0]);
-      const cam = q.scene.cameraPreset;
-      const v = DIRECTION_VECTORS[dir];
-      expect(v[0] * cam[0] + v[1] * cam[1] + v[2] * cam[2]).toBeGreaterThan(0);
-      expect(q.question).toContain({ top: '真上', bottom: '真下', front: '正面', back: '後ろ', right: '右側', left: '左側' }[dir]);
-      expect(q.visuals[0].viewDirection).toEqual(cam);
-    }
-  });
-
-  it('V03：目の並び方の見え方が向きの計算と一致する', () => {
-    for (const { q } of questionsOf('V03')) {
-      const dir = q.question.includes('真上') ? 'top' : q.question.includes('正面') ? 'front' : 'right';
-      const face = q.scene.orientation[dir];
-      const v = q.scene.faces[face].value;
-      expect(ORIENTED_PIPS).toContain(v); // 向きで見え方が変わる 2・3・6 の目
-      expect(q.correctAnswers).toEqual([`${v}-${pipTurnAsSeen(face, q.scene.orientation, dir)}`]);
-      // 同じ目の2通りの並び方が必ず選択肢に入る
-      expect(q.choices.map((c) => c.id)).toEqual(expect.arrayContaining([`${v}-0`, `${v}-90`]));
-    }
-  });
-
-  it('V04：正解の図は回転後の向き、ほかは別の向き', () => {
-    for (const { q } of questionsOf('V04')) {
-      const move = q.correctAnswers[0];
-      expect(MOVE_IDS).toContain(move);
-      const correct = q.choices.find((c) => c.id === move);
-      expect(correct.visual.orientation).toEqual(rotateOrientation(q.scene.orientation, move));
-      expect(q.explanation.reveal.steps[0].moves).toEqual([move]);
-      expect(hasHiddenList(q)).toBe(true);
-    }
-  });
-
-  it('V05：条件どおりに置けるのは正解だけ（鏡映しは置けない）', () => {
-    for (const { q } of questionsOf('V05')) {
-      const cond = visibleOf(q);
-      for (const c of q.choices) {
-        const view = viewOf(byDirection(values(c.visual.faces), c.visual.orientation));
-        expect(canSatisfyConditions(view, cond)).toBe(c.id === 'match');
-      }
-    }
-  });
-
-  it('V06：回転で作れない図は1つだけで、それが正解', () => {
-    for (const { q } of questionsOf('V06')) {
-      const full = fullOf(q);
-      const impossible = q.choices.filter((c) => !canMatchView(full, viewOf(byDirection(values(c.visual.faces), c.visual.orientation))));
-      expect(impossible.map((c) => c.id)).toEqual(q.correctAnswers);
-      // 演出は、作れる3つの向きを順番に見せる
-      let o = q.scene.orientation;
-      const reached = q.explanation.reveal.steps.map((s) => (o = rotateOrientationSequence(o, s.moves)));
-      for (const r of reached) {
-        expect(q.choices.some((c) => c.id !== 'mirror' && viewKey(viewOf(byDirection(values(c.visual.faces), c.visual.orientation))) === viewKey(viewOf(byDirection(values(q.scene.faces), r))))).toBe(true);
-      }
-    }
-  });
-});
+// 積み木の見え方・投影図（V01〜V06）のテストは blockQuestions.test.js
 
 describe('エンジンでの連続出題（乱数を固定して大量に検証）', () => {
   it.each(['dice', 'projection'])('%s：すべての難易度で200問、正しい形・3連続なし', (category) => {

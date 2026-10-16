@@ -9,15 +9,14 @@
 import { getEdgesOfFace } from '../../core/cubeGeometry.js';
 import { ALL_ORIENTATIONS, INITIAL_ORIENTATION, rotateOrientationSequence, findRotationPath, sequenceMatrix, orientationKey } from '../../core/cubeOrientation.js';
 import { MOVE_IDS, ROLL_MOVE_IDS, ROTATION_MOVES, rotateLabeling, ALL_ROTATIONS, getOppositeDirection, DIRECTIONS, matrixKey, IDENTITY } from '../../core/cubeRotations.js';
-import { STANDARD_DICE, numberFaces, numberFace, randomNumberAssignment, isStandardDice, byDirection, pipLabel } from '../../core/cubeFaceLabels.js';
+import { STANDARD_DICE, numberFaces, numberFace, byDirection, pipLabel, markLabel, randomSymbolAssignment, symbolFaces, facesFromValues } from '../../core/cubeFaceLabels.js';
 import { solveUnique, viewOf, mirrorView, viewKey, canMatchView, VIEW_DIRECTIONS } from '../../core/cubePuzzle.js';
-import { cubeVisual, viewOnlyVisual, movesVisual, hiddenFacesVisual, pipChoice, figureChoice, assembleQuestion } from '../decoratedCube.js';
+import { cubeVisual, viewOnlyVisual, movesVisual, hiddenFacesVisual, markChoice, figureChoice, assembleQuestion } from '../decoratedCube.js';
 import { shuffle, pick } from '../../utils/random.js';
 import * as X from './diceExplanations.js';
 
 export const DICE_CATEGORY = 'dice';
 
-const NUMBERS = [1, 2, 3, 4, 5, 6];
 const ASKED_LABELS = { top: '上の面', front: '前の面', right: '右の面' };
 const RULE_NOTE = 'このサイコロは、向かい合う面の目の数の和が7です。';
 const POSE_VARIANTS = [0, 5, 11, 17, 23];
@@ -25,11 +24,14 @@ const POSE_VARIANTS = [0, 5, 11, 17, 23];
 /** 面 ID の4辺（正解の面を緑の枠で示す。面の目を隠さないため） */
 const faceFrame = (faceId) => getEdgesOfFace(faceId);
 
-/** サイコロの目の配置を決める */
+/**
+ * サイコロの配置を決める
+ * ふつうのサイコロ（向かい合う面の目の和が7）は目で、そうでない配置はマーク（〇◎×●◇◆）で表す。
+ */
 function setupDie(rng, { preferStandard } = {}) {
   const standard = preferStandard ?? rng() < 0.6;
-  const byFace = standard ? { ...STANDARD_DICE } : randomNumberAssignment(rng);
-  return { byFace, standard: isStandardDice(byFace) };
+  const byFace = standard ? { ...STANDARD_DICE } : randomSymbolAssignment(rng);
+  return { byFace, standard };
 }
 
 /**
@@ -37,19 +39,21 @@ function setupDie(rng, { preferStandard } = {}) {
  * @returns {'visible'|'rule'|'list'} visible: 見えている3面で決まる / rule: 和が7のルール / list: 見えていない面の一覧
  */
 function chooseInfo({ byDir, answerOf, standard, rng }) {
+  const values = Object.values(byDir);
   const known = Object.fromEntries(VIEW_DIRECTIONS.map((d) => [d, byDir[d]]));
-  if (solveUnique({ values: NUMBERS, known }, answerOf).unique) return 'visible';
-  if (standard && rng() < 0.65 && solveUnique({ values: NUMBERS, known, oppositeSum: 7 }, answerOf).unique) return 'rule';
+  if (solveUnique({ values, known }, answerOf).unique) return 'visible';
+  if (standard && rng() < 0.65 && solveUnique({ values, known, oppositeSum: 7 }, answerOf).unique) return 'rule';
   return 'list';
 }
 
-/** 目の選択肢（4択）。priority の目を優先して誤答にする */
-function numberChoices({ correct, priority, byFace, rng }) {
-  const faceOf = (n) => Object.keys(byFace).find((f) => byFace[f] === n);
-  const wrong = [...new Set(priority.filter((n) => n !== correct && NUMBERS.includes(n)))];
-  const rest = shuffle(NUMBERS.filter((n) => n !== correct && !wrong.includes(n)), rng);
+/** 面の選択肢（4択）。priority の面を優先して誤答にする */
+function faceChoices({ correct, priority, byFace, rng }) {
+  const all = Object.values(byFace);
+  const faceOf = (v) => Object.keys(byFace).find((f) => byFace[f] === v);
+  const wrong = [...new Set(priority.filter((v) => v !== correct && all.includes(v)))];
+  const rest = shuffle(all.filter((v) => v !== correct && !wrong.includes(v)), rng);
   const picked = [...wrong, ...rest].slice(0, 3);
-  return [correct, ...picked].map((n) => pipChoice(n, { elementId: faceOf(n) }));
+  return [correct, ...picked].map((v) => markChoice(v, { elementId: faceOf(v) }));
 }
 
 /**
@@ -57,7 +61,7 @@ function numberChoices({ correct, priority, byFace, rng }) {
  */
 function trackingQuestion(template, base, rng, { moves, askedDir, pose, preferStandard }) {
   const { byFace, standard } = setupDie(rng, { preferStandard });
-  const faces = numberFaces(byFace);
+  const faces = facesFromValues(byFace);
   const byDir = byDirection(byFace, pose);
   const matrix = sequenceMatrix(moves);
   const answerOf = (labeling) => rotateLabeling(labeling, matrix)[askedDir];
@@ -82,9 +86,9 @@ function trackingQuestion(template, base, rng, { moves, askedDir, pose, preferSt
 
   return assembleQuestion(template, base, DICE_CATEGORY, {
     type: 'single',
-    question: `${note}このサイコロを${X.movesPhrase(moves)}と、${ASKED_LABELS[askedDir]}の目はいくつになりますか。`,
+    question: `${note}このサイコロを${X.movesPhrase(moves)}と、${ASKED_LABELS[askedDir]}${standard ? 'の目はいくつ' : 'のマークはどれ'}になりますか。`,
     visuals,
-    choices: numberChoices({ correct: answer, priority, byFace, rng }),
+    choices: faceChoices({ correct: answer, priority, byFace, rng }),
     correctAnswers: [String(answer)],
     explanation: X.explainTracking({ moves, askedDir, value: answer, info, byDir }),
     highlight: faceFrame(answerFace),
@@ -132,10 +136,9 @@ export const DICE_TEMPLATES = [
     title: '向かい合う面',
     bases: () => VISIBLE_DIRS.flatMap((dir) => [0, 1, 2, 3, 4, 5, 6, 7].map((v) => ({ key: `${dir}-${v}`, refs: [], dir, group: dir }))),
     build(base, rng) {
-      // 和が7のルールでは解けないように、ふつうでない目の配置にする
-      let byFace = randomNumberAssignment(rng);
-      while (isStandardDice(byFace)) byFace = randomNumberAssignment(rng);
-      const faces = numberFaces(byFace);
+      // 和が7のルールでは解けないように、ふつうでない配置（マーク）にする
+      const byFace = randomSymbolAssignment(rng);
+      const faces = symbolFaces(byFace);
       const pose = INITIAL_ORIENTATION;
       const byDir = byDirection(byFace, pose);
       const target = byDir[base.dir];
@@ -167,16 +170,13 @@ export const DICE_TEMPLATES = [
       }
       const faceOf = (n) => Object.keys(byFace).find((f) => byFace[f] === n);
 
-      // 誤答は、7−（目）のまちがい（和が7と思いこむ）を優先する
-      const sevenMistake = 7 - target;
-      const othersPool = Object.values(byDir).filter((n) => n !== target && n !== answer);
-      const others = [
-        ...(othersPool.includes(sevenMistake) ? [sevenMistake] : []),
-        ...shuffle(othersPool.filter((n) => n !== sevenMistake), rng),
-      ].slice(0, 3);
-      const choices = [answer, ...others].map((n) => pipChoice(n, { elementId: faceOf(n) }));
+      const others = shuffle(
+        Object.values(byDir).filter((v) => v !== target && v !== answer),
+        rng,
+      ).slice(0, 3);
+      const choices = [answer, ...others].map((v) => markChoice(v, { elementId: faceOf(v) }));
 
-      // 正解演出：基準の目を前に向けてから、水平に 180° 回して向かい合う面を前に出す
+      // 正解演出：基準のマークを前に向けてから、水平に 180° 回して向かい合う面を前に出す
       const targetFace = pose[base.dir];
       const toFront = ALL_ORIENTATIONS.filter((o) => o.front === targetFace)
         .map((o) => pathBetween(pose, o))
@@ -185,12 +185,10 @@ export const DICE_TEMPLATES = [
       if (toFront.length > 0) steps.push({ type: 'rotate', moves: toFront, pauseAfter: 700 });
       steps.push({ type: 'rotate', moves: ['turnRight', 'turnRight'] });
 
-      const neighbors = DIRECTIONS.filter((d) => d !== base.dir && d !== answerDir).map((d) => pipLabel(byDir[d]));
+      const neighbors = DIRECTIONS.filter((d) => d !== base.dir && d !== answerDir).map((d) => markLabel(byDir[d]));
       return assembleQuestion(this, base, DICE_CATEGORY, {
         type: 'single',
-        question:
-          `${pipLabel(target)}の面と向かい合う面の目はいくつですか。図1と図2は、同じサイコロを別の向きから見たものです。` +
-          'このサイコロは、向かい合う面の目の和が7とはかぎりません。',
+        question: `${markLabel(target)}の面と向かい合う面のマークはどれですか。図1と図2は、同じサイコロを別の向きから見たものです。`,
         visuals: [
           cubeVisual(pose, faces, { caption: '図1' }),
           ...extras.map((m, i) => cubeVisual(rotateLabeling(pose, m), faces, { caption: `図${i + 2}` })),
@@ -198,8 +196,8 @@ export const DICE_TEMPLATES = [
         choices,
         correctAnswers: [String(answer)],
         explanation:
-          `図をくらべると、${pipLabel(target)}ととなり合う面は${neighbors.join('・')}の4つだとわかります。` +
-          `となりにない残りの${pipLabel(answer)}が、${pipLabel(target)}と向かい合う面です。`,
+          `図をくらべると、${markLabel(target)}ととなり合う面は${neighbors.join('・')}の4つだとわかります。` +
+          `となりにない残りの${markLabel(answer)}が、${markLabel(target)}と向かい合う面です。`,
         highlight: faceFrame(pose[answerDir]),
         reveal: { steps },
         scene: { model: 'dice', faces, orientation: pose },

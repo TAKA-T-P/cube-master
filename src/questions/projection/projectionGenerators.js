@@ -1,294 +1,376 @@
 /**
- * 立方体の見え方の問題テンプレート（V01〜V06）
+ * 積み木の見え方・投影図の問題テンプレート（V01〜V06）
  *
- * 目のついたサイコロで出題する。正解は向き（core/cubeOrientation）と目の配置（core/cubeFaceLabels）から計算し、
- * 図の選択肢は cubePuzzle で「回転で一致するか」を確かめてから出題する（鏡映しは一致しない）。
+ * 1つの積み木の配置データ（core/blockGeometry）から、
+ *   - 回答前に表示する見取図（scene.preview）
+ *   - 回答後の 3D モデル（scene.blocks）
+ *   - 正解の投影図（core/blockProjection）
+ * をすべて作る。まちがいの図は「左右の反転」「奥の列の見落とし」「高さの1マスちがい」など、
+ * よくある考えちがいから作り、正解と同じ形にならないことを確かめる。
  */
-import { getEdgesOfFace } from '../../core/cubeGeometry.js';
-import { ALL_ORIENTATIONS, INITIAL_ORIENTATION, rotateOrientation, findRotationPath, orientationKey } from '../../core/cubeOrientation.js';
-import { MOVE_IDS, ROTATION_MOVES, DIRECTIONS } from '../../core/cubeRotations.js';
+import { BLOCK_VIEW_DIRECTION, heightsToCubes, generateHeights, perturbHeights, isBlockStructureReadable, getBlockBounds, blocksKey } from '../../core/blockGeometry.js';
 import {
-  numberFaces,
-  numberFace,
-  randomNumberAssignment,
-  byDirection,
-  unknownFace,
-  pipLabel,
-  pipTurnAsSeen,
-  ORIENTED_PIPS,
-} from '../../core/cubeFaceLabels.js';
-import { viewOf, mirrorView, viewKey, canMatchView, canSatisfyConditions, VIEW_DIRECTIONS } from '../../core/cubePuzzle.js';
-import { cubeVisual, viewOnlyVisual, hiddenFacesVisual, pipChoice, figureChoice, assembleQuestion } from '../decoratedCube.js';
-import { movePhrase } from '../dice/diceExplanations.js';
-import { shuffle, pick, sample } from '../../utils/random.js';
+  getProjection,
+  getShapeKey,
+  columnHeights,
+  projectionFromHeights,
+  projectionFromCells,
+  mirrorProjection,
+  flipProjection,
+  VIEW_FROM,
+  VIEW_NAMES,
+  PROJECTION_NAMES,
+} from '../../core/blockProjection.js';
+import { LOCKED_INTERACTION, figureChoice } from '../decoratedCube.js';
+import { relabelByPosition } from '../../core/questionEngine.js';
+import { shuffle, pick } from '../../utils/random.js';
 import * as X from './projectionExplanations.js';
 
 export const PROJECTION_CATEGORY = 'projection';
 
-/** 答えの方向から見るカメラの向き（真上・真下はわずかに前へずらして、前が下／上になるようにする） */
-const STRAIGHT_VIEWS = Object.freeze({
-  top: [0, 1, 0.05],
-  bottom: [0, -1, 0.05],
+/** 真正面から見るカメラの向き（真上はわずかに手前へずらして、手前が下になるようにする） */
+export const STRAIGHT_VIEWS = Object.freeze({
   front: [0, 0.02, 1],
-  back: [0, 0.02, -1],
   right: [1, 0.02, 0],
+  top: [0, 1, 0.05],
   left: [-1, 0.02, 0],
+  back: [0, 0.02, -1],
 });
 
-/** 3つの符号から、斜めのカメラの向き */
-const cornerCamera = (sx, sy, sz) => [4 * sx, 3 * sy, 5 * sz];
+/** 難易度ごとの大きさ（底面 横×奥行き・最大の高さ） */
+const SIZES = {
+  1: { bases: [[2, 2], [3, 2]], maxHeight: 3 },
+  2: { bases: [[3, 3]], maxHeight: 4 },
+  3: { bases: [[3, 3], [4, 3]], maxHeight: 4 },
+};
 
-/** 目 → その目がある面 ID */
-const faceOfValue = (byFace, n) => Object.keys(byFace).find((f) => byFace[f] === n);
+function makeBlocks(rng, level) {
+  const { bases, maxHeight } = SIZES[level];
+  const [width, depth] = pick(bases, rng);
+  const heights = generateHeights(rng, { width, depth, maxHeight, minCubes: 4, maxCubes: 25 });
+  return { heights, cubes: heightsToCubes(heights) };
+}
 
-/** その方向から見える、斜めのカメラで見えている面の目を答える問題（V01・V02） */
-function singleViewQuestion(template, base, rng, { dir, camera }) {
-  const byFace = randomNumberAssignment(rng);
-  const faces = numberFaces(byFace);
-  const pose = INITIAL_ORIENTATION;
-  const byDir = byDirection(byFace, pose);
-  const answer = byDir[dir];
+const blocksVisual = (cubes, arrows = [], caption) => ({
+  type: 'blocks',
+  cubes: cubes.map((c) => ({ ...c })),
+  viewDirection: [...BLOCK_VIEW_DIRECTION],
+  arrows: [...arrows],
+  ...(caption ? { caption } : {}),
+});
+const projectionVisual = (projection, caption) => ({ type: 'projection', projection, ...(caption ? { caption } : {}) });
 
-  // 斜めのカメラで見えている3面
-  const visibleDirs = DIRECTIONS.filter((d) => {
-    const v = { top: [0, 1, 0], bottom: [0, -1, 0], front: [0, 0, 1], back: [0, 0, -1], right: [1, 0, 0], left: [-1, 0, 0] }[d];
-    return v[0] * camera[0] + v[1] * camera[1] + v[2] * camera[2] > 0;
-  });
-  if (!visibleDirs.includes(dir)) throw new Error('答えの面がカメラから見えていません');
-  const visibleOthers = visibleDirs.filter((d) => d !== dir).map((d) => byDir[d]);
-  const hidden = shuffle(
-    DIRECTIONS.filter((d) => !visibleDirs.includes(d)).map((d) => byDir[d]),
-    rng,
-  );
-  const options = [answer, ...visibleOthers, hidden[0]];
-
-  return assembleQuestion(template, base, PROJECTION_CATEGORY, {
+/** 問題オブジェクトを組み立てる（id はエンジンが付ける） */
+function assemble(template, base, { question, cubes, arrows, preview, visuals = [], choices, correctAnswers, explanation, steps }) {
+  return {
+    templateId: template.id,
+    key: `${template.id}:${base.key}`,
+    category: PROJECTION_CATEGORY,
+    difficulty: template.difficulty,
     type: 'single',
-    question: `このサイコロを${X.VIEW_PHRASES[dir]}見ると、どの目の面が見えますか。`,
-    visuals: [cubeVisual(pose, faces, { caption: 'いまの見え方', viewDirection: camera })],
-    choices: options.map((n) => pipChoice(n, { elementId: faceOfValue(byFace, n) })),
-    correctAnswers: [String(answer)],
-    explanation: X.explainSingleView(dir, pipLabel(answer)),
-    highlight: getEdgesOfFace(pose[dir]),
-    reveal: { steps: [{ type: 'camera', direction: STRAIGHT_VIEWS[dir] }] },
-    scene: { model: 'dice', faces, orientation: pose, cameraPreset: camera },
+    question,
+    visuals,
+    scene: {
+      model: 'blocks',
+      referenceElements: [],
+      cameraPreset: [...BLOCK_VIEW_DIRECTION],
+      blocks: cubes.map((c) => ({ ...c })),
+      arrows: [...arrows],
+      preview: preview ?? blocksVisual(cubes, arrows),
+      showLabels: false,
+      interaction: { ...LOCKED_INTERACTION },
+    },
+    choices: relabelByPosition(choices),
+    correctAnswers: [...correctAnswers],
+    explanation: { text: explanation, highlightElements: [], animation: 'highlightElements', reveal: { steps } },
+  };
+}
+
+// ---------- まちがいの図 ----------
+
+/** 正面図・側面図のまちがい：左右反転・いちばん手前の列だけ・高さの1マスちがい・ほかの向きの図 */
+function sideViewMistakes(cubes, direction) {
+  const correct = getProjection(cubes, direction);
+  const heights = columnHeights(correct);
+  const list = [{ reason: '左右が反対になっています。', projection: mirrorProjection(correct) }];
+  // いちばん手前の列だけを見て、奥の高いブロックを見落としたとき
+  const nearHeights = nearestLayerHeights(cubes, direction);
+  if (nearHeights.some((h) => h > 0)) {
+    list.push({ reason: '奥にあるブロックを見落としています。', projection: projectionFromHeights(direction, nearHeights, correct.height) });
+  }
+  heights.forEach((h, i) => {
+    for (const d of [1, -1]) {
+      const hs = [...heights];
+      hs[i] = h + d;
+      if (hs[i] < 0 || hs.every((x) => x === 0)) continue;
+      list.push({ reason: `左から${i + 1}列目の高さがちがいます。`, projection: projectionFromHeights(direction, hs, Math.max(correct.height, ...hs)) });
+    }
+  });
+  const other = getProjection(cubes, direction === 'front' ? 'right' : 'front');
+  if (other.width === correct.width) list.push({ reason: '別の方向から見た形になっています。', projection: projectionFromCells(direction, other.cells) });
+  return uniqueMistakes(correct, list);
+}
+
+/** 見る人にいちばん近い列だけの、各列の高さ（正面図・右側面図の並び） */
+function nearestLayerHeights(cubes, direction) {
+  const { width: W, depth: D } = getBlockBounds(cubes);
+  if (direction === 'front') {
+    return [...Array(W).keys()].map((x) => Math.max(0, ...cubes.filter((c) => c.z === D - 1 && c.x === x).map((c) => c.y + 1)));
+  }
+  // 右から見ると、図の左が手前（z = D - 1）
+  return [...Array(D).keys()].map((i) => Math.max(0, ...cubes.filter((c) => c.x === W - 1 && c.z === D - 1 - i).map((c) => c.y + 1)));
+}
+
+/** 上面図のまちがい：左右反転・前後反転・1マス多い／少ない */
+function topViewMistakes(cubes) {
+  const correct = getProjection(cubes, 'top');
+  const list = [
+    { reason: '左右が反対になっています。', projection: mirrorProjection(correct) },
+    { reason: '手前と奥が反対になっています。', projection: flipProjection(correct) },
+  ];
+  correct.cells.forEach((row, r) =>
+    row.forEach((v, c) => {
+      const cells = correct.cells.map((x) => [...x]);
+      cells[r][c] = v ? 0 : 1;
+      if (cells.flat().some(Boolean)) list.push({ reason: v ? 'ブロックのあるマスが1つ足りません。' : 'ブロックのないマスまでぬられています。', projection: projectionFromCells('top', cells) });
+    }),
+  );
+  return uniqueMistakes(correct, list);
+}
+
+/** 正解と同じ形・同じ形どうしの重なりを除く */
+function uniqueMistakes(correct, list) {
+  const seen = new Set([getShapeKey(correct)]);
+  return list.filter((m) => {
+    const key = getShapeKey(m.projection);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 
-/** 図の選択肢の説明（読み上げ用） */
-const describe = (view, label = pipLabel) => `上 ${label(view.top)}、前 ${label(view.front)}、右 ${label(view.right)}`;
-
-/** 見えている3面の目（上・前・右）だけの見取図 */
-const viewOnlyPips = (view) => viewOnlyVisual({ top: numberFace(view.top), front: numberFace(view.front), right: numberFace(view.right) });
+/** まちがいを3つ選ぶ（最初の理由の種類を優先し、残りはランダム） */
+function pickMistakes(mistakes, rng, count = 3) {
+  const [first, ...rest] = mistakes;
+  return [first, ...shuffle(rest, rng)].filter(Boolean).slice(0, count);
+}
 
 export const PROJECTION_TEMPLATES = [
+  // ---------------- ★1 きほん ----------------
   {
     id: 'V01',
     difficulty: 1,
-    title: '上から見える面',
-    bases: () =>
-      ['top', 'bottom'].flatMap((dir) =>
-        [
-          [1, 1],
-          [1, -1],
-          [-1, 1],
-          [-1, -1],
-        ].map(([sx, sz]) => ({ key: `${dir}-${sx}${sz}`, refs: [], dir, sx, sz, group: dir })),
-      ),
+    title: '矢印の方向から見た形',
+    bases: () => ['front', 'right'].flatMap((dir) => [0, 1, 2, 3, 4, 5, 6, 7].map((v) => ({ key: `${dir}-${v}`, refs: [], dir, group: dir }))),
     build(base, rng) {
-      const camera = cornerCamera(base.sx, base.dir === 'top' ? 1 : -1, base.sz);
-      return singleViewQuestion(this, base, rng, { dir: base.dir, camera });
+      const { cubes } = makeBlocks(rng, 1);
+      const correct = getProjection(cubes, base.dir);
+      const mistakes = pickMistakes(sideViewMistakes(cubes, base.dir), rng);
+      const choices = [
+        figureChoice('correct', projectionVisual(correct), `正しい形`),
+        ...mistakes.map((m, i) => figureChoice(`mistake-${i}`, projectionVisual(m.projection), m.reason)),
+      ];
+      return assemble(this, base, {
+        question: `矢印の方向（${VIEW_NAMES[base.dir]}）から見たとき、どの形に見えますか。`,
+        cubes,
+        arrows: [base.dir],
+        choices,
+        correctAnswers: ['correct'],
+        explanation: X.explainSideView(base.dir, columnHeights(correct)),
+        steps: [{ type: 'camera', direction: STRAIGHT_VIEWS[base.dir] }],
+      });
     },
   },
   {
     id: 'V02',
     difficulty: 1,
-    title: '横から見える面',
-    bases: () => ['right', 'left', 'front', 'back'].flatMap((dir) => [1, -1].map((s) => ({ key: `${dir}-${s}`, refs: [], dir, s, group: dir }))),
+    title: '真上から見た形',
+    bases: () => [...Array(12).keys()].map((v) => ({ key: `${v}`, refs: [] })),
     build(base, rng) {
-      const sx = base.dir === 'right' ? 1 : base.dir === 'left' ? -1 : base.s;
-      const sz = base.dir === 'front' ? 1 : base.dir === 'back' ? -1 : base.s;
-      return singleViewQuestion(this, base, rng, { dir: base.dir, camera: cornerCamera(sx, 1, sz) });
+      const { cubes } = makeBlocks(rng, 1);
+      const correct = getProjection(cubes, 'top');
+      const mistakes = pickMistakes(topViewMistakes(cubes), rng);
+      const choices = [
+        figureChoice('correct', projectionVisual(correct), '正しい形'),
+        ...mistakes.map((m, i) => figureChoice(`mistake-${i}`, projectionVisual(m.projection), m.reason)),
+      ];
+      return assemble(this, base, {
+        question: 'この積み木を矢印の方向（真上）から見ると、どの形に見えますか。図は手前が下になるように見たものです。',
+        cubes,
+        arrows: ['top'],
+        choices,
+        correctAnswers: ['correct'],
+        explanation: X.explainTopView(),
+        steps: [{ type: 'camera', direction: STRAIGHT_VIEWS.top }],
+      });
     },
   },
+
+  // ---------------- ★2 標準 ----------------
   {
     id: 'V03',
     difficulty: 2,
-    title: '指定方向からの見え方',
-    // 2・3・6 の目は、見る向きによって目の並び方（ななめの向き・たて／よこ）が変わる
-    bases: () => VIEW_DIRECTIONS.flatMap((asked) => [0, 4, 9, 14, 19, 23].map((pose) => ({ key: `${asked}-${pose}`, refs: [], asked, pose, group: asked }))),
+    title: '正面図と右側面図の組み合わせ',
+    bases: () => [...Array(12).keys()].map((v) => ({ key: `${v}`, refs: [] })),
     build(base, rng) {
-      const pose = ALL_ORIENTATIONS[base.pose];
-      const answerFace = pose[base.asked];
-      // 問う面に、向きで見え方が変わる目（2・3・6）を置く
-      const byFace = randomNumberAssignment(rng);
-      const v = pick(ORIENTED_PIPS, rng);
-      const holder = faceOfValue(byFace, v);
-      [byFace[holder], byFace[answerFace]] = [byFace[answerFace], v];
-      const faces = numberFaces(byFace);
-      const turn = pipTurnAsSeen(answerFace, pose, base.asked);
-
-      // 誤答に使うもう1つの目：見えているほかの面にある 2・3・6、なければ残りから
-      const visibleOriented = VIEW_DIRECTIONS.filter((d) => d !== base.asked)
-        .map((d) => byFace[pose[d]])
-        .filter((n) => ORIENTED_PIPS.includes(n));
-      const w = visibleOriented[0] ?? pick(ORIENTED_PIPS.filter((n) => n !== v), rng);
-      const choices = [v, w].flatMap((n) =>
-        [0, 90].map((t) => figureChoice(`${n}-${t}`, { type: 'face', face: numberFace(n), turn: t }, `${pipLabel(n)}、${X.pipArrangement(n, t)}`)),
-      );
-      const note = base.asked === 'top' ? '（前が下になるように見た図）' : '（上が上になるように見た図）';
-      return assembleQuestion(this, base, PROJECTION_CATEGORY, {
-        type: 'single',
-        question: `このサイコロを${X.VIEW_PHRASES[base.asked]}見ると、どのように見えますか。${note}`,
-        visuals: [cubeVisual(pose, faces, { caption: 'いまの見え方' })],
+      const { cubes } = makeBlocks(rng, 2);
+      const front = getProjection(cubes, 'front');
+      const right = getProjection(cubes, 'right');
+      const [wf1, wf2] = pickMistakes(sideViewMistakes(cubes, 'front'), rng, 2);
+      const [wr1, wr2] = pickMistakes(sideViewMistakes(cubes, 'right'), rng, 2);
+      const pair = (f, r) => ({
+        type: 'projectionPair',
+        items: [
+          { projection: f, caption: '正面図' },
+          { projection: r, caption: '右側面図' },
+        ],
+      });
+      const choices = [
+        figureChoice('both', pair(front, right), '正面図も右側面図も正しい'),
+        figureChoice('frontOnly', pair(front, wr1.projection), '正面図だけ正しい'),
+        figureChoice('rightOnly', pair(wf1.projection, right), '右側面図だけ正しい'),
+        figureChoice('neither', pair((wf2 ?? wf1).projection, (wr2 ?? wr1).projection), 'どちらもまちがい'),
+      ];
+      return assemble(this, base, {
+        question: 'この積み木の正面図（手前から見た図）と右側面図（右から見た図）の組み合わせとして、正しいものはどれですか。',
+        cubes,
+        arrows: ['front', 'right'],
         choices,
-        correctAnswers: [`${v}-${turn}`],
-        explanation: X.explainPipView(base.asked, v, turn),
-        reveal: { steps: [{ type: 'camera', direction: STRAIGHT_VIEWS[base.asked] }] },
-        scene: { model: 'dice', faces, orientation: pose },
+        correctAnswers: ['both'],
+        explanation: X.explainPair(columnHeights(front), columnHeights(right)),
+        steps: [
+          { type: 'camera', direction: STRAIGHT_VIEWS.front },
+          { type: 'pause', ms: 700 },
+          { type: 'camera', direction: STRAIGHT_VIEWS.right },
+        ],
       });
     },
   },
   {
     id: 'V04',
     difficulty: 2,
-    title: '回転後の完成図',
-    bases: () => MOVE_IDS.flatMap((move) => [0, 1, 2, 3].map((v) => ({ key: `${move}-${v}`, refs: [], move, group: move }))),
+    title: '指定方向からの高さ',
+    bases: () => ['front', 'right'].flatMap((dir) => [0, 1, 2, 3, 4, 5].map((v) => ({ key: `${dir}-${v}`, refs: [], dir, group: dir }))),
     build(base, rng) {
-      const byFace = randomNumberAssignment(rng);
-      const faces = numberFaces(byFace);
-      const pose = INITIAL_ORIENTATION;
-      const correct = rotateOrientation(pose, base.move);
-      const viewOfPose = (o) => viewOf(byDirection(byFace, o));
-      const valueKey = (o) => viewKey(viewOfPose(o));
-
-      // まちがいの図：逆向き・ほかの回転の結果（同じ図が重ならないようにする）
-      const inverse = ROTATION_MOVES[base.move].inverse;
-      const others = [inverse, ...shuffle(MOVE_IDS.filter((m) => m !== base.move && m !== inverse), rng)];
-      const used = new Set([valueKey(correct), valueKey(pose)]);
-      const wrongMoves = [];
-      for (const m of others) {
-        const key = valueKey(rotateOrientation(pose, m));
-        if (used.has(key)) continue;
-        used.add(key);
-        wrongMoves.push(m);
-        if (wrongMoves.length === 3) break;
-      }
-      const choices = [base.move, ...wrongMoves].map((m) => {
-        const o = rotateOrientation(pose, m);
-        return figureChoice(m, cubeVisual(o, faces), describe(viewOfPose(o)));
-      });
-      const correctView = viewOfPose(correct);
-      return assembleQuestion(this, base, PROJECTION_CATEGORY, {
-        type: 'single',
-        question: `このサイコロを${movePhrase(base.move)}と、どのように見えますか。`,
-        visuals: [cubeVisual(pose, faces, { caption: 'はじめの向き' }), hiddenFacesVisual(faces, pose)],
-        choices,
-        correctAnswers: [base.move],
-        explanation: X.explainTurnedCube(base.move, { top: pipLabel(correctView.top), front: pipLabel(correctView.front), right: pipLabel(correctView.right) }),
-        reveal: { steps: [{ type: 'rotate', moves: [base.move] }] },
-        scene: { model: 'dice', faces, orientation: pose },
+      const { cubes } = makeBlocks(rng, 2);
+      const projection = getProjection(cubes, base.dir);
+      const heights = columnHeights(projection);
+      const index = Math.floor(rng() * heights.length);
+      const k = index + 1;
+      const answer = heights[index];
+      // まちがい：1マスちがい・左右を反対に数えた列・いちばん高い列
+      const candidates = [answer + 1, answer - 1, heights[heights.length - 1 - index], Math.max(...heights), answer + 2, 1, 2, 3, 4];
+      const options = [answer];
+      for (const n of candidates) if (n >= 1 && n <= 5 && !options.includes(n) && options.length < 4) options.push(n);
+      // その列の小立方体（演出で強調する）
+      const { depth: D } = getBlockBounds(cubes);
+      const columnCubes = base.dir === 'front' ? cubes.filter((c) => c.x === index) : cubes.filter((c) => c.z === D - 1 - index);
+      return assemble(this, base, {
+        question: `矢印の方向（${VIEW_NAMES[base.dir]}）から見たとき、左から${k}列目の高さは何マスですか。左右は、矢印の方向から見たときの向きで数えます。`,
+        cubes,
+        arrows: [base.dir],
+        choices: shuffle(options, rng).map((n) => ({ id: String(n), label: `${n}マス` })),
+        correctAnswers: [String(answer)],
+        explanation: X.explainColumnHeight(base.dir, k, answer),
+        steps: [
+          { type: 'camera', direction: STRAIGHT_VIEWS[base.dir] },
+          { type: 'highlightBlocks', cubes: columnCubes },
+        ],
       });
     },
   },
+
+  // ---------------- ★3 チャレンジ ----------------
   {
     id: 'V05',
     difficulty: 3,
-    title: '3方向の情報から推理',
-    bases: () => [1, 2].flatMap((shift) => [0, 1, 2, 3, 4, 5].map((v) => ({ key: `${shift}-${v}`, refs: [], shift }))),
+    title: '3方向の図から立体を推理',
+    bases: () => [...Array(12).keys()].map((v) => ({ key: `${v}`, refs: [] })),
     build(base, rng) {
-      const [c1, c2, c3] = sample([1, 2, 3, 4, 5, 6], 3, rng);
-      const conditions = { top: c1, front: c2, right: c3 };
-      // 条件の3面だけ目があり、ほかの面は「？」のサイコロ
-      const faces = Object.fromEntries(
-        DIRECTIONS.map((d) => [INITIAL_ORIENTATION[d], conditions[d] ? numberFace(conditions[d]) : unknownFace()]),
-      );
-      const cornerFaces = new Set(VIEW_DIRECTIONS.map((d) => INITIAL_ORIENTATION[d]));
-      const cornerTurns = ALL_ORIENTATIONS.filter((o) => VIEW_DIRECTIONS.every((d) => cornerFaces.has(o[d])));
-      const nonIdentity = cornerTurns.filter((o) => orientationKey(o) !== orientationKey(INITIAL_ORIENTATION));
-      const correctPose = nonIdentity[(base.shift - 1) % nonIdentity.length];
+      const { heights, cubes } = makeBlocks(rng, 3);
+      const views = ['front', 'right', 'top'];
+      const target = views.map((d) => getShapeKey(getProjection(cubes, d)));
+      const matches = (cs) => views.filter((d, i) => getShapeKey(getProjection(cs, d)) === target[i]).length;
 
-      // 鏡に映した並び（3つの目の、反対回りの並べ方すべて）
-      const triple = [c1, c2, c3];
-      const mirrors = [
-        [0, 2, 1],
-        [2, 1, 0],
-        [1, 0, 2],
-      ].map(([a, b, c]) => ({ top: triple[a], front: triple[b], right: triple[c] }));
-
-      const valueView = (o) => {
-        const v = viewOf(byDirection(faces, o));
-        return { top: v.top.value, front: v.front.value, right: v.right.value };
-      };
-      const name = pipLabel;
+      // まちがいの積み木：形が読み取れ、3つの図のどれかが合わないもの（2つ合うものを優先）
+      const seen = new Set([blocksKey(cubes)]);
+      const candidates = [];
+      for (const h of perturbHeights(heights, rng)) {
+        if (h.some((row) => row.every((v) => v === 0)) || h[0].some((_, x) => h.every((row) => row[x] === 0))) continue;
+        const cs = heightsToCubes(h);
+        if (cs.length === 0 || !isBlockStructureReadable(cs)) continue;
+        const key = blocksKey(cs);
+        if (seen.has(key)) continue;
+        const m = matches(cs);
+        if (m === 3) continue; // 3方向の図が同じ別の立体は、選択肢に入れない
+        seen.add(key);
+        candidates.push({ cubes: cs, m });
+      }
+      candidates.sort((a, b) => b.m - a.m);
+      const wrong = candidates.slice(0, 3);
+      if (wrong.length < 3) throw new Error('まちがいの積み木を作れませんでした');
       const choices = [
-        figureChoice('match', cubeVisual(correctPose, faces), describe(valueView(correctPose))),
-        ...mirrors.map((m, i) => figureChoice(`mirror-${i}`, viewOnlyPips(m), describe(m))),
+        figureChoice('correct', blocksVisual(cubes), '3つの図すべてに合う'),
+        ...wrong.map((w, i) => figureChoice(`wrong-${i}`, blocksVisual(w.cubes), `図が${3 - w.m}つ合わない`)),
       ];
-      // 回転で条件どおりに置けるのは正解だけ（鏡映しは置けない）
-      if (canSatisfyConditions(valueView(correctPose), conditions) !== true) throw new Error('正解の図が条件を満たしません');
-      for (const m of mirrors) if (canSatisfyConditions(m, conditions) !== false) throw new Error('鏡映しの図が条件を満たしてしまいます');
-
-      return assembleQuestion(this, base, PROJECTION_CATEGORY, {
-        type: 'single',
-        question: `上から見ると${name(c1)}、正面から見ると${name(c2)}、右から見ると${name(c3)}に見えるように置けるサイコロはどれですか。`,
-        visuals: [cubeVisual(INITIAL_ORIENTATION, faces, { caption: '条件' })],
+      return assemble(this, base, {
+        question: '正面図・右側面図・上面図がこのようになる積み木はどれですか。',
+        cubes,
+        arrows: [],
+        preview: {
+          type: 'projectionPair',
+          items: views.map((d) => ({ projection: getProjection(cubes, d), caption: PROJECTION_NAMES[d] })),
+        },
         choices,
-        correctAnswers: ['match'],
-        explanation: X.explainCornerOrder(name(c1), name(c2), name(c3)),
-        reveal: { steps: [{ type: 'rotate', moves: findRotationPath(INITIAL_ORIENTATION, correctPose) }] },
-        scene: { model: 'dice', faces, orientation: INITIAL_ORIENTATION },
+        correctAnswers: ['correct'],
+        explanation: X.explainThreeViews(),
+        steps: [
+          { type: 'camera', direction: STRAIGHT_VIEWS.front },
+          { type: 'pause', ms: 600 },
+          { type: 'camera', direction: STRAIGHT_VIEWS.right },
+          { type: 'pause', ms: 600 },
+          { type: 'camera', direction: STRAIGHT_VIEWS.top },
+        ],
       });
     },
   },
   {
     id: 'V06',
     difficulty: 3,
-    title: 'ありえない配置を見抜く',
-    bases: () => [0, 1, 2, 3, 4, 5, 6, 7].map((v) => ({ key: `${v}`, refs: [], v })),
+    title: 'ありえない投影図',
+    bases: () => [...Array(12).keys()].map((v) => ({ key: `${v}`, refs: [] })),
     build(base, rng) {
-      const byFace = randomNumberAssignment(rng);
-      const faces = numberFaces(byFace);
-      const pose = INITIAL_ORIENTATION;
-      const fullByDir = byDirection(byFace, pose);
-      const valueView = (o) => viewOf(byDirection(byFace, o));
-
-      const used = new Set([viewKey(valueView(pose))]);
-      const poses = [];
-      for (const o of shuffle(ALL_ORIENTATIONS, rng)) {
-        const key = viewKey(valueView(o));
-        if (used.has(key)) continue;
-        used.add(key);
-        poses.push(o);
-        if (poses.length === 4) break;
-      }
-      const [p1, p2, p3, p4] = poses;
-      const mirror = mirrorView(valueView(p4));
-      if (used.has(viewKey(mirror)) || canMatchView(fullByDir, mirror)) throw new Error('鏡映しの図が作れません');
-      for (const o of [p1, p2, p3]) if (!canMatchView(fullByDir, valueView(o))) throw new Error('回転した図が一致しません');
-
-      const name = pipLabel;
-      const choices = [
-        ...[p1, p2, p3].map((o, i) => figureChoice(`rotated-${i}`, cubeVisual(o, faces), describe(valueView(o)))),
-        figureChoice('mirror', viewOnlyPips(mirror), describe(mirror)),
-      ];
-      // 成立する向きを順番に見せる
-      const steps = [];
-      let from = pose;
-      for (const o of [p1, p2, p3]) {
-        steps.push({ type: 'rotate', moves: findRotationPath(from, o), pauseAfter: 800 });
-        from = o;
-      }
-      return assembleQuestion(this, base, PROJECTION_CATEGORY, {
-        type: 'single',
-        question: '次の4つの図のうち、このサイコロをどのように回しても作れないものはどれですか。',
-        visuals: [cubeVisual(pose, faces, { caption: 'もとのサイコロ' }), hiddenFacesVisual(faces, pose)],
+      const { cubes } = makeBlocks(rng, 3);
+      const directions = ['front', 'right', 'top', pick(['left', 'back'], rng)];
+      const wrongDir = pick(directions, rng);
+      const mistakes = wrongDir === 'top' ? topViewMistakes(cubes) : sideViewMistakesFor(cubes, wrongDir);
+      const mistake = mistakes[0];
+      const choices = directions.map((d) =>
+        figureChoice(d, projectionVisual(d === wrongDir ? mistake.projection : getProjection(cubes, d), `${VIEW_FROM[d]}見た図`), `${VIEW_FROM[d]}見た図`),
+      );
+      return assemble(this, base, {
+        question: 'この積み木について、ありえない図はどれですか。',
+        cubes,
+        arrows: [],
         choices,
-        correctAnswers: ['mirror'],
-        explanation: X.explainImpossible({ top: name(mirror.top), front: name(mirror.front), right: name(mirror.right) }),
-        reveal: { steps },
-        scene: { model: 'dice', faces, orientation: pose },
+        correctAnswers: [wrongDir],
+        explanation: X.explainImpossibleView(wrongDir, mistake.reason),
+        steps: [{ type: 'camera', direction: STRAIGHT_VIEWS[wrongDir] }],
       });
     },
   },
 ];
+
+/** 左・後ろから見た図のまちがい（正面図・右側面図と同じ考え方） */
+function sideViewMistakesFor(cubes, direction) {
+  if (direction === 'front' || direction === 'right') return sideViewMistakes(cubes, direction);
+  const correct = getProjection(cubes, direction);
+  const heights = columnHeights(correct);
+  const list = [{ reason: '左右が反対になっています。', projection: mirrorProjection(correct) }];
+  heights.forEach((h, i) => {
+    const hs = [...heights];
+    hs[i] = h + 1;
+    list.push({ reason: `左から${i + 1}列目の高さがちがいます。`, projection: projectionFromHeights(direction, hs, Math.max(correct.height, ...hs)) });
+  });
+  return uniqueMistakes(correct, list);
+}

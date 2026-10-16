@@ -88,7 +88,10 @@ export function mountQuestionScreen(container, { navigate }) {
   );
 
   // 立方体の表示領域（画面に固定。答えが見えてしまう問題では回答するまで表示しない）
-  const quizView = h('section', { class: 'quiz-view' }, viewport, legend, h('div', { class: 'quiz-view__tools' }, resetViewButton, faceModeButton));
+  // 回答前に 3D の代わりに表示する静的な図（積み木の見取図など）。回答すると同じ場所が 3D に切り替わる
+  const previewEl = h('div', { class: 'quiz-preview', hidden: true });
+  const viewTools = h('div', { class: 'quiz-view__tools' }, resetViewButton, faceModeButton);
+  const quizView = h('section', { class: 'quiz-view' }, viewport, previewEl, legend, viewTools);
   const quizRoot = h(
     'div',
     { class: 'quiz' },
@@ -149,13 +152,17 @@ export function mountQuestionScreen(container, { navigate }) {
     figures.replaceChildren(...(q.visuals ?? []).map(renderVisual));
     figures.hidden = !q.visuals?.length;
 
-    // 3D：前の問題の演出・強調・選択を消し、この問題の立方体（装飾・向き）にする
+    // 3D：前の問題の演出・強調・選択を消し、この問題の立方体（装飾・向き）や積み木にする
     const decorated = q.scene.model !== 'cube';
+    const isBlocks = q.scene.model === 'blocks';
+    previewEl.replaceChildren(...(q.scene.preview ? [renderVisual(q.scene.preview)] : []));
+    legend.hidden = decorated; // 基準・正解・まちがいの色分けは位置関係の問題だけ
     if (viewer) {
       viewer.animations.cancel();
       viewer.clearHighlights();
       viewer.clearSelection();
-      viewer.setFaceDecorations(decorated ? q.scene.faces : null);
+      viewer.setFaceDecorations(decorated && !isBlocks ? q.scene.faces : null);
+      viewer.setBlocks(isBlocks ? q.scene.blocks : null, { arrows: q.scene.arrows ?? [] });
       viewer.setCubeOrientation(q.scene.orientation ?? INITIAL_ORIENTATION);
       viewer.setLabelsVisible(q.scene.showLabels ?? true);
       // 色や数字の立方体は、隠れた面が透けて見えないように不透明にする
@@ -287,8 +294,14 @@ export function mountQuestionScreen(container, { navigate }) {
     const i = q.scene.interaction ?? {};
     const rotation = phase === 'before' ? (i.allowCameraRotationBeforeAnswer ?? true) : (i.allowCameraRotationAfterAnswer ?? true);
     const zoom = phase === 'before' ? (i.allowZoomBeforeAnswer ?? true) : true;
-    const hideView = phase === 'before' && !rotation;
+    const preview = Boolean(q.scene.preview);
+    // 静的な図があれば回答前（と 3D が使えない端末）はそれを表示し、なければ立方体の領域ごと隠す
+    const showPreview = preview && (phase === 'before' ? !rotation : !viewer);
+    const hideView = phase === 'before' && !rotation && !preview;
     quizView.hidden = hideView;
+    previewEl.hidden = !showPreview;
+    viewport.hidden = showPreview;
+    viewTools.hidden = showPreview;
     quizRoot.classList.toggle('quiz--no-view', hideView);
     if (!viewer) return;
     if (rotation) viewer.enableRotation();

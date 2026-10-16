@@ -28,7 +28,10 @@
  * }
  *
  * Phase 2 で追加した項目（すべて省略可。省略時は Phase 1 と同じ動き）
- *   scene.model        : 'cube'（ふつうの立方体） | 'dice'（数字） | 'colorCube'（色）
+ *   scene.model        : 'cube'（ふつうの立方体） | 'dice'（サイコロ） | 'colorCube'（色） | 'blocks'（積み木）
+ *   scene.blocks       : 積み木の小立方体の一覧（blocks のとき必須。core/blockGeometry）
+ *   scene.arrows       : 積み木を見る向きの矢印の一覧（'front' | 'right' | 'top' | 'left' | 'back'）
+ *   scene.preview      : 回答前に 3D の代わりに表示する静的な図（積み木の見取図など）
  *   scene.faces        : 面 ID → 装飾（core/cubeFaceLabels）。dice / colorCube では必須
  *   scene.orientation  : はじめの向き（core/cubeOrientation）。dice / colorCube では必須
  *   scene.showLabels   : 頂点ラベル A〜H を表示するか（既定 true）
@@ -40,9 +43,11 @@ import { isValidElementId } from './cubeGeometry.js';
 import { FACES } from './cubeConstants.js';
 import { isValidOrientation } from './cubeOrientation.js';
 import { MOVE_IDS } from './cubeRotations.js';
+import { getBlockErrors } from './blockGeometry.js';
+import { PROJECTION_DIRECTIONS } from './blockProjection.js';
 
-export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube']);
-export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'pip', 'moves', 'faceList']);
+export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube', 'blocks']);
+export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'pip', 'moves', 'faceList', 'blocks', 'projection', 'projectionPair']);
 const INTERACTION_KEYS = ['allowCameraRotationBeforeAnswer', 'allowZoomBeforeAnswer', 'allowCameraRotationAfterAnswer'];
 
 export class QuestionValidationError extends Error {
@@ -93,7 +98,11 @@ export function getQuestionErrors(q) {
   // 3D シーン
   const scene = q.scene;
   if (!scene || !SCENE_MODELS.includes(scene.model)) errors.push(`scene.model は ${SCENE_MODELS.join(' / ')}`);
-  if (scene && scene.model !== 'cube') {
+  if (scene?.model === 'blocks') {
+    for (const e of getBlockErrors(scene.blocks)) errors.push(`scene.blocks: ${e}`);
+    if (!Array.isArray(scene.arrows) || !scene.arrows.every((a) => PROJECTION_DIRECTIONS.includes(a))) errors.push('scene.arrows が不正です');
+    if (scene.preview !== undefined && !VISUAL_TYPES.includes(scene.preview?.type)) errors.push('scene.preview が不正です');
+  } else if (scene && scene.model !== 'cube') {
     const faces = scene.faces ?? {};
     for (const f of FACES) {
       const d = faces[f.id];
@@ -131,6 +140,8 @@ export function getQuestionErrors(q) {
         if (!Array.isArray(step.moves) || !step.moves.every((m) => MOVE_IDS.includes(m))) errors.push('reveal の回転が不正です');
       } else if (step.type === 'camera') {
         if (!Array.isArray(step.direction) || step.direction.length !== 3 || !step.direction.every(Number.isFinite)) errors.push('reveal のカメラの向きが不正です');
+      } else if (step.type === 'highlightBlocks') {
+        if (!Array.isArray(step.cubes)) errors.push('reveal の強調する小立方体が不正です');
       } else if (step.type !== 'pause') errors.push(`reveal の種類が不正です: ${step.type}`);
     }
   }

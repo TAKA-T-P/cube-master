@@ -3,7 +3,7 @@
  * 面の動きを「どの方向の面が、どこへ動くか」で具体的に説明する。
  */
 import { ROTATION_MOVES, DIRECTION_LABELS, DIRECTIONS, moveDirection, getOppositeDirection } from '../../core/cubeRotations.js';
-import { pipLabel } from '../../core/cubeFaceLabels.js';
+import { pipLabel, markLabel } from '../../core/cubeFaceLabels.js';
 
 const D = (d) => DIRECTION_LABELS[d];
 
@@ -61,9 +61,9 @@ export function explainTracking({ moves, askedDir, value, info, byDir }) {
     const opp = getOppositeDirection(start);
     lines.push(`${D(start)}の面は見えていませんが、向かい合う${D(opp)}の面が${pipLabel(byDir[opp])}なので、7−${byDir[opp]}＝${value}で${pipLabel(value)}です。`);
   } else if (info === 'list' && ['bottom', 'back', 'left'].includes(start)) {
-    lines.push(`見えていない面の一覧から、${D(start)}の面は${pipLabel(value)}です。`);
+    lines.push(`見えていない面の一覧から、${D(start)}の面は${markLabel(value)}です。`);
   } else {
-    lines.push(`はじめ${D(start)}の面は${pipLabel(value)}なので、答えは${pipLabel(value)}です。`);
+    lines.push(`はじめ${D(start)}の面は${markLabel(value)}なので、答えは${markLabel(value)}です。`);
   }
   return lines.join('');
 }

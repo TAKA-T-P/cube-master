@@ -157,3 +157,27 @@ export function pipTurnAsSeen(faceId, orientation, viewDirection) {
   const seen = arrowAsSeen(faceId, 'up', orientation, viewDirection);
   return seen === 'up' || seen === 'down' ? 0 : 90;
 }
+
+// ---------- マーク（向かい合う面の和が7ではないサイコロ） ----------
+
+/**
+ * ふつうの配置ではないサイコロは、目の代わりにマークで表す
+ * （目の数の和という考え方が使えないので、目と区別する）。
+ */
+export const FACE_MARKS = Object.freeze(['〇', '◎', '×', '●', '◇', '◆']);
+
+export const symbolFace = (mark, extra = {}) => ({ kind: 'symbol', value: mark, label: mark, color: '#ffffff', textColor: '#1b2a41', ...extra });
+export const symbolFaces = (byFace) => Object.fromEntries(FACES.map((f) => [f.id, symbolFace(byFace[f.id])]));
+
+/** 面にマークをランダムに割り当てる */
+export const randomSymbolAssignment = (rng) => {
+  const marks = shuffle(FACE_MARKS, rng);
+  return Object.fromEntries(FACES.map((f, i) => [f.id, marks[i]]));
+};
+
+/** 値（目の数 または マーク）から面の装飾を作る */
+export const faceFromValue = (value) => (typeof value === 'number' ? numberFace(value) : symbolFace(value));
+export const facesFromValues = (byFace) => Object.fromEntries(FACES.map((f) => [f.id, faceFromValue(byFace[f.id])]));
+
+/** 文章での言い方（「3の目」・「〇」） */
+export const markLabel = (value) => (typeof value === 'number' ? pipLabel(value) : `「${value}」`);

@@ -61,12 +61,12 @@ export const CATEGORIES = Object.freeze([
   { id: 'division', name: '立方体の分割', description: '小さな立方体に分けて数えよう。', grades: '小学5年生～中学1年生', enabled: false },
   {
     id: 'projection',
-    name: '立方体の見え方',
-    description: '上から、横から、回してみると？見る方向による違いを見抜こう！',
-    grades: '小学5年生以上',
+    name: '積み木の見え方・投影図',
+    description: '積み木を前・横・上から見ると、どんな形に見える？立体の形を見抜こう！',
+    grades: '小学4年生～中学2年生',
     enabled: true,
     templates: PROJECTION_TEMPLATES,
-    levelNotes: ['★1 きほん：上・横から見える面', '★2 標準：目の並び方・回したあとの図', '★3 チャレンジ：条件に合うサイコロ・ありえない配置'],
+    levelNotes: ['★1 きほん：矢印の方向・真上から見た形', '★2 標準：正面図と右側面図・列の高さ', '★3 チャレンジ：3方向の図から立体を推理・ありえない図'],
   },
 ]);
 

@@ -11,6 +11,7 @@ import { orientationToMatrix } from '../core/cubeOrientation.js';
 import { FACE_UP, ARROW_LABELS, PIP_LAYOUTS, pipRadius, pipColor } from '../core/cubeFaceLabels.js';
 import { FACES } from '../core/cubeConstants.js';
 import { vecCross, vecDot } from '../core/cubeGeometry.js';
+import { renderBlockVisual } from './blockVisuals.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -137,6 +138,9 @@ export function renderFaceSvg({ face, arrow, turn = 0 }, className = 'figure-svg
 
 /** 図を描く（種類ごと） */
 export function renderVisual(visual) {
+  // 積み木の見取図・投影図
+  const block = renderBlockVisual(visual);
+  if (block) return block;
   switch (visual.type) {
     case 'cube':
       return h(
@@ -175,9 +179,12 @@ export function renderVisual(visual) {
             'span',
             { class: 'face-list__item' },
             `${item.label}：`,
-            isPipFace(item.face)
-              ? [renderFaceSvg({ face: item.face }, 'pip-icon pip-icon--small'), h('span', { class: 'sr-only' }, `${item.face.value}の目`)]
-              : [h('span', { class: 'swatch', style: { background: item.face.color }, 'aria-hidden': 'true' }), item.face.label],
+            item.face.kind === 'color'
+              ? [h('span', { class: 'swatch', style: { background: item.face.color }, 'aria-hidden': 'true' }), item.face.label]
+              : [
+                  renderFaceSvg({ face: item.face }, 'pip-icon pip-icon--small'),
+                  h('span', { class: 'sr-only' }, isPipFace(item.face) ? `${item.face.value}の目` : item.face.label),
+                ],
           ),
         ),
       );

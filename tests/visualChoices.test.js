@@ -52,8 +52,10 @@ describe('そのほかの図', () => {
     const el = renderVisual(movesVisual(['right', 'forward', 'turnLeft']));
     const items = [...el.querySelectorAll('.moves__item')];
     expect(items.map((i) => i.querySelector('.moves__label').textContent)).toEqual(['右へ', '前へ', '水平に左へ']);
-    // 前（手前）は見取図の左下 ↙、後ろ（奥）は右上 ↗。水平に左へは真上から見て時計回り ↻
-    expect(items.map((i) => i.querySelector('.moves__icon').textContent)).toEqual(['→', '↙', '↻']);
+    // 見取図の向きに合わせる：右は右下 ↘、前（手前）は左下 ↙。水平に左へは真上から見て時計回り ↻
+    expect(items.map((i) => i.querySelector('.moves__icon').textContent)).toEqual(['↘', '↙', '↻']);
+    const all = renderVisual(movesVisual(['left', 'backward', 'turnRight']));
+    expect([...all.querySelectorAll('.moves__icon')].map((i) => i.textContent)).toEqual(['↖', '↗', '↺']);
   });
 
   it('見えていない面の一覧', () => {

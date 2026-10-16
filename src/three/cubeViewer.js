@@ -23,6 +23,7 @@ import { createHighlightManager } from './cubeHighlight.js';
 import { AnimationManager } from './animationManager.js';
 import { createRotationDemo, createFaceFlash, createAnswerReveal } from './cubeAnimations.js';
 import { createFaceDecorations } from './faceDecoration.js';
+import { createBlockModel } from './blockModel.js';
 import { createOrientationState, createTurnSequence, createQuestionReveal, DEFAULT_TURN_DURATION, DEFAULT_TURN_PAUSE } from './cubeRotationAnimations.js';
 
 /**
@@ -64,6 +65,10 @@ export function createCubeViewer(container) {
   // 面の装飾（数字・色）と、立方体の向き（数学上の向きと 3D を同期）
   const decorations = createFaceDecorations(model);
   const cubeState = createOrientationState(model.root, render);
+
+  // 積み木（積み木の問題のときだけ表示し、そのあいだ単一の立方体は隠す）
+  const blocks = createBlockModel();
+  sceneManager.scene.add(blocks.root);
 
   // 選択状態 → 見た目
   const offSelection = selection.onChange((event) => {
@@ -165,6 +170,27 @@ export function createCubeViewer(container) {
     },
     getCubeOrientation: () => ({ ...cubeState.orientation }),
 
+    // ----- 積み木 -----
+    /**
+     * 積み木を表示する（null で消して、ふつうの立方体に戻る）
+     * @param {{x,y,z}[]|null} cubes 小立方体の一覧（core/blockGeometry）
+     * @param {{ arrows?: string[] }} [options] 見る向きの矢印
+     */
+    setBlocks(cubes, options) {
+      blocks.set(cubes ?? null, options);
+      model.root.visible = !blocks.root.visible;
+      render();
+    },
+    highlightBlocks(cubes) {
+      blocks.highlight(cubes);
+      render();
+    },
+    clearBlockHighlights() {
+      blocks.clearHighlights();
+      render();
+    },
+    getBlocks: blocks.getCubes,
+
     /**
      * 立方体を 90° ずつ回転させる。完了・スキップで最終の向き、キャンセルで再生前の向きになる
      * @param {{ direction: string, turns?: number, duration?: number }} params
@@ -184,7 +210,7 @@ export function createCubeViewer(container) {
      * @param {{ orientation?, cameraPreset?, steps?, wrong?, correct? }} spec cubeRotationAnimations.createQuestionReveal 参照
      */
     playQuestionReveal: (spec) =>
-      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, onUpdate: render }, spec)),
+      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, blocks, onUpdate: render }, spec)),
 
     /**
      * 回答後の正解演出（誤選択を赤 → 正解を1つずつ緑）。完了時に { status } で解決
@@ -203,6 +229,7 @@ export function createCubeViewer(container) {
       cameraControls.dispose();
       highlights.dispose();
       decorations.dispose();
+      blocks.dispose();
       model.dispose();
       sceneManager.dispose();
       events.clear();

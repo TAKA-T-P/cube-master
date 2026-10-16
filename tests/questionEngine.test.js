@@ -148,12 +148,12 @@ describe('TrainingSession', () => {
 });
 
 describe('questionRegistry', () => {
-  it('10カテゴリがあり、Phase 2 で遊べるのは位置関係・サイコロ・回転・立方体の見え方', () => {
+  it('10カテゴリがあり、遊べるのは位置関係・サイコロ・回転・積み木の見え方・投影図', () => {
     expect(CATEGORIES).toHaveLength(10);
     expect(CATEGORIES.filter((c) => c.enabled).map((c) => c.id)).toEqual(['position', 'dice', 'projection']);
     expect(getCategory('position')).toMatchObject({ name: '位置関係', grades: '小学6年生～中学1年生' });
     expect(getCategory('dice')).toMatchObject({ name: 'サイコロ・回転', grades: '小学4年生以上' });
-    expect(getCategory('projection')).toMatchObject({ name: '立方体の見え方', grades: '小学5年生以上' });
+    expect(getCategory('projection')).toMatchObject({ name: '積み木の見え方・投影図', grades: '小学4年生～中学2年生' });
     expect(getTemplates('position', 2).map((t) => t.id)).toEqual(['P06', 'P07', 'P08', 'P09', 'P10']);
     expect(getTemplates('dice', 3).map((t) => t.id)).toEqual(['D05', 'D06']);
     expect(getTemplates('net')).toEqual([]);

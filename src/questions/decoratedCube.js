@@ -5,7 +5,7 @@
  * 3D 本体と同じ向き・装飾のデータから図を作るので、3D と図が食いちがわない。
  */
 import { ROTATION_MOVES, DIRECTION_LABELS, DIRECTIONS } from '../core/cubeRotations.js';
-import { byDirection, unknownFace, numberFace, pipLabel } from '../core/cubeFaceLabels.js';
+import { byDirection, unknownFace, faceFromValue, markLabel } from '../core/cubeFaceLabels.js';
 import { INITIAL_ORIENTATION } from '../core/cubeOrientation.js';
 import { DEFAULT_VIEW_DIRECTION } from '../core/cubeConstants.js';
 import { relabelByPosition } from '../core/questionEngine.js';
@@ -60,11 +60,14 @@ export function hiddenFacesVisual(faces, orientation, directions = ['bottom', 'b
   };
 }
 
-/** サイコロの目の選択肢（目の絵で表示。id は数字の文字列、label は「3の目」） */
-export const pipChoice = (n, extra = {}) => ({
-  id: String(n),
-  label: pipLabel(n),
-  visual: { type: 'pip', face: numberFace(n) },
+/**
+ * 面の選択肢（目の数 または マーク）。面の絵で表示する。
+ * id は値の文字列、label は「3の目」・「「〇」」（読み上げ用）
+ */
+export const markChoice = (value, extra = {}) => ({
+  id: String(value),
+  label: markLabel(value),
+  visual: { type: 'pip', face: faceFromValue(value) },
   ...extra,
 });
 

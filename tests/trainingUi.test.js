@@ -38,6 +38,7 @@ globalThis.__createFakeViewer = () => {
     enableZoom: vi.fn(),
     disableZoom: vi.fn(),
     playQuestionReveal: vi.fn(),
+    setBlocks: vi.fn(),
   };
   return viewer;
 };
@@ -62,7 +63,7 @@ describe('カテゴリ選択・設定画面', () => {
     container = document.createElement('main');
   });
 
-  it('10カテゴリを表示し、位置関係・サイコロ・回転・立方体の見え方を選べる', () => {
+  it('10カテゴリを表示し、位置関係・サイコロ・回転・積み木の見え方・投影図を選べる', () => {
     const navigate = vi.fn();
     mountCategoryScreen(container, { navigate });
     const cards = container.querySelectorAll('.category-card');
@@ -381,7 +382,7 @@ describe('問題画面（Phase 2：サイコロ・見え方）', () => {
     expect(viewer.playAnswerReveal).not.toHaveBeenCalled();
   });
 
-  it('見え方 ★3：図の選択肢（ア〜エ）で回答できる', () => {
+  it('積み木 ★3：図の選択肢（ア〜エ）で回答できる', () => {
     start({ category: 'projection', difficulty: 3, questionLimit: 5 });
     const figures = container.querySelectorAll('.choice--figure');
     expect(figures).toHaveLength(4);
@@ -392,11 +393,11 @@ describe('問題画面（Phase 2：サイコロ・見え方）', () => {
     expect(container.querySelector('.feedback__title').textContent).toBe('正解！');
   });
 
-  it('目を答える選択肢は目の絵で表示し、読み上げ用に「〇の目」を持つ', () => {
-    start({ category: 'projection', difficulty: 1, questionLimit: 5 });
+  it('目・マークを答える選択肢は面の絵で表示し、読み上げ用の文字（「3の目」「「〇」」）を持つ', () => {
+    start({ category: 'dice', difficulty: 1, questionLimit: 5 });
     const choice = choiceButtons(container)[0];
     expect(choice.querySelector('svg.pip-icon')).not.toBeNull();
-    expect(choice.querySelector('.choice__label').textContent).toMatch(/^[1-6]の目$/);
+    expect(choice.querySelector('.choice__label').textContent).toMatch(/^([1-6]の目|「[〇◎×●◇◆]」)$/);
     // 次の問題へ進むと、回答前の問題では立方体がまた隠れる
     answer(container);
     expect(container.querySelector('.quiz-view').hidden).toBe(false);
@@ -415,7 +416,7 @@ describe('問題画面（Phase 2：サイコロ・見え方）', () => {
     expect(viewer.playQuestionReveal).not.toHaveBeenCalled();
   });
 
-  it('見え方の5問を最後まで進められ、結果に反映される', () => {
+  it('積み木の5問を最後まで進められ、結果に反映される', () => {
     start({ category: 'projection', difficulty: 'all', questionLimit: 5 });
     for (let i = 0; i < 5; i++) {
       answer(container);
@@ -439,6 +440,92 @@ describe('問題画面（Phase 2：サイコロ・見え方）', () => {
       expect(container.querySelector('.feedback__title').textContent).toBe('正解！');
       buttonByText(container, '次の問題へ').click();
       expect(store.getSession().state.answeredCount).toBe(1);
+    } finally {
+      globalThis.__createFakeViewer = original;
+      spy.mockRestore();
+    }
+  });
+});
+
+describe('問題画面（積み木の見え方・投影図）', () => {
+  let container;
+  let navigate;
+  let screen;
+
+  const start = (settings) => {
+    store.startTraining({ category: 'projection', questionLimit: 5, ...settings }, { rng: createRng(13) });
+    screen = mountQuestionScreen(container, { navigate });
+  };
+
+  beforeEach(() => {
+    store.resetTrainingStore();
+    container = document.createElement('main');
+    document.body.append(container);
+    navigate = vi.fn();
+  });
+
+  afterEach(() => {
+    screen?.unmount();
+    container.remove();
+  });
+
+  it('回答前は 3D の場所に見取図（赤い矢印つき）を表示し、3D は隠す。積み木を 3D に設定する', () => {
+    start({ difficulty: 1 });
+    const q = currentQuestion();
+    expect(viewer.setBlocks).toHaveBeenLastCalledWith(q.scene.blocks, { arrows: q.scene.arrows });
+    expect(viewer.setFaceDecorations).toHaveBeenLastCalledWith(null);
+    const view = container.querySelector('.quiz-view');
+    expect(view.hidden).toBe(false);
+    expect(container.querySelector('.quiz-preview').hidden).toBe(false);
+    expect(container.querySelector('.viewport').hidden).toBe(true);
+    const drawing = container.querySelector('.quiz-preview svg');
+    expect(drawing.querySelectorAll('[data-cube]')).toHaveLength(q.scene.blocks.length);
+    expect(drawing.querySelectorAll('.block-arrow')).toHaveLength(q.scene.arrows.length);
+    expect(container.querySelector('.quiz').classList).not.toContain('quiz--no-view');
+  });
+
+  it('回答すると同じ場所が 3D に切りかわり、視点移動の演出を再生する', () => {
+    start({ difficulty: 2 });
+    const q = currentQuestion();
+    answer(container, { correct: false });
+    expect(container.querySelector('.quiz-preview').hidden).toBe(true);
+    expect(container.querySelector('.viewport').hidden).toBe(false);
+    const call = viewer.playQuestionReveal.mock.calls.at(-1)[0];
+    expect(call.steps).toEqual(q.explanation.reveal.steps);
+    expect(call.cameraPreset).toEqual(q.scene.cameraPreset);
+    expect(viewer.enableRotation).toHaveBeenCalled();
+  });
+
+  it('次の問題がほかのカテゴリでなくても、積み木は毎回設定し直され、前の問題が残らない', () => {
+    start({ difficulty: 'all' });
+    const first = currentQuestion();
+    answer(container);
+    buttonByText(container, '次の問題へ').click();
+    const second = currentQuestion();
+    expect(second.id).not.toBe(first.id);
+    expect(viewer.setBlocks).toHaveBeenLastCalledWith(second.scene.blocks, { arrows: second.scene.arrows });
+    expect(container.querySelector('.quiz-preview').hidden).toBe(false);
+  });
+
+  it('位置関係の問題では積み木を消して、ふつうの立方体に戻る', () => {
+    store.startTraining({ category: 'position', difficulty: 1, questionLimit: 5 }, { rng: createRng(2) });
+    screen = mountQuestionScreen(container, { navigate });
+    expect(viewer.setBlocks).toHaveBeenLastCalledWith(null, { arrows: [] });
+    expect(container.querySelector('.quiz-preview').hidden).toBe(true);
+    expect(container.querySelector('.viewport').hidden).toBe(false);
+  });
+
+  it('WebGL が使えなくても、回答後も見取図を表示したまま回答できる', () => {
+    const original = globalThis.__createFakeViewer;
+    globalThis.__createFakeViewer = () => {
+      throw new Error('WebGL2 unavailable');
+    };
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      start({ difficulty: 3 });
+      answer(container);
+      expect(container.querySelector('.feedback__title').textContent).toBe('正解！');
+      expect(container.querySelector('.quiz-preview').hidden).toBe(false);
     } finally {
       globalThis.__createFakeViewer = original;
       spy.mockRestore();
