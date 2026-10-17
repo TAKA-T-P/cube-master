@@ -5,6 +5,7 @@
  */
 import { h } from '../utils/dom.js';
 import { soundToggleButton } from './soundControls.js';
+import { createHomeCube } from './homeCube.js';
 
 export const MENU_ITEMS = [
   { id: 'training', label: 'トレーニング', route: 'categories', enabled: true, primary: true },
@@ -14,6 +15,7 @@ export const MENU_ITEMS = [
 ];
 
 export function mountHomeScreen(container, { navigate, version }) {
+  const cube = createHomeCube();
   const menu = h(
     'nav',
     { class: 'home-menu', 'aria-label': 'メニュー' },
@@ -42,7 +44,7 @@ export function mountHomeScreen(container, { navigate, version }) {
       h(
         'header',
         { class: 'home-hero' },
-        h('img', { class: 'home-logo', src: `${import.meta.env.BASE_URL}favicon.svg`, alt: '', width: 88, height: 88 }),
+        cube.el,
         h('h1', { class: 'home-title' }, 'CUBE MASTER'),
         h('p', { class: 'home-subtitle' }, '立方体を極める！空間認識トレーニング'),
       ),
@@ -52,5 +54,9 @@ export function mountHomeScreen(container, { navigate, version }) {
     ),
   );
 
-  return { unmount() {} };
+  return {
+    unmount() {
+      cube.destroy();
+    },
+  };
 }
