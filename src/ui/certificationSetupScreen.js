@@ -71,6 +71,7 @@ export function mountCertificationSetupScreen(container, { navigate }) {
           {},
           `まちがえると減点。1回目は${rules.mistakePenalty.perMistake}点、2回目は${rules.mistakePenalty.perMistake * 2}点…と、まちがえるほど重くなります（${rules.mistakePenalty.perMistake * rules.mistakePenalty.maxMultiplier}点まで）。`,
         ),
+        h('li', {}, `「パス」で問題を入れかえられます。n回目のパスで残り時間が${rules.passPenalty.perPassMs / 1000}×n秒へります（1回目${rules.passPenalty.perPassMs / 1000}秒、2回目${(rules.passPenalty.perPassMs * 2) / 1000}秒…）。減点はありませんが、連続正解は0に戻ります。`),
         h('li', {}, '答え合わせ・3Dの演出のあいだは、時間は止まります。ヒントは使えません。'),
         h('li', {}, 'とちゅうでやめたり、ほかのタブに切りかえたりすると中断になり、記録に残りません。'),
       ),

@@ -741,8 +741,8 @@ ul.setup-note {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-height: 84px;
-  padding: 5px;
+  min-height: 59px;
+  padding: 4px;
 }
 
 .choice--figure .choice__mark {
@@ -757,11 +757,11 @@ ul.setup-note {
 }
 
 .choice--figure .figure {
-  width: min(100%, 132px);
+  width: min(100%, 92px);
 }
 
 .choice--figure .figure--face {
-  width: min(70%, 96px);
+  width: min(70%, 67px);
 }
 
 /* ----- サイコロの目（選択肢・見えていない面の一覧） ----- */
@@ -864,11 +864,16 @@ ul.setup-note {
 
 .choice--figure .figure--projection,
 .choice--figure .projection-pair {
-  width: min(100%, 140px);
+  width: min(100%, 98px);
+}
+
+/* 選択肢の中の投影図は、問題文の図の 70% の高さ */
+.choice--figure .figure--projection .figure-svg {
+  max-height: 77px;
 }
 
 .choice--figure .figure--blocks {
-  width: min(100%, 150px);
+  width: min(100%, 105px);
 }
 
 @media (min-width: 900px), (orientation: landscape) and (min-width: 640px) {
@@ -893,7 +898,11 @@ ul.setup-note {
 }
 
 .choice--figure .figure--net {
-  width: min(100%, 150px);
+  width: min(100%, 105px);
+}
+
+.choice--figure .figure--net .figure-svg {
+  max-height: 105px;
 }
 
 .quiz-preview .figure--net .figure-svg {
@@ -1156,4 +1165,9 @@ ul.setup-note {
   padding: 0 6px;
   background: rgb(23 163 74 / 94%);
   font-size: 13px;
+}
+
+/* 「回答する」の行（段位認定ではパスも並ぶ） */
+.quiz-actions {
+  display: grid;
 }

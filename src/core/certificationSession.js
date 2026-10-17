@@ -10,6 +10,7 @@
  *   - 難易度はレベルの割合（例：★1 30%・★2 70%）に近くなるように選ぶ
  * タイマー：問題を表示して回答できるようになったら resume、回答を確定したら pause（○△×・3D 演出・次の問題の準備の間は止まる）。
  * 回答の確定時刻に時間が残っていなければ、その回答は受け付けない（未回答。正解にも不正解にも数えない）。
+ * パス：回答する前に問題を入れかえられる。n 回目のパスで残り時間が perPassMs × n へる（回答・正答率には数えず、減点もしない。連続正解は 0 に戻る）。
  */
 import { QuestionPicker } from './questionEngine.js';
 import { validateAnswer, canSubmitAnswer, normalizeAnswers } from './answerValidator.js';
@@ -63,6 +64,7 @@ export class CertificationSession {
       hintUsed: false,
       score: createScoreState(),
       history: [],
+      passes: [], // パスした問題 { number, templateId, category, difficulty, penaltyMs }
       aborted: false,
     };
   }
@@ -168,6 +170,10 @@ export class CertificationSession {
     const s = this._state;
     if (s.phase === 'finished') return null;
     if (s.currentQuestion && !s.answerLocked) return s.currentQuestion;
+    if (s.phase === 'playing' && this.timer.state === 'finished') {
+      this.finish();
+      return null;
+    }
     if (s.phase === 'playing' && this.timer.getRemainingMs() <= 0) {
       this.finish();
       return null;
@@ -198,6 +204,39 @@ export class CertificationSession {
     }
     this._questionStartActiveMs = this.timer.getElapsedActiveMs();
     return true;
+  }
+
+  /** 次にパスしたときに減る時間（ms） */
+  nextPassPenaltyMs() {
+    return this.rules.passPenalty.perPassMs * (this._state.passes.length + 1);
+  }
+
+  /**
+   * パス（今の問題を入れかえる）。回答前・時間が残っているときだけ。残り時間を減らし、タイマーを止める
+   * （次の問題を作って表示し、startAnswering で再開する）。
+   * @returns {{ penaltyMs: number, count: number }|null} 実際に減った時間とパスの回数（パスできなければ null）
+   */
+  pass() {
+    const s = this._state;
+    const q = s.currentQuestion;
+    if (!q || s.answerLocked || s.phase !== 'playing' || this.timer.state !== 'running') return null;
+    if (this.timer.getRemainingMs() <= 0) {
+      this.finish();
+      return null;
+    }
+    const penalty = this.nextPassPenaltyMs();
+    const before = this.timer.getRemainingMs();
+    this.timer.pause();
+    this.timer.penalize(penalty);
+    const penaltyMs = before - this.timer.getRemainingMs();
+    s.passes.push({ number: this._seq, templateId: q.templateId, category: q.category, difficulty: q.difficulty, penaltyMs });
+    // 減点はしないが、連続正解ボーナスは途切れる
+    s.score = { ...s.score, streak: 0 };
+    // 今の問題は答えずに終える（次の nextQuestion で新しい問題を作る）
+    s.currentQuestion = null;
+    s.selectedAnswers = [];
+    if (this.timer.getRemainingMs() <= 0) this.finish();
+    return { penaltyMs, count: s.passes.length };
   }
 
   /** ヒントは段位認定では使えない */
@@ -312,6 +351,8 @@ export class CertificationSession {
       mistakeCount: s.score.mistakes,
       deductionTotal: answered.reduce((t, h) => t + h.deduction, 0),
       timeBonusTotalMs: answered.reduce((t, h) => t + h.timeBonusMs, 0),
+      passCount: s.passes.length,
+      passPenaltyTotalMs: s.passes.reduce((t, p) => t + p.penaltyMs, 0),
       averageAnswerMs: answerTimes.length === 0 ? 0 : answerTimes.reduce((a, b) => a + b, 0) / answerTimes.length,
       byCategory,
       rankLevel: getRankForScore(this.level, s.score.score, this.rules),

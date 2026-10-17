@@ -275,7 +275,7 @@ describe('段位認定の出題・進行', () => {
     expect(session.useHint()).toBeNull(); // ヒントは使えない
   });
 
-  it('答えが複数ある問題（多答問題）に一発で正解すると残り時間 +4 秒。1つの答えの問題・まちがえたときは増えない', () => {
+  it('答えが複数ある問題（多答問題）に一発で正解すると残り時間 +3 秒。1つの答えの問題・まちがえたときは増えない', () => {
     const now = fakeClock();
     const session = new CertificationSession({ level: 'basic', templatesByCategory, rng: createRng(9), now });
     const seen = { multipleCorrect: 0, multipleWrong: 0, single: 0 };
@@ -332,6 +332,70 @@ describe('段位認定の出題・進行', () => {
     expect(Object.values(s.byCategory).reduce((a, c) => a + c.answered, 0)).toBe(s.answeredCount);
     expect(s.maxStreak).toBe(2);
     expect(s.rankLevel).toBe(getRankForScore('basic', s.score));
+  });
+
+  it('パス：問題を入れかえ、n 回目のパスで残り時間が 2×n 秒へる。回答・正答率には数えない', () => {
+    const now = fakeClock();
+    const session = new CertificationSession({ level: 'standard', templatesByCategory, rng: createRng(6), now });
+    const q1 = session.nextQuestion();
+    expect(session.pass()).toBeNull(); // まだ回答できる状態ではない
+    session.startAnswering();
+    now.advance(1000);
+    expect(session.nextPassPenaltyMs()).toBe(2000);
+    expect(session.pass()).toEqual({ penaltyMs: 2000, count: 1 });
+    expect(session.timer.state).toBe('paused'); // 次の問題を作る間は止まる
+    expect(session.timer.getRemainingMs()).toBe(R.durationMs - 1000 - 2000);
+    const q2 = session.nextQuestion();
+    expect(q2).not.toBe(q1);
+    expect(q2.templateId).not.toBe(q1.templateId);
+    session.startAnswering();
+    expect(session.nextPassPenaltyMs()).toBe(4000);
+    expect(session.pass().penaltyMs).toBe(4000);
+    const q3 = session.nextQuestion();
+    session.startAnswering();
+    expect(session.pass().penaltyMs).toBe(6000);
+    const q4 = session.nextQuestion();
+    session.startAnswering();
+    session.submit(q4.correctAnswers);
+    expect(session.pass()).toBeNull(); // 回答したあとはパスできない
+    const summary = session.getSummary();
+    expect(summary).toMatchObject({ answeredCount: 1, correctCount: 1, passCount: 3, passPenaltyTotalMs: 12000 });
+    expect(summary.history.map((h) => h.questionId)).toEqual([q4.id]);
+    expect(q3).toBeDefined();
+  });
+
+  it('パスしても減点はしないが、連続正解ボーナスは 0 に戻る', () => {
+    const now = fakeClock();
+    const session = new CertificationSession({ level: 'basic', templatesByCategory, rng: createRng(8), now });
+    for (let i = 0; i < 3; i++) {
+      const q = session.nextQuestion();
+      session.startAnswering();
+      session.submit(q.correctAnswers);
+    }
+    const before = session.state.score;
+    expect(before.streak).toBe(3);
+    session.nextQuestion();
+    session.startAnswering();
+    session.pass();
+    expect(session.state.score).toMatchObject({ score: before.score, streak: 0, maxStreak: 3, mistakes: 0 });
+    // 次の正解は連続1問目（ボーナスなし）
+    const q = session.nextQuestion();
+    session.startAnswering();
+    session.submit(q.correctAnswers);
+    expect(session.state.lastScore.bonus).toBe(0);
+    expect(session.state.score.streak).toBe(1);
+  });
+
+  it('パスのペナルティで時間がなくなったら終了（残り時間は 0 より減らない）', () => {
+    const now = fakeClock();
+    const session = new CertificationSession({ level: 'basic', templatesByCategory, rng: createRng(6), now });
+    session.nextQuestion();
+    session.startAnswering();
+    now.advance(R.durationMs - 1500);
+    expect(session.pass()).toEqual({ penaltyMs: 1500, count: 1 });
+    expect(session.isFinished).toBe(true);
+    expect(session.nextQuestion()).toBeNull();
+    expect(session.getSummary().remainingMs).toBe(0);
   });
 
   it('中断した挑戦は aborted になる', () => {

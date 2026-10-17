@@ -49,6 +49,15 @@ export function mountCertificationQuestionScreen(container, { navigate, params }
     streakEl.textContent = score.streak >= 2 ? `${score.streak}連続` : '';
   };
 
+  /** タイマーの横に、増えた・減った時間を少しの間だけ出す */
+  const flashTime = (text, kind) => {
+    timeBonusEl.textContent = text;
+    timeBonusEl.classList.toggle('cert-timer__bonus--penalty', kind === 'penalty');
+    timeBonusEl.classList.remove('cert-timer__bonus--show');
+    void timeBonusEl.offsetWidth; // アニメーションをやり直す
+    timeBonusEl.classList.add('cert-timer__bonus--show');
+  };
+
   const updateTimer = () => {
     const ms = session.timer.getRemainingMs();
     timeEl.textContent = formatSeconds(ms);
@@ -83,12 +92,7 @@ export function mountCertificationQuestionScreen(container, { navigate, params }
       updateScore();
       updateTimer();
       const last = session.state.lastScore;
-      if (last?.timeBonusMs > 0) {
-        timeBonusEl.textContent = `+${Math.round(last.timeBonusMs / 1000)}秒`;
-        timeBonusEl.classList.remove('cert-timer__bonus--show');
-        void timeBonusEl.offsetWidth; // アニメーションをやり直す
-        timeBonusEl.classList.add('cert-timer__bonus--show');
-      }
+      if (last?.timeBonusMs > 0) flashTime(`+${Math.round(last.timeBonusMs / 1000)}秒`, 'bonus');
     },
     scoreText() {
       const last = session.state.lastScore;
@@ -101,6 +105,12 @@ export function mountCertificationQuestionScreen(container, { navigate, params }
       return last.deduction > 0 ? `−${last.deduction}点` : '';
     },
     onScore: updateScore,
+    /** パスした：減った時間をタイマーの横に出す */
+    onPassed({ penaltyMs }) {
+      updateTimer();
+      updateScore(); // 連続正解の表示を消す
+      if (penaltyMs > 0) flashTime(`−${Math.round(penaltyMs / 1000)}秒`, 'penalty');
+    },
     onFinish: () => timeUp(),
     onQuit: () => confirmQuit(),
   };

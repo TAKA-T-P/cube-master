@@ -134,6 +134,10 @@
   pointer-events: none;
 }
 
+.cert-timer__bonus--penalty {
+  color: var(--color-danger);
+}
+
 .cert-timer__bonus--show {
   animation: cert-time-bonus 1.4s ease-out forwards;
 }
@@ -398,4 +402,17 @@
   .cert-timeup {
     animation: none;
   }
+}
+
+/* ----- パス（「回答する」と同じ行の左。回答するより幅をせまく） ----- */
+.quiz-actions--with-pass {
+  display: grid;
+  grid-template-columns: minmax(84px, 28%) 1fr;
+  gap: 8px;
+}
+
+.btn--pass {
+  border-color: var(--color-border);
+  background: var(--color-surface-2);
+  color: var(--color-text-sub);
 }

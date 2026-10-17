@@ -342,7 +342,7 @@ describe('結果発表・段位・記録', () => {
 });
 
 describe('多答問題の時間ボーナスの表示', () => {
-  it('答えが複数ある問題に一発で正解すると「+4秒」を出し、残り時間が増える', async () => {
+  it('答えが複数ある問題に一発で正解すると「+3秒」を出し、残り時間が増える', async () => {
     start('basic');
     mount(mountCertificationQuestionScreen, { level: 'basic' });
     await vi.advanceTimersByTimeAsync(COUNTDOWN);
@@ -355,7 +355,64 @@ describe('多答問題の時間ボーナスの表示', () => {
     const before = session().timer.getRemainingMs();
     answer(container, true);
     expect(session().timer.getRemainingMs()).toBe(before + R.multipleAnswerTimeBonusMs);
-    expect(container.querySelector('.cert-timer__bonus').textContent).toBe('+4秒');
-    expect(container.querySelector('.feedback__detail').textContent).toContain('残り時間 +4秒');
+    expect(container.querySelector('.cert-timer__bonus').textContent).toBe('+3秒');
+    expect(container.querySelector('.feedback__detail').textContent).toContain('残り時間 +3秒');
+  });
+});
+
+describe('パス', () => {
+  it('「回答する」と同じ行の左にあり、幅は「回答する」より小さい。トレーニングには出ない', async () => {
+    start('basic');
+    mount(mountCertificationQuestionScreen, { level: 'basic' });
+    await vi.advanceTimersByTimeAsync(COUNTDOWN);
+    const row = container.querySelector('.quiz-actions');
+    expect([...row.children].map((b) => b.textContent)).toEqual(['パス', '回答する']);
+    expect(row.classList).toContain('quiz-actions--with-pass');
+    expect(buttonByText(container, 'パス').disabled).toBe(false);
+  });
+
+  it('確認で「いいえ」なら同じ問題のまま。「はい」で問題が入れかわり、残り時間が 2×n 秒へる。確認中も時間は減る', async () => {
+    start('basic');
+    mount(mountCertificationQuestionScreen, { level: 'basic' });
+    await vi.advanceTimersByTimeAsync(COUNTDOWN);
+    const q1 = current();
+    buttonByText(container, 'パス').click();
+    let dialog = document.querySelector('.dialog-backdrop');
+    expect(dialog.textContent).toContain('問題を入れかえますか？');
+    expect(dialog.textContent).toContain('ペナルティ：残り時間 −2秒');
+    const before = session().timer.getRemainingMs();
+    await vi.advanceTimersByTimeAsync(1000); // 確認している間も減る
+    expect(session().timer.getRemainingMs()).toBe(before - 1000);
+    buttonByText(dialog, 'いいえ').click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(current()).toBe(q1);
+    // 1回目のパス
+    buttonByText(container, 'パス').click();
+    dialog = document.querySelector('.dialog-backdrop');
+    const t0 = session().timer.getRemainingMs();
+    buttonByText(dialog, 'はい').click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(current()).not.toBe(q1);
+    expect(session().timer.state).toBe('running'); // 新しい問題で再開
+    expect(t0 - session().timer.getRemainingMs()).toBeGreaterThanOrEqual(2000);
+    expect(t0 - session().timer.getRemainingMs()).toBeLessThan(2100);
+    expect(container.querySelector('.cert-timer__bonus').textContent).toBe('−2秒');
+    expect(session().state.answeredCount).toBe(0);
+    // 2回目のパスは 4 秒
+    buttonByText(container, 'パス').click();
+    expect(document.querySelector('.dialog-backdrop').textContent).toContain('ペナルティ：残り時間 −4秒');
+    buttonByText(document.querySelector('.dialog-backdrop'), 'はい').click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(session().getSummary()).toMatchObject({ passCount: 2, passPenaltyTotalMs: 6000 });
+  });
+
+  it('回答したあとはパスできない（ボタンは押せない）', async () => {
+    start('basic');
+    mount(mountCertificationQuestionScreen, { level: 'basic' });
+    await vi.advanceTimersByTimeAsync(COUNTDOWN);
+    answer(container, true);
+    expect(buttonByText(container, 'パス').disabled).toBe(true);
+    await vi.advanceTimersByTimeAsync(AUTO_ADVANCE);
+    expect(buttonByText(container, 'パス').disabled).toBe(false);
   });
 });

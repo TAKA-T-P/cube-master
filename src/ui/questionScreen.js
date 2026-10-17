@@ -103,6 +103,9 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   const choicesEl = h('div', { class: 'choices', role: 'group', 'aria-label': '選択肢' });
   // 回答前は「回答する」、回答後は同じ場所のまま「次の問題へ」（最後は「結果を見る」）に変わる
   const submitButton = button('回答する', () => (session.state.answerLocked ? goNext() : submit()), 'btn--primary btn--large');
+  // 段位認定：「回答する」の左に「パス」（問題を入れかえる。残り時間が減る）
+  const passButton = cert ? button('パス', () => confirmPass(), 'btn--large btn--pass') : null;
+  const actionRow = h('div', { class: `quiz-actions ${cert ? 'quiz-actions--with-pass' : ''}` }, passButton, submitButton);
 
   const resultTitle = h('p', { class: 'feedback__title', role: 'status' });
   const resultDetail = h('p', { class: 'feedback__detail' });
@@ -142,7 +145,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
         'div',
         { class: 'quiz-scroll' },
         h('section', { class: 'quiz-question' }, typeHint, questionText, figures, h('div', { class: 'quiz-hint-row' }, hintButton), hintText),
-        h('section', { class: 'quiz-answer' }, choicesEl, submitButton, feedback),
+        h('section', { class: 'quiz-answer' }, choicesEl, actionRow, feedback),
       ),
     ),
   );
@@ -258,6 +261,10 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
 
     feedback.hidden = true;
     submitButton.textContent = '回答する';
+    if (passButton) {
+      passButton.hidden = false;
+      passButton.disabled = false;
+    }
     // もう一度見る・スキップ・展開図に戻す・元に戻すは、回答したあとだけ
     for (const b of revealTools) b.hidden = true;
     // ヒント：同じ問題では何度見ても同じ内容。ヒントのない問題ではボタンを出さない
@@ -297,6 +304,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     if (!selection.canSubmit()) return;
     const selected = selection.getSelected();
     selection.lock(); // 回答の変更を禁止
+    if (passButton) passButton.disabled = true; // 回答したあとはパスできない（行の形はそのまま）
     const result = session.submit(selected);
     if (!result) {
       // 段位認定：時間切れ（確定した時刻に時間が残っていなかった）。この回答は数えない
@@ -448,6 +456,34 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   /** 解説の〔choice:ID〕を、選択肢の記号（ア・イ…）に置きかえる */
   function resolveChoiceRefs(text) {
     return text.replace(/〔choice:([^〕]+)〕/g, (_, id) => question.choices.find((c) => c.id === id)?.label ?? id);
+  }
+
+  /**
+   * 段位認定：パスの確認（確認している間も時間は減り続ける）。「はい」で問題を入れかえる
+   */
+  async function confirmPass() {
+    if (!cert || session.state.answerLocked || disposed) return;
+    const q = question;
+    const penaltySec = Math.round(session.nextPassPenaltyMs() / 1000);
+    const dialog = confirmDialog({
+      title: '問題を入れかえますか？',
+      message: `ペナルティ：残り時間 −${penaltySec}秒`,
+      okLabel: 'はい',
+      cancelLabel: 'いいえ',
+    });
+    cleanups.push(() => dialog.el.isConnected && dialog.close(false));
+    // 時間切れ・回答・ほかの問題に変わったあとの「はい」は何もしない
+    if (!(await dialog.result) || disposed || question !== q || session.state.answerLocked) return;
+    const passed = session.pass();
+    if (!passed) {
+      cert.onFinish();
+      return;
+    }
+    cert.onPassed?.(passed);
+    selection?.lock();
+    const next = session.hasNextQuestion() ? session.nextQuestion() : null;
+    if (next) showQuestion(next);
+    else cert.onFinish();
   }
 
   /** ヒントを見る ⇄ 隠す（回答前だけ） */

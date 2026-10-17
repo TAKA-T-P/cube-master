@@ -56,8 +56,10 @@ export const CERTIFICATION_RULES = Object.freeze({
    * 得点は 0 点より下がらない
    */
   mistakePenalty: Object.freeze({ perMistake: 50, maxMultiplier: 6 }),
+  /** パス（問題を入れかえる）：n 回目のパスで残り時間から perPassMs × n を引く。パスは回答に数えず、減点もしないが、連続正解は 0 に戻る */
+  passPenalty: Object.freeze({ perPassMs: 2000 }),
   /** 答えが複数ある問題（多答問題）に完全正解したときに、残り時間に加える時間 */
-  multipleAnswerTimeBonusMs: 4000,
+  multipleAnswerTimeBonusMs: 3000,
   /** 連続正解ボーナス（連続正解数が min 以上のとき、その問題に加える点。上から順に調べる） */
   streakBonus: Object.freeze([Object.freeze({ min: 5, bonus: 40 }), Object.freeze({ min: 3, bonus: 20 })]),
   /** スタートのカウントダウン（3・2・1・START!） */

@@ -60,6 +60,8 @@ export function mountCertificationResultScreen(container, { navigate }) {
       h('dd', {}, summary.deductionTotal > 0 ? `−${summary.deductionTotal}点（${summary.mistakeCount}回）` : 'なし'),
       h('dt', {}, '多答問題の時間ボーナス'),
       h('dd', {}, summary.timeBonusTotalMs > 0 ? `+${Math.round(summary.timeBonusTotalMs / 1000)}秒` : 'なし'),
+      h('dt', {}, 'パス'),
+      h('dd', {}, summary.passCount > 0 ? `${summary.passCount}回（残り時間 −${Math.round(summary.passPenaltyTotalMs / 1000)}秒）` : 'なし'),
       h('dt', {}, '平均解答時間'),
       h('dd', {}, summary.answeredCount > 0 ? `${sec(summary.averageAnswerMs)}秒` : '－'),
     ),

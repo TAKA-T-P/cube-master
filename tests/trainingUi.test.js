@@ -658,6 +658,7 @@ describe('回答ボタンが「次の問題へ」に変わる', () => {
     expect([...container.querySelectorAll('button')].filter((b) => b.textContent === '次の問題へ')).toHaveLength(1);
     // 選択肢のすぐ下（解説より上）にある
     expect(btn.compareDocumentPosition(container.querySelector('.feedback')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(buttonByText(container, 'パス')).toBeUndefined(); // パスは段位認定だけ
     btn.click();
     expect(btn.textContent).toBe('回答する');
     expect(btn.disabled).toBe(true);
