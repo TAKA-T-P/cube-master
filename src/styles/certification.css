@@ -63,6 +63,9 @@
 }
 
 .cert-level__best {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 14px;
   font-weight: 700;
   color: var(--color-primary-strong);
 }

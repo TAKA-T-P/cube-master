@@ -40,17 +40,16 @@ export function getRankLabel(rankLevel, level) {
 
 /**
  * 21段階の必要スコア（仮の基準。rankLevel 1〜21 の順。どれも前より大きい）
- * ベーシックは 1 問 100 点の問題を 100 秒で解く前提で、10級 100 点（1 問正解）〜皆伝 2400 点（連続正解ボーナスこみで約 18 問正解）。
- * スタンダード・エキスパートは 1 問の点が高い分、考える時間も長いので、ベーシックの 1.15 倍・1.3 倍程度にした。
+ * 3つのレベルで共通。10級 100 点 〜 1級 1000 点（100 点ごと）、初段 1100 点 〜 三段 1300 点（100 点ごと）、
+ * 四段 1450 点 〜 皆伝 2500 点（150 点ごと）。レベルごとに変えたいときは、levels の thresholds を別々にする。
  */
-const BASIC_THRESHOLDS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1650, 1800, 1950, 2100, 2250, 2400];
-const scaleThresholds = (k) => BASIC_THRESHOLDS.map((v) => Math.round((v * k) / 10) * 10);
+const THRESHOLDS = Object.freeze([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1450, 1600, 1750, 1900, 2050, 2200, 2350, 2500]);
 
 export const CERTIFICATION_RULES = Object.freeze({
-  rulesVersion: 2,
+  rulesVersion: 3,
   durationMs: 100000,
   /** 完全正解の得点（問題の難易度ごと）。部分正解・不正解は 0 点 */
-  points: Object.freeze({ 1: 100, 2: 160, 3: 220 }),
+  points: Object.freeze({ 1: 100, 2: 160, 3: 240 }),
   /**
    * 誤答（不正解・部分正解）の減点：n 回目の誤答で perMistake × n 点（n は maxMultiplier まで）。まちがえるほど重くなる。
    * 得点は 0 点より下がらない
@@ -78,18 +77,18 @@ export const CERTIFICATION_RULES = Object.freeze({
   /** 問題ごとの考える時間の目安（秒）。テンプレート ID ごとに上書きできる。出題の調整・分析用 */
   recommendedSeconds: Object.freeze({ byDifficulty: Object.freeze({ 1: 8, 2: 12, 3: 18 }), byTemplate: Object.freeze({}) }),
   levels: Object.freeze({
-    basic: Object.freeze({ label: 'ベーシック', description: '基本的な空間認識を試そう！', difficultyWeights: Object.freeze({ 1: 1 }), thresholds: Object.freeze(BASIC_THRESHOLDS) }),
+    basic: Object.freeze({ label: 'ベーシック', description: '基本的な空間認識を試そう！', difficultyWeights: Object.freeze({ 1: 1 }), thresholds: THRESHOLDS }),
     standard: Object.freeze({
       label: 'スタンダード',
       description: '位置関係や、何段階かの思考に挑戦！',
       difficultyWeights: Object.freeze({ 1: 0.3, 2: 0.7 }),
-      thresholds: Object.freeze(scaleThresholds(1.15)),
+      thresholds: THRESHOLDS,
     }),
     expert: Object.freeze({
       label: 'エキスパート',
       description: '難しい空間推理に挑戦！',
       difficultyWeights: Object.freeze({ 2: 0.3, 3: 0.7 }),
-      thresholds: Object.freeze(scaleThresholds(1.3)),
+      thresholds: THRESHOLDS,
     }),
   }),
 });

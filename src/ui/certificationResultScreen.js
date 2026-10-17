@@ -103,28 +103,33 @@ export function mountCertificationResultScreen(container, { navigate }) {
         h('p', { class: 'cert-result__score' }, scoreValue, h('span', {}, '点')),
         rankEl,
         badges,
+        // 「正解数」のすぐ上に、2行×2列で並べる
+        h(
+          'div',
+          { class: 'result-grid-actions cert-result__actions' },
+          button(
+            'もう一度挑戦',
+            () => {
+              startCertification(level);
+              navigate('certification-play', { level });
+            },
+            'btn--primary',
+          ),
+          button('レベルを変更', () => navigate('certification')),
+          button('記録を見る', () => navigate('certification-records')),
+          button('タイトルへ', () => navigate('home')),
+        ),
         details,
       ),
-      h(
-        'div',
-        { class: 'result-actions' },
-        button(
-          'もう一度挑戦',
-          () => {
-            startCertification(level);
-            navigate('certification-play', { level });
-          },
-          'btn--primary btn--large',
-        ),
-        mistakes.length > 0
-          ? button(`間違えた問題を復習（${mistakes.length}問）`, () => {
+      mistakes.length > 0
+        ? h(
+            'div',
+            { class: 'result-actions' },
+            button(`間違えた問題を復習（${mistakes.length}問）`, () => {
               if (startCertificationReview(mistakes)) navigate('question', { review: 'cert' });
-            })
-          : null,
-        button('レベルを変更', () => navigate('certification')),
-        button('段位・記録を見る', () => navigate('certification-records')),
-        button('ホームへ', () => navigate('home'), 'btn--ghost'),
-      ),
+            }),
+          )
+        : null,
     ),
   );
   return {

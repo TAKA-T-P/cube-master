@@ -14,7 +14,8 @@ export function mountCertificationSetupScreen(container, { navigate }) {
 
   const cards = LEVELS.map((level) => {
     const info = rules.levels[level];
-    const best = records.levels[level].bestRank;
+    const rec = records.levels[level];
+    const best = rec.bestRank;
     return h(
       'button',
       {
@@ -26,7 +27,13 @@ export function mountCertificationSetupScreen(container, { navigate }) {
       },
       h('span', { class: 'cert-level__name' }, info.label),
       h('span', { class: 'cert-level__desc' }, info.description),
-      h('span', { class: 'cert-level__best' }, best > 0 ? `最高段位：${getRankLabel(best, level)}` : 'まだ段位がありません'),
+      // 最高段位の右にハイスコア（挑戦したことがあれば）
+      h(
+        'span',
+        { class: 'cert-level__best' },
+        h('span', { 'data-testid': 'best-rank' }, best > 0 ? `最高段位：${getRankLabel(best, level)}` : rec.attempts > 0 ? '最高段位：認定なし' : 'まだ段位がありません'),
+        rec.attempts > 0 ? h('span', { class: 'cert-level__score', 'data-testid': 'high-score' }, `ハイスコア：${rec.bestScore}点`) : null,
+      ),
     );
   });
 

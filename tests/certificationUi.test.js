@@ -298,19 +298,22 @@ describe('結果発表・段位・記録', () => {
     expect(rankHeadline(15, 'standard')).toBe('五段＋ 認定！');
   });
 
-  it('結果画面のボタン：もう一度挑戦・レベルを変更・段位・記録・ホーム・間違えた問題の復習', () => {
+  it('結果画面のボタン：もう一度挑戦・レベルを変更・記録を見る・タイトルへ（正解数のすぐ上に2行×2列）・間違えた問題の復習', () => {
     const s = start('basic');
     const q = s.nextQuestion();
     s.startAnswering();
     s.submit([q.choices.find((c) => !q.correctAnswers.includes(c.id)).id]);
     certStore.finishCertification();
     const navigate = mount(mountCertificationResultScreen);
+    const grid = container.querySelector('.cert-result__actions');
+    expect([...grid.children].map((b) => b.textContent)).toEqual(['もう一度挑戦', 'レベルを変更', '記録を見る', 'タイトルへ']);
+    expect(grid.nextElementSibling.querySelector('dt').textContent).toBe('正解数'); // 「正解数」のすぐ上
     buttonByText(container, '間違えた問題を復習（1問）').click();
     expect(navigate).toHaveBeenCalledWith('question', { review: 'cert' });
     expect(trainingStore.getReview()).toMatchObject({ kind: 'cert', total: 1 });
     buttonByText(container, 'レベルを変更').click();
-    buttonByText(container, '段位・記録を見る').click();
-    buttonByText(container, 'ホームへ').click();
+    buttonByText(container, '記録を見る').click();
+    buttonByText(container, 'タイトルへ').click();
     buttonByText(container, 'もう一度挑戦').click();
     expect(navigate).toHaveBeenCalledWith('certification-play', { level: 'basic' });
     expect(navigate.mock.calls.map((c) => c[0])).toEqual(['question', 'certification', 'certification-records', 'home', 'certification-play']);
@@ -332,6 +335,17 @@ describe('結果発表・段位・記録', () => {
     expect(card('basic').querySelector('[data-testid="best-rank"]').textContent).toBe('認定なし');
     expect(card('expert').textContent).toContain('まだ記録がありません');
     expect(card('expert').querySelectorAll('.cert-rank-list__item')[10].textContent).toContain('初段★');
+  });
+
+  it('レベル選択に、最高段位とハイスコアを並べて表示する（挑戦していないレベルはハイスコアなし）', () => {
+    finishWith('standard', 5);
+    const rec = certStore.getCertificationRecords().levels.standard;
+    mount(mountCertificationSetupScreen);
+    const level = (l) => container.querySelector(`.cert-level[data-level="${l}"]`);
+    expect(level('standard').querySelector('[data-testid="best-rank"]').textContent).toBe(`最高段位：${getRankLabel(rec.bestRank, 'standard')}`);
+    expect(level('standard').querySelector('[data-testid="high-score"]').textContent).toBe(`ハイスコア：${rec.bestScore}点`);
+    expect(level('basic').querySelector('[data-testid="best-rank"]').textContent).toBe('まだ段位がありません');
+    expect(level('basic').querySelector('[data-testid="high-score"]')).toBeNull();
   });
 
   it('保存できない環境でも挑戦できる', () => {

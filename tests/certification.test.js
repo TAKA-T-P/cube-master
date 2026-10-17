@@ -72,8 +72,12 @@ describe('段位（21段階）', () => {
       expect(getRankForScore(level, th[20])).toBe(21); // 皆伝
       expect(getRankForScore(level, 999999)).toBe(21);
     }
-    // レベルごとに基準は別
-    expect(R.levels.basic.thresholds[10]).not.toBe(R.levels.expert.thresholds[10]);
+    // 3レベル共通の基準で、皆伝は 2500 点
+    expect(R.levels.standard.thresholds).toEqual(R.levels.basic.thresholds);
+    expect(R.levels.expert.thresholds).toEqual(R.levels.basic.thresholds);
+    expect(R.levels.basic.thresholds[20]).toBe(2500);
+    expect(getRankForScore('expert', 2499)).toBe(20);
+    expect(getRankForScore('expert', 2500)).toBe(21);
   });
 
   it('次の段位と、あと何点かがわかる（皆伝は次がない）', () => {
@@ -89,8 +93,8 @@ describe('段位（21段階）', () => {
 });
 
 describe('スコア', () => {
-  it('難易度別の得点（★1 100・★2 160・★3 220）。不正解・部分正解は得点なしで連続正解が0に戻る', () => {
-    expect([1, 2, 3].map((d) => basePoints(d))).toEqual([100, 160, 220]);
+  it('難易度別の得点（★1 100・★2 160・★3 240）。不正解・部分正解は得点なしで連続正解が0に戻る', () => {
+    expect([1, 2, 3].map((d) => basePoints(d))).toEqual([100, 160, 240]);
     let s = createScoreState();
     s = applyAnswer(s, { difficulty: 2, isCorrect: true }).state;
     expect(s).toMatchObject({ score: 160, streak: 1, correct: 1, answered: 1 });
@@ -409,13 +413,13 @@ describe('段位認定の記録', () => {
   const summary = (level, score, extra = {}) => ({ level, score, correctCount: Math.floor(score / 100), answeredCount: 10, rankLevel: getRankForScore(level, score), aborted: false, ...extra });
 
   it('レベルごとに別々に、挑戦回数・最高得点・最高段位を記録する。低い成績で下がらない', () => {
-    let res = recordCertificationResult(createEmptyRecords(), summary('basic', 1500));
+    let res = recordCertificationResult(createEmptyRecords(), summary('basic', 1600));
     expect(res).toMatchObject({ previousRank: 0, newRank: 15, rankUp: true, bestScoreUpdated: true, recorded: true });
     res = recordCertificationResult(res.records, summary('basic', 300));
     expect(res).toMatchObject({ previousRank: 15, newRank: 15, rankUp: false, bestScoreUpdated: false });
-    expect(res.records.levels.basic).toMatchObject({ attempts: 2, bestScore: 1500, bestRank: 15 });
+    expect(res.records.levels.basic).toMatchObject({ attempts: 2, bestScore: 1600, bestRank: 15 });
     // 同じ段位でも最高得点の更新は自己ベスト
-    res = recordCertificationResult(res.records, summary('basic', 1540));
+    res = recordCertificationResult(res.records, summary('basic', 1650));
     expect(res).toMatchObject({ rankUp: false, bestScoreUpdated: true });
     expect(res.records.levels.standard).toMatchObject({ attempts: 0, bestRank: 0 });
   });
