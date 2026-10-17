@@ -167,6 +167,35 @@ describe('画面', () => {
     expect([...container.querySelectorAll('button')].some((b) => b.textContent === '学習記録を消去')).toBe(true);
   });
 
+  it('あそびかたの下は「タイトルに戻る」「KEC数学科ラボへ」。ラボへは確かめてから移動する', async () => {
+    const { mountHelpScreen, MATH_LAB_URL } = await import('../src/ui/helpScreen.js');
+    const navigate = vi.fn();
+    mountHelpScreen(container, { navigate });
+    const actions = [...container.querySelectorAll('.help-actions button')];
+    expect(actions.map((b) => b.textContent)).toEqual(['タイトルに戻る', 'KEC数学科ラボへ']);
+    actions[0].click();
+    expect(navigate).toHaveBeenCalledWith('home');
+    const assign = vi.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, assign } });
+    try {
+      const pick = async (label) => {
+        actions[1].click();
+        const dialog = document.querySelector('.dialog');
+        expect(dialog.querySelector('.dialog__title').textContent).toBe('KEC数学科ラボへ移動しますか？');
+        [...dialog.querySelectorAll('button')].find((b) => b.textContent === label).click();
+        await new Promise((r) => setTimeout(r, 0));
+      };
+      await pick('いいえ');
+      expect(assign).not.toHaveBeenCalled();
+      await pick('はい');
+      expect(assign).toHaveBeenCalledWith(MATH_LAB_URL);
+      expect(MATH_LAB_URL).toBe('https://taka-t-p.github.io/math-app-portal/');
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
+  });
+
   it('トップ画面に効果音のオン／オフ（押すと切りかわる）', async () => {
     const settings = await import('../src/ui/soundSettings.js');
     settings.configureSoundSettingsStorage(createMemoryBackend());

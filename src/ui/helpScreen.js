@@ -13,6 +13,9 @@ import { CERTIFICATION_RULES } from '../core/certificationRules.js';
 import { CHALLENGE_RULES } from '../core/timedChallengeSession.js';
 
 const R = CERTIFICATION_RULES;
+
+/** KEC数学科ラボ（ほかのアプリの入り口） */
+export const MATH_LAB_URL = 'https://taka-t-p.github.io/math-app-portal/';
 const sec = (ms) => ms / 1000;
 
 const HOW_TO = {
@@ -107,6 +110,12 @@ function recordSection() {
   ];
 }
 
+/** 「KEC数学科ラボへ」：確かめてから移動する */
+async function goToMathLab() {
+  const dialog = confirmDialog({ title: 'KEC数学科ラボへ移動しますか？', okLabel: 'はい', cancelLabel: 'いいえ' });
+  if (await dialog.result) window.location.assign(MATH_LAB_URL);
+}
+
 export function mountHelpScreen(container, { navigate }) {
   const touch = isTouchPrimary();
   const order = touch ? ['touch', 'pc'] : ['pc', 'touch'];
@@ -163,8 +172,8 @@ export function mountHelpScreen(container, { navigate }) {
       h(
         'div',
         { class: 'help-actions' },
-        h('button', { class: 'btn btn--primary', type: 'button', onClick: () => navigate('categories') }, 'トレーニングをはじめる'),
-        h('button', { class: 'btn', type: 'button', onClick: () => navigate('certification') }, '段位認定に挑戦'),
+        h('button', { class: 'btn', type: 'button', onClick: () => navigate('home') }, 'タイトルに戻る'),
+        h('button', { class: 'btn btn--primary', type: 'button', 'data-testid': 'math-lab', onClick: () => goToMathLab() }, 'KEC数学科ラボへ'),
       ),
     ),
   );

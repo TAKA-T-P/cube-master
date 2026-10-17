@@ -120,8 +120,8 @@
 }
 
 .btn--menu {
-  min-height: 64px;
-  padding-inline: 8px;
+  min-height: 52px;
+  padding: 4px 8px;
   font-size: clamp(15px, 4.2vw, 18px);
   justify-content: center;
   text-align: center;
