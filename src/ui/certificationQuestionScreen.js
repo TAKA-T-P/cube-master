@@ -1,5 +1,5 @@
 /**
- * 段位認定：90秒チャレンジの画面
+ * 段位認定：制限時間（100秒）のチャレンジの画面
  *
  * 問題の表示・回答・3D の演出は、トレーニングと同じ問題画面（ui/questionScreen）を段位認定のモードで使う。
  * この画面はその上に、カウントダウン（3・2・1・START!）・タイマー・得点・TIME UP! を重ねる。
@@ -12,7 +12,7 @@ import { confirmDialog } from './components.js';
 import { mountQuestionScreen } from './questionScreen.js';
 import { CERTIFICATION_RULES, levelLabel } from '../core/certificationRules.js';
 import { getCertificationSession, finishCertification, abortCertification } from './certificationStore.js';
-import { playTimeUpSound } from './answerSound.js';
+import { playTimeUpSound, playCountdownSound } from './answerSound.js';
 
 const TICK_MS = 100;
 
@@ -36,8 +36,8 @@ export function mountCertificationQuestionScreen(container, { navigate, params }
 
   // ---------- 上の帯（タイマー・得点） ----------
   const timeEl = h('span', { class: 'cert-timer__value', 'data-testid': 'cert-timer' }, formatSeconds(rules.durationMs));
-  const penaltyEl = h('span', { class: 'cert-timer__penalty', 'aria-hidden': 'true' });
-  const timerEl = h('div', { class: 'cert-timer', role: 'timer', 'aria-label': '残り時間' }, h('span', { class: 'cert-timer__label' }, '残り'), timeEl, penaltyEl);
+  const timeBonusEl = h('span', { class: 'cert-timer__bonus', 'aria-hidden': 'true' });
+  const timerEl = h('div', { class: 'cert-timer', role: 'timer', 'aria-label': '残り時間' }, h('span', { class: 'cert-timer__label' }, '残り'), timeEl, timeBonusEl);
   const scoreEl = h('span', { class: 'cert-score', 'data-testid': 'cert-score' }, '0点');
   const streakEl = h('span', { class: 'cert-streak' });
   const levelEl = h('span', { class: 'badge badge--info' }, levelLabel(session.level));
@@ -83,18 +83,22 @@ export function mountCertificationQuestionScreen(container, { navigate, params }
       updateScore();
       updateTimer();
       const last = session.state.lastScore;
-      if (last?.penaltyMs > 0) {
-        penaltyEl.textContent = `−${Math.round(last.penaltyMs / 1000)}秒`;
-        penaltyEl.classList.remove('cert-timer__penalty--show');
-        void penaltyEl.offsetWidth; // アニメーションをやり直す
-        penaltyEl.classList.add('cert-timer__penalty--show');
+      if (last?.timeBonusMs > 0) {
+        timeBonusEl.textContent = `+${Math.round(last.timeBonusMs / 1000)}秒`;
+        timeBonusEl.classList.remove('cert-timer__bonus--show');
+        void timeBonusEl.offsetWidth; // アニメーションをやり直す
+        timeBonusEl.classList.add('cert-timer__bonus--show');
       }
     },
     scoreText() {
       const last = session.state.lastScore;
       if (!last) return '';
-      if (last.points > 0) return `+${last.points}点${last.bonus > 0 ? `（連続ボーナス +${last.bonus}点）` : ''}`;
-      return last.penaltyMs > 0 ? `残り時間 −${Math.round(last.penaltyMs / 1000)}秒` : '';
+      if (last.points > 0) {
+        const streak = last.bonus > 0 ? `（連続ボーナス +${last.bonus}点）` : '';
+        const time = last.timeBonusMs > 0 ? ` 多答問題を一発正解！ 残り時間 +${Math.round(last.timeBonusMs / 1000)}秒` : '';
+        return `+${last.points}点${streak}${time}`;
+      }
+      return last.deduction > 0 ? `−${last.deduction}点` : '';
     },
     onScore: updateScore,
     onFinish: () => timeUp(),
@@ -110,11 +114,20 @@ export function mountCertificationQuestionScreen(container, { navigate, params }
   const countdown = h('div', { class: 'cert-countdown', role: 'status', 'aria-live': 'assertive' }, h('span', { class: 'cert-countdown__level' }, levelLabel(session.level)), countText);
   container.append(countdown, finalCount);
   const step = rules.countdownMs / 3;
-  later(() => (countText.textContent = '2'), step);
-  later(() => (countText.textContent = '1'), step * 2);
+  // 表示に合わせて効果音（3・2・1 はピッ、START! はピーン）
+  playCountdownSound(false);
+  later(() => {
+    countText.textContent = '2';
+    playCountdownSound(false);
+  }, step);
+  later(() => {
+    countText.textContent = '1';
+    playCountdownSound(false);
+  }, step * 2);
   later(() => {
     countText.textContent = 'START!';
     countdown.classList.add('cert-countdown--start');
+    playCountdownSound(true);
   }, step * 3);
   later(() => {
     countdown.remove();

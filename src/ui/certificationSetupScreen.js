@@ -25,7 +25,6 @@ export function mountCertificationSetupScreen(container, { navigate }) {
         onClick: () => select(level),
       },
       h('span', { class: 'cert-level__name' }, info.label),
-      h('span', { class: 'cert-level__audience' }, info.audience),
       h('span', { class: 'cert-level__desc' }, info.description),
       h('span', { class: 'cert-level__best' }, best > 0 ? `最高段位：${getRankLabel(best, level)}` : 'まだ段位がありません'),
     );
@@ -57,18 +56,24 @@ export function mountCertificationSetupScreen(container, { navigate }) {
         h('button', { class: 'btn btn--small btn--back page-header__end', type: 'button', onClick: () => navigate('certification-records') }, '段位・記録'),
       ),
       notice ? h('p', { class: 'cert-notice', role: 'alert' }, notice) : null,
-      h('p', { class: 'cert-lead' }, '90秒で何問解ける？立方体マスターを目指せ！'),
+      h('p', { class: 'cert-lead' }, `${rules.durationMs / 1000}秒で何問解ける？立方体マスターを目指せ！`),
       h('div', { class: 'cert-levels', role: 'group', 'aria-label': 'レベル' }, cards),
+      // スタートは、レベルのボタンのすぐ下
+      h('div', { class: 'cert-start' }, start),
       h(
         'ul',
         { class: 'cert-rules' },
         h('li', {}, `制限時間は${rules.durationMs / 1000}秒。いろいろなカテゴリの問題が出ます。`),
         h('li', {}, `正解すると ★1 ${rules.points[1]}点・★2 ${rules.points[2]}点・★3 ${rules.points[3]}点。3問連続正解から連続ボーナス！`),
-        h('li', {}, `まちがえると0点で、残り時間が${rules.mistakePenaltyMs / 1000}秒へります。`),
+        h('li', {}, `答えが複数ある問題に一発で正解すると、残り時間が${rules.multipleAnswerTimeBonusMs / 1000}秒ふえます。`),
+        h(
+          'li',
+          {},
+          `まちがえると減点。1回目は${rules.mistakePenalty.perMistake}点、2回目は${rules.mistakePenalty.perMistake * 2}点…と、まちがえるほど重くなります（${rules.mistakePenalty.perMistake * rules.mistakePenalty.maxMultiplier}点まで）。`,
+        ),
         h('li', {}, '答え合わせ・3Dの演出のあいだは、時間は止まります。ヒントは使えません。'),
         h('li', {}, 'とちゅうでやめたり、ほかのタブに切りかえたりすると中断になり、記録に残りません。'),
       ),
-      h('div', { class: 'result-actions' }, start),
     ),
   );
   return { unmount() {} };

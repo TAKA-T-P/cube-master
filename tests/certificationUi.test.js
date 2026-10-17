@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createEventBus } from '../src/core/eventBus.js';
 import { createRng } from '../src/utils/random.js';
 
-vi.mock('../src/ui/answerSound.js', () => ({ playAnswerSound: vi.fn(), playFinishSound: vi.fn(), playRankUpSound: vi.fn(), playTimeUpSound: vi.fn() }));
+vi.mock('../src/ui/answerSound.js', () => ({ playAnswerSound: vi.fn(), playFinishSound: vi.fn(), playRankUpSound: vi.fn(), playTimeUpSound: vi.fn(), playCountdownSound: vi.fn() }));
 vi.mock('../src/three/cubeViewer.js', () => ({
   FACE_DISPLAY_MODES: { OPAQUE: 'opaque', TRANSLUCENT: 'translucent', WIREFRAME: 'wireframe' },
   createCubeViewer: () => globalThis.__createFakeViewer(),
@@ -107,8 +107,12 @@ describe('レベル選択', () => {
     const levels = [...container.querySelectorAll('.cert-level')];
     expect(levels.map((b) => b.dataset.level)).toEqual(['basic', 'standard', 'expert']);
     expect(levels.map((b) => b.querySelector('.cert-level__name').textContent)).toEqual(['ベーシック', 'スタンダード', 'エキスパート']);
-    expect(container.textContent).toContain('90秒で何問解ける？');
+    expect(container.textContent).toContain('100秒で何問解ける？');
     expect(container.textContent).toContain('ヒントは使えません');
+    expect(container.textContent).toContain('1回目は50点、2回目は100点');
+    // 対象学年は書かない（ボタンを小さく）。スタートはエキスパートのすぐ下
+    expect(container.textContent).not.toContain('小学生向け');
+    expect(container.querySelector('.cert-levels').nextElementSibling.contains(buttonByText(container, 'スタート'))).toBe(true);
     levels[2].click();
     expect(levels[2].getAttribute('aria-pressed')).toBe('true');
     buttonByText(container, 'スタート').click();
@@ -119,26 +123,29 @@ describe('レベル選択', () => {
   });
 });
 
-describe('90秒チャレンジ', () => {
+describe('100秒チャレンジ', () => {
   it('3・2・1・START! の間は問題を隠してタイマーは止まったまま。そのあと回答でき、ヒントは出ない', async () => {
     start();
     mount(mountCertificationQuestionScreen, { level: 'basic' });
     const countdown = container.querySelector('.cert-countdown');
     expect(countdown.textContent).toContain('3');
+    expect(sounds.playCountdownSound.mock.calls).toEqual([[false]]); // 表示に合わせて効果音
     expect(session().timer.state).toBe('ready');
     await vi.advanceTimersByTimeAsync(R.countdownMs / 3);
     expect(countdown.textContent).toContain('2');
+    expect(sounds.playCountdownSound).toHaveBeenCalledTimes(2);
     await vi.advanceTimersByTimeAsync((R.countdownMs * 2) / 3);
     expect(countdown.textContent).toContain('START!');
+    expect(sounds.playCountdownSound.mock.calls).toEqual([[false], [false], [false], [true]]);
     expect(session().timer.getRemainingMs()).toBe(R.durationMs); // まだ減らない
     await vi.advanceTimersByTimeAsync(600);
     expect(container.querySelector('.cert-countdown')).toBeNull();
     expect(session().timer.state).toBe('running');
     expect(buttonByText(container, 'ヒントを見る').hidden).toBe(true);
-    // START! のあと 0.1 秒たったところ
-    expect(container.querySelector('[data-testid="cert-timer"]').textContent).toBe('89.9秒');
+    // START! のあと 0.1 秒たったところ（制限時間 100 秒）
+    expect(container.querySelector('[data-testid="cert-timer"]').textContent).toBe('99.9秒');
     await vi.advanceTimersByTimeAsync(2500);
-    expect(container.querySelector('[data-testid="cert-timer"]').textContent).toBe('87.4秒');
+    expect(container.querySelector('[data-testid="cert-timer"]').textContent).toBe('97.4秒');
   });
 
   it('回答するとタイマーが止まり、得点を表示して自動で次の問題へ。次の問題で再開する。連打で2回答えない', async () => {
@@ -163,12 +170,13 @@ describe('90秒チャレンジ', () => {
     expect(session().timer.state).toBe('running');
     // 次の問題を表示した時刻から、また減りはじめる
     expect(afterAnswer - session().timer.getRemainingMs()).toBeLessThanOrEqual(50);
-    // 誤答：0点・残り時間が3秒へる
+    // 誤答：減点（1回目は 50 点）。残り時間は減らない
     const before = session().timer.getRemainingMs();
+    const scoreBefore = session().state.score.score;
     answer(container, false);
-    expect(session().timer.getRemainingMs()).toBe(before - R.mistakePenaltyMs);
-    expect(container.querySelector('.cert-timer__penalty').textContent).toBe('−3秒');
-    expect(container.querySelector('.feedback__detail').textContent).toContain('残り時間 −3秒');
+    expect(session().timer.getRemainingMs()).toBe(before);
+    expect(session().state.score.score).toBe(scoreBefore - 50);
+    expect(container.querySelector('.feedback__detail').textContent).toContain('−50点');
     // 「次の問題へ」を連打しても、1問だけ進む（回答も増えない）
     const n = session().questionNumber;
     buttonByText(container, '次の問題へ').click();
@@ -186,7 +194,7 @@ describe('90秒チャレンジ', () => {
     await vi.advanceTimersByTimeAsync(COUNTDOWN);
     answer(container, true);
     await vi.advanceTimersByTimeAsync(AUTO_ADVANCE);
-    await vi.advanceTimersByTimeAsync(86000); // 残り 5 秒より少ない
+    await vi.advanceTimersByTimeAsync(session().timer.getRemainingMs() - 4000); // 残り 5 秒より少ない
     expect(container.querySelector('.cert-final-count').hidden).toBe(false);
     expect(container.querySelector('.cert-timer').classList).toContain('cert-timer--final');
     await vi.advanceTimersByTimeAsync(5000);
@@ -330,5 +338,24 @@ describe('結果発表・段位・記録', () => {
     expect(outcome.rankUp).toBe(true);
     mount(mountCertificationRecordsScreen);
     expect(container.textContent).toContain('この端末では記録を保存できません');
+  });
+});
+
+describe('多答問題の時間ボーナスの表示', () => {
+  it('答えが複数ある問題に一発で正解すると「+4秒」を出し、残り時間が増える', async () => {
+    start('basic');
+    mount(mountCertificationQuestionScreen, { level: 'basic' });
+    await vi.advanceTimersByTimeAsync(COUNTDOWN);
+    // 多答問題が出るまで進める（1つの答えの問題は正解して次へ）
+    for (let i = 0; i < 20 && current().type !== 'multiple'; i++) {
+      answer(container, true);
+      await vi.advanceTimersByTimeAsync(AUTO_ADVANCE);
+    }
+    expect(current().type).toBe('multiple');
+    const before = session().timer.getRemainingMs();
+    answer(container, true);
+    expect(session().timer.getRemainingMs()).toBe(before + R.multipleAnswerTimeBonusMs);
+    expect(container.querySelector('.cert-timer__bonus').textContent).toBe('+4秒');
+    expect(container.querySelector('.feedback__detail').textContent).toContain('残り時間 +4秒');
   });
 });

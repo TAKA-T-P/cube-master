@@ -40,18 +40,24 @@ export function getRankLabel(rankLevel, level) {
 
 /**
  * 21段階の必要スコア（仮の基準。rankLevel 1〜21 の順。どれも前より大きい）
- * ベーシックは 1 問 100 点の問題を 90 秒で解く前提で、10級 100 点（1 問正解）〜皆伝 2400 点（連続正解ボーナスこみで約 18 問正解）。
+ * ベーシックは 1 問 100 点の問題を 100 秒で解く前提で、10級 100 点（1 問正解）〜皆伝 2400 点（連続正解ボーナスこみで約 18 問正解）。
  * スタンダード・エキスパートは 1 問の点が高い分、考える時間も長いので、ベーシックの 1.15 倍・1.3 倍程度にした。
  */
 const BASIC_THRESHOLDS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1650, 1800, 1950, 2100, 2250, 2400];
 const scaleThresholds = (k) => BASIC_THRESHOLDS.map((v) => Math.round((v * k) / 10) * 10);
 
 export const CERTIFICATION_RULES = Object.freeze({
-  rulesVersion: 1,
-  durationMs: 90000,
-  mistakePenaltyMs: 3000,
+  rulesVersion: 2,
+  durationMs: 100000,
   /** 完全正解の得点（問題の難易度ごと）。部分正解・不正解は 0 点 */
-  points: Object.freeze({ 1: 100, 2: 150, 3: 220 }),
+  points: Object.freeze({ 1: 100, 2: 160, 3: 220 }),
+  /**
+   * 誤答（不正解・部分正解）の減点：n 回目の誤答で perMistake × n 点（n は maxMultiplier まで）。まちがえるほど重くなる。
+   * 得点は 0 点より下がらない
+   */
+  mistakePenalty: Object.freeze({ perMistake: 50, maxMultiplier: 6 }),
+  /** 答えが複数ある問題（多答問題）に完全正解したときに、残り時間に加える時間 */
+  multipleAnswerTimeBonusMs: 4000,
   /** 連続正解ボーナス（連続正解数が min 以上のとき、その問題に加える点。上から順に調べる） */
   streakBonus: Object.freeze([Object.freeze({ min: 5, bonus: 40 }), Object.freeze({ min: 3, bonus: 20 })]),
   /** スタートのカウントダウン（3・2・1・START!） */
@@ -70,17 +76,15 @@ export const CERTIFICATION_RULES = Object.freeze({
   /** 問題ごとの考える時間の目安（秒）。テンプレート ID ごとに上書きできる。出題の調整・分析用 */
   recommendedSeconds: Object.freeze({ byDifficulty: Object.freeze({ 1: 8, 2: 12, 3: 18 }), byTemplate: Object.freeze({}) }),
   levels: Object.freeze({
-    basic: Object.freeze({ label: 'ベーシック', audience: '小学生向け', description: '基本的な空間認識を試そう！', difficultyWeights: Object.freeze({ 1: 1 }), thresholds: Object.freeze(BASIC_THRESHOLDS) }),
+    basic: Object.freeze({ label: 'ベーシック', description: '基本的な空間認識を試そう！', difficultyWeights: Object.freeze({ 1: 1 }), thresholds: Object.freeze(BASIC_THRESHOLDS) }),
     standard: Object.freeze({
       label: 'スタンダード',
-      audience: '小学校高学年〜中学生',
       description: '位置関係や、何段階かの思考に挑戦！',
       difficultyWeights: Object.freeze({ 1: 0.3, 2: 0.7 }),
       thresholds: Object.freeze(scaleThresholds(1.15)),
     }),
     expert: Object.freeze({
       label: 'エキスパート',
-      audience: '中学生・発展',
       description: '難しい空間推理に挑戦！',
       difficultyWeights: Object.freeze({ 2: 0.3, 3: 0.7 }),
       thresholds: Object.freeze(scaleThresholds(1.3)),

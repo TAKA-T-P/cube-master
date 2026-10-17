@@ -1,5 +1,5 @@
 /**
- * 段位認定の進行（90 秒で複数カテゴリの問題を解き続ける。Three.js・DOM 非依存）
+ * 段位認定の進行（制限時間の中で複数カテゴリの問題を解き続ける。Three.js・DOM 非依存）
  *
  * 問題画面（ui/questionScreen）がトレーニングと同じように使えるよう、TrainingSession と同じ形の
  * state / nextQuestion / submit / hasNextQuestion / useHint を持つ（ヒントは使えない）。
@@ -59,7 +59,7 @@ export class CertificationSession {
       selectedAnswers: [],
       answerLocked: false,
       lastResult: null,
-      lastScore: null, // 直前の問題の { points, bonus, penaltyMs }
+      lastScore: null, // 直前の問題の { points, bonus, deduction, timeBonusMs }
       hintUsed: false,
       score: createScoreState(),
       history: [],
@@ -219,7 +219,7 @@ export class CertificationSession {
     const q = s.currentQuestion;
     if (!q || s.answerLocked || s.phase !== 'playing' || this.timer.state !== 'running') return null;
     if (!canSubmitAnswer(selected, q.type)) return null;
-    // 確定した時刻で時間を決める（90 秒を過ぎた回答は数えない）
+    // 確定した時刻で時間を決める（制限時間を過ぎた回答は数えない）
     if (this.timer.getRemainingMs() <= 0) {
       this.finish();
       return null;
@@ -229,15 +229,16 @@ export class CertificationSession {
     const result = validateAnswer(q.correctAnswers, selected);
     const applied = applyAnswer(s.score, { difficulty: q.difficulty, isCorrect: result.isCorrect }, this.rules);
     s.score = applied.state;
-    let penaltyMs = 0;
-    if (!result.isCorrect) {
-      penaltyMs = Math.min(this.rules.mistakePenaltyMs, this.timer.getRemainingMs());
-      this.timer.penalize(this.rules.mistakePenaltyMs);
+    // 答えが複数ある問題（多答問題）に完全正解したら、残り時間を増やす
+    let timeBonusMs = 0;
+    if (result.isCorrect && q.type === 'multiple') {
+      timeBonusMs = this.rules.multipleAnswerTimeBonusMs;
+      this.timer.addTime(timeBonusMs);
     }
     s.selectedAnswers = result.selected;
     s.answerLocked = true;
     s.lastResult = result;
-    s.lastScore = { points: applied.points, bonus: applied.bonus, penaltyMs };
+    s.lastScore = { points: applied.points, bonus: applied.bonus, deduction: applied.deduction, timeBonusMs };
     s.history.push({
       number: this._seq,
       questionId: q.id,
@@ -248,6 +249,8 @@ export class CertificationSession {
       isCorrect: result.isCorrect,
       points: applied.points,
       bonus: applied.bonus,
+      deduction: applied.deduction,
+      timeBonusMs,
       answerMs,
       question: q, // 結果画面から間違えた問題を復習するため
     });
@@ -306,6 +309,9 @@ export class CertificationSession {
       answeredCount: s.score.answered,
       accuracy: s.score.answered === 0 ? 0 : s.score.correct / s.score.answered,
       maxStreak: s.score.maxStreak,
+      mistakeCount: s.score.mistakes,
+      deductionTotal: answered.reduce((t, h) => t + h.deduction, 0),
+      timeBonusTotalMs: answered.reduce((t, h) => t + h.timeBonusMs, 0),
       averageAnswerMs: answerTimes.length === 0 ? 0 : answerTimes.reduce((a, b) => a + b, 0) / answerTimes.length,
       byCategory,
       rankLevel: getRankForScore(this.level, s.score.score, this.rules),

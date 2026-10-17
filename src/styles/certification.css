@@ -57,7 +57,6 @@
   color: #e0a100;
 }
 
-.cert-level__audience,
 .cert-level__best {
   font-size: 13px;
   color: var(--color-text-sub);
@@ -66,6 +65,11 @@
 .cert-level__best {
   font-weight: 700;
   color: var(--color-primary-strong);
+}
+
+.cert-start {
+  display: grid;
+  margin: 12px var(--gutter) 0;
 }
 
 .cert-rules {
@@ -119,19 +123,19 @@
   animation: cert-pulse 0.5s ease-in-out infinite alternate;
 }
 
-.cert-timer__penalty {
+.cert-timer__bonus {
   position: absolute;
   right: 4px;
   top: 100%;
-  color: var(--color-danger);
+  color: var(--color-success);
   font-size: 15px;
   font-weight: 900;
   opacity: 0;
   pointer-events: none;
 }
 
-.cert-timer__penalty--show {
-  animation: cert-penalty 1.2s ease-out forwards;
+.cert-timer__bonus--show {
+  animation: cert-time-bonus 1.4s ease-out forwards;
 }
 
 .cert-score {
@@ -352,14 +356,14 @@
   }
 }
 
-@keyframes cert-penalty {
+@keyframes cert-time-bonus {
   0% {
     opacity: 1;
     transform: translateY(0);
   }
   100% {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(-10px);
   }
 }
 

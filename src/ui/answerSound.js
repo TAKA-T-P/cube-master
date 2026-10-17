@@ -5,7 +5,7 @@
  * - おしい：ポンポン（同じ高さの音が2つ）
  * - 不正解：ブッブー（低いブザー）
  * - 結果画面へ（決めた問題数を解き終えたとき）：ファンファーレ（ド・ミ・ソ・ド）
- * - 段位認定：時間切れ（ピッ・ピッ・ピー）・昇段（キラキラ）
+ * - 段位認定：カウントダウン（3・2・1 はピッ、START! はピーン）・時間切れ（ピッ・ピッ・ピー）・昇段（キラキラ）
  *
  * iOS などは、ボタンを押した処理の中で AudioContext を作る・再開しないと音が出ないので、
  * 「回答する」「結果を見る」を押したときに呼ぶ。Web Audio が使えない環境では何もしない。
@@ -31,6 +31,12 @@ const TONES = {
     { freq: 1568, at: 0.3, length: 0.12, volume: 0.16, type: 'triangle' },
     { freq: 2093, at: 0.42, length: 0.8, volume: 0.14, type: 'triangle' },
     { freq: 1568, at: 0.42, length: 0.8, volume: 0.08 },
+  ],
+  // 段位認定：カウントダウン
+  countdown: [{ freq: 880, at: 0, length: 0.14, volume: 0.18 }],
+  countdownStart: [
+    { freq: 1760, at: 0, length: 0.5, volume: 0.2 },
+    { freq: 1318.5, at: 0, length: 0.5, volume: 0.1 },
   ],
   // 段位認定：時間切れ
   timeUp: [
@@ -69,6 +75,9 @@ export const playFinishSound = () => playTones(TONES.finish);
 
 /** 段位認定：昇段したとき */
 export const playRankUpSound = () => playTones(TONES.rankUp);
+
+/** 段位認定：カウントダウン（start = true で START!） */
+export const playCountdownSound = (start = false) => playTones(start ? TONES.countdownStart : TONES.countdown);
 
 /** 段位認定：時間切れ */
 export const playTimeUpSound = () => playTones(TONES.timeUp);
