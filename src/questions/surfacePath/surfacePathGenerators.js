@@ -17,6 +17,8 @@ import { VERTEX_POINTS, MIDPOINTS, FACE_CENTERS, labelPoints, pointKey, CUBE_ROT
 import { CHOICE_MARKS } from '../decoratedCube.js';
 import { surdChoices } from '../cubeCutting/cubeCuttingGenerators.js';
 import { shuffle, pick } from '../../utils/random.js';
+import { buildElementChoices } from '../questionUtils.js';
+import { describeEdgePoint } from '../../core/cubeCutting.js';
 import * as X from './surfacePathExplanations.js';
 
 export const SURFACE_PATH_CATEGORY = 'surfacePath';
@@ -113,7 +115,7 @@ const UNFOLD_STEPS = Object.freeze([
   { type: 'pathUnfold', to: 0 },
 ]);
 
-function assemble(template, base, { P, Q, question, type = 'single', choices, correct, explanation, candidates = [], solution }) {
+function assemble(template, base, { P, Q, question, type = 'single', choices, correct, explanation, candidates = [], solution, highlight = [] }) {
   return {
     templateId: template.id,
     key: `${template.id}:${base.key}`,
@@ -131,7 +133,7 @@ function assemble(template, base, { P, Q, question, type = 'single', choices, co
     },
     choices,
     correctAnswers: correct,
-    explanation: { text: explanation, highlightElements: [], animation: 'highlightElements', reveal: { steps: UNFOLD_STEPS.map((s) => ({ ...s })) } },
+    explanation: { text: explanation, highlightElements: highlight, animation: 'highlightElements', reveal: { steps: UNFOLD_STEPS.map((s) => ({ ...s })) } },
   };
 }
 
@@ -295,27 +297,38 @@ export const SURFACE_PATH_TEMPLATES = [
   {
     id: 'S01',
     difficulty: 1,
-    title: '最短経路はどの道？',
-    bases: () => basePairs().filter((x) => candidatePaths(x.res, x.p, x.q).longer.length >= 2).map((x) => baseOf(x)),
+    title: '最短経路はどの辺を通る？',
+    // 最短経路が1本に決まり、2つの面を通る（1本の辺を横切る）組だけ
+    bases: () => basePairs().filter((x) => x.res.shortest.length === 1 && x.res.shortest[0].faces.length === 2).map((x) => baseOf(x)),
     build(base, rng) {
       const { P, Q, res } = rotatedPair(findPair(base.key), rng);
-      const { shortest, longer } = candidatePaths(res, P, Q);
-      const picked = [pick(shortest, rng), ...shuffle(longer, rng).slice(0, 3)];
-      const list = labelCandidates(picked, rng);
-      const correct = list.find((c) => c.kind === 'geodesic');
+      const path = res.shortest[0];
+      const edge = sharedEdge(path.faces[0], path.faces[1]);
+      const crossing = describeEdgePoint(path.polyline[1], edge);
+      // まちがい：P・Q がのっている面の辺（P・Q がのっている辺はのぞく）
+      const near = new Set([...facesOfPoint(P.position), ...facesOfPoint(Q.position)].flatMap((f) => EDGES.filter((e) => e.vertices.every((v) => f.includes(v))).map((e) => e.id)));
+      const onPoint = (e) => [P, Q].some((x) => x.kind === 'midpoint' && x.id === e) || [P, Q].some((x) => x.kind === 'vertex' && e.includes(x.id));
+      const pool = EDGES.map((e) => e.id).filter((e) => e !== edge && !onPoint(e));
+      const preferred = pool.filter((e) => near.has(e));
+      // 別の辺を通る道で、いちばん短いもの（解説でくらべる）
+      const other = res.all.find((x) => x !== path && x.faces.length >= 2 && sharedEdge(x.faces[0], x.faces[1]) !== edge);
       return assemble(this, base, {
         P,
         Q,
-        question: `${questionStart(P, Q)}色をつけた${list.map((c) => c.label).join('・')}の道のうち、いちばん短い道（最短経路）はどれですか。`,
-        choices: list.map(candidateChoice),
-        correct: [correct.id],
-        explanation: X.explainChoice({
-          correctLabels: [correct.label],
-          faces: correct.faces,
-          lengths: list.map((c) => ({ label: c.label, length: fmtLength(c.length) })),
+        question: `${questionStart(P, Q)}いちばん短い道（最短経路）は、立方体のどの辺を通りますか。`,
+        choices: buildElementChoices({ correct: [edge], pool, preferred, total: 4, rng }),
+        correct: [edge],
+        explanation: X.explainEdge({
+          faces: path.faces,
+          from: P.short,
+          to: Q.short,
+          edge,
+          where: crossing.kind === 'midpoint' ? '中点' : `${crossing.from}側から${crossing.ratio[0]}:${crossing.ratio[1]}の点`,
+          length: fmtLength(path.length),
+          other: other ? { edge: sharedEdge(other.faces[0], other.faces[1]), length: fmtLength(other.length) } : null,
         }),
-        candidates: candidateScene(list),
-        solution: solutionOf([correct], { highlight: [correct.id] }),
+        highlight: [edge],
+        solution: solutionOf([path]),
       });
     },
   },
@@ -457,12 +470,12 @@ export const SURFACE_PATH_TEMPLATES = [
     id: 'S06',
     difficulty: 3,
     title: '最短経路をすべて選ぶ',
-    bases: () => basePairs().filter((x) => x.res.shortest.length >= 2 && candidatePaths(x.res, x.p, x.q).longer.length >= 2).map((x) => baseOf(x, { group: `c${Math.min(3, x.res.shortest.length)}` })),
+    bases: () => basePairs().filter((x) => x.res.shortest.length >= 2 && candidatePaths(x.res, x.p, x.q).longer.length >= 1).map((x) => baseOf(x)),
     build(base, rng) {
       const { P, Q, res } = rotatedPair(findPair(base.key), rng);
       const { shortest, longer } = candidatePaths(res, P, Q);
-      const k = Math.min(shortest.length, 2 + Math.floor(rng() * 2));
-      const picked = [...shuffle(shortest, rng).slice(0, k), ...shuffle(longer, rng).slice(0, 2)];
+      // 図がごちゃごちゃしないように、道は3本（最短経路2本と、長い道1本）
+      const picked = [...shuffle(shortest, rng).slice(0, 2), ...shuffle(longer, rng).slice(0, 1)];
       const list = labelCandidates(picked, rng);
       const correct = list.filter((c) => c.kind === 'geodesic');
       return assemble(this, base, {

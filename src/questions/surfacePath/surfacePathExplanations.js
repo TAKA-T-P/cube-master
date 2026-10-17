@@ -34,7 +34,15 @@ export function explainRoutes({ two, many, shortestIsMany, detail }) {
   );
 }
 
-/** S01・S06：最短経路の道を選ぶ */
+/** S01：最短経路が通る辺 */
+export function explainEdge({ faces, from, to, edge, where, length, other }) {
+  return (
+    `${facesText(faces)}を1つの平面に広げると、${from}と${to}を結ぶ直線は、辺${edge}の${where}を通ります。これが最短経路で、立方体の1辺を2cmとすると長さは${length}です。` +
+    (other ? `ほかの辺（たとえば辺${other.edge}）を通る道は、いちばん短いものでも${other.length}で、長くなります。` : '')
+  );
+}
+
+/** S06：最短経路の道を選ぶ */
 export function explainChoice({ correctLabels, faces, lengths, unitNote = '立方体の1辺を2cmとすると' }) {
   return (
     `最短経路は、通る面を広げた図の上で一直線になる道です。${correctLabels.join('・')}は、${facesText(faces)}を広げると一直線になります。` +
@@ -65,10 +73,10 @@ export function explainNet({ choiceId, faces, from, to, kinds }) {
 
 // ---------- ヒント（答えそのものは書かない） ----------
 export const HINTS = Object.freeze({
-  S01: '道が通る面を平面に広げたら、どの道がまっすぐになるか考えよう。',
+  S01: '2点がのっている面を平面に広げて、2点を直線で結んでみよう。その直線は、どの辺と交わるかな？',
   S02: '2つの道が通る面を、それぞれ展開図にかいてみよう。まっすぐな道はどちらかな？',
   S03: '2つの面を1つの平面に広げて、2点を直線で結ぼう。直角三角形が見つかるかな？',
   S04: '最短経路は、展開図の上でどんな線になるかな？ 面からはみ出していないかも確かめよう。',
   S05: '通る3つの面を平面に広げて、2点を直線で結ぼう。通る面の組み合わせは1通りではありません。',
-  S06: '通る面の組み合わせを変えると、同じ長さの道がほかにもできることがあるよ。',
+  S06: '道が通る面を平面に広げたら、どの道がまっすぐになるか考えよう。通る面の組み合わせを変えると、同じ長さの道がほかにもできることがあるよ。',
 });

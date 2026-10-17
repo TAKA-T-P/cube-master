@@ -111,7 +111,7 @@ export const CATEGORIES = Object.freeze([
     grades: '中学1年生～中学3年生',
     enabled: true,
     templates: SURFACE_PATH_TEMPLATES,
-    levelNotes: ['基本：最短経路はどの道・2つの道の長さくらべ', '標準：2面を通る最短距離・展開図の上の最短経路', '応用：3面以上を通る最短距離・最短経路をすべて選ぶ'],
+    levelNotes: ['基本：最短経路が通る辺・2つの道の長さくらべ', '標準：2面を通る最短距離・展開図の上の最短経路', '応用：3面以上を通る最短距離・最短経路をすべて選ぶ'],
   },
   // ⑨ 立方体に隠れた図形・長さ・角度（Phase 8 で追加予定）
   { id: 'cubeGeometryChallenge', name: '立方体に隠れた図形・長さ・角度', description: '立方体の中の三角形や対角線を見つけよう！長さや角度のなぞに挑戦！', grades: '中学1年生～中学3年生', enabled: false },

@@ -174,16 +174,18 @@ describe('最短経路の問題（S01〜S06）', () => {
     for (const t of SURFACE_PATH_TEMPLATES) for (const q of questions(t, [3, 8], 3)) expect(getQuestionErrors(q), q.key).toEqual([]);
   });
 
-  it('S01：正解の道だけが最短で、ほかの候補はどれも長い（候補は色つき・ア〜エの順）', () => {
+  it('S01：最短経路が1本に決まる問題で、最短経路が通る辺を選ぶ（回答前は道を表示しない）', () => {
     for (const q of questions(byId.S01)) {
-      const sp = q.scene.surfacePath;
-      const [p, qq] = sp.points.map((x) => x.position);
-      const min = findShortestSurfacePaths(p, qq).length.toNumber();
-      const len = (c) => sp.candidates.find((x) => x.id === c).polyline.reduce((s, pt, i, a) => (i ? s + new THREE.Vector3(...pt).distanceTo(new THREE.Vector3(...a[i - 1])) : 0), 0);
-      expect(len(q.correctAnswers[0])).toBeCloseTo(min, 9);
-      for (const c of q.choices.filter((x) => x.id !== q.correctAnswers[0])) expect(len(c.id)).toBeGreaterThan(min * 1.04);
-      expect(q.choices.map((c) => c.label)).toEqual(['ア', 'イ', 'ウ', 'エ'].slice(0, q.choices.length));
-      expect(q.choices.every((c) => c.visual?.type === 'swatch')).toBe(true);
+      const [p, qq] = q.scene.surfacePath.points.map((x) => x.position);
+      const r = findShortestSurfacePaths(p, qq);
+      expect(r.shortest).toHaveLength(1);
+      const edge = sharedEdge(r.shortest[0].faces[0], r.shortest[0].faces[1]);
+      expect(q.correctAnswers).toEqual([edge]);
+      expect(q.choices).toHaveLength(4);
+      expect(q.choices.every((c) => c.elementId === c.id && c.label === `辺${c.id}`)).toBe(true);
+      expect(q.explanation.highlightElements).toEqual([edge]);
+      expect(q.scene.surfacePath.candidates).toEqual([]);
+      expect(q.explanation.text).toContain(`辺${edge}の`);
     }
   });
 
@@ -231,10 +233,11 @@ describe('最短経路の問題（S01〜S06）', () => {
     }
   });
 
-  it('S06：最短経路をすべて選ぶ（2本以上）。正解は候補のうち最短の長さのものすべて', () => {
+  it('S06：最短経路をすべて選ぶ（道は3本：最短経路2本と長い道1本）。正解は候補のうち最短の長さのものすべて', () => {
     for (const q of questions(byId.S06)) {
       expect(q.type).toBe('multiple');
-      expect(q.correctAnswers.length).toBeGreaterThanOrEqual(2);
+      expect(q.choices).toHaveLength(3);
+      expect(q.correctAnswers).toHaveLength(2);
       const lengths = Object.fromEntries(q.scene.surfacePath.candidates.map((c) => [c.id, calculatePathLength(c.polyline.map((pt) => pt.map(toQ)))]));
       const min = Object.values(lengths).reduce((m, x) => (x.cmp(m) < 0 ? x : m));
       expect(Object.keys(lengths).filter((id) => lengths[id].eq(min)).sort()).toEqual([...q.correctAnswers].sort());
@@ -289,7 +292,7 @@ describe('最短経路の 3D モデルと展開の演出', () => {
   });
 
   it('演出：正解を緑に → 点が動く → 面を広げる → 立方体に戻す。リプレイで初めから、スキップで最終状態', async () => {
-    const [q] = questions(byId.S01, [7], 1);
+    const [q] = questions(byId.S06, [7], 1);
     const { model, state, highlights, surface, manager, controls } = setup(q);
     expect(surface.getState()).toMatchObject({ active: true, candidateCount: q.choices.length, solutionVisible: false, unfoldVisible: false });
     const steps = q.explanation.reveal.steps;
