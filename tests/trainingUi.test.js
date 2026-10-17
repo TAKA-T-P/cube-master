@@ -103,7 +103,8 @@ describe('カテゴリ選択・設定画面', () => {
     expect(detail.hidden).toBe(false);
     expect(position.getAttribute('aria-pressed')).toBe('true');
     expect(detail.textContent).toContain('平行・垂直・ねじれ');
-    expect(detail.textContent).toContain('小学6年生～中学1年生');
+    expect(detail.textContent).not.toContain('小学6年生～中学1年生'); // 対象学年は出さない
+    expect(detail.textContent).not.toContain('対象：');
     // 説明と「次へ」は、スクロールする部分の外（画面下に固定）
     expect(container.querySelector('.category-scroll').contains(detail)).toBe(false);
     buttonByText(container, '次へ').click();
@@ -131,8 +132,9 @@ describe('カテゴリ選択・設定画面', () => {
     const navigate = vi.fn();
     mountTrainingSetupScreen(container, { navigate, params: { category: 'position' } });
     const pressed = [...container.querySelectorAll('[aria-pressed="true"]')].map((b) => b.textContent);
-    expect(pressed).toEqual(['すべて']);
-    expect([...container.querySelectorAll('.segmented__item')].map((b) => b.textContent)).toEqual(['基本', '標準', '応用', 'すべて']);
+    expect(pressed).toEqual(['すべて', '問題数を選ぶ']);
+    expect([...container.querySelectorAll('.segmented__item')].map((b) => b.textContent)).toEqual(['基本', '標準', '応用', 'すべて', '問題数を選ぶ', '1分チャレンジ']);
+    expect(container.textContent).not.toContain('対象：');
     const range = container.querySelector('input[type="range"]');
     expect([range.min, range.max, range.value]).toEqual(['1', '20', '5']);
     expect(container.querySelector('.slider__value').textContent).toBe('5問');

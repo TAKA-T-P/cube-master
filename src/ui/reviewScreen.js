@@ -21,6 +21,7 @@ export function mountReviewResultScreen(container, { navigate }) {
   // 結果画面から始めた復習は結果画面へ、学習記録から始めた復習は学習記録へ戻る
   const fromHistory = summary.kind === 'saved';
   const fromCertification = summary.kind === 'cert';
+  const fromChallenge = summary.kind === 'challenge';
 
   container.append(
     h(
@@ -57,7 +58,9 @@ export function mountReviewResultScreen(container, { navigate }) {
               'btn--primary btn--large',
             )
           : null,
-        fromCertification
+        fromChallenge
+          ? button('1分チャレンジの結果に戻る', () => navigate('challenge-result'), remaining > 0 ? '' : 'btn--primary btn--large')
+          : fromCertification
           ? button('段位認定の結果に戻る', () => navigate('certification-result'), remaining > 0 ? '' : 'btn--primary btn--large')
           : fromHistory
           ? button('学習記録に戻る', () => navigate('history'), remaining > 0 ? '' : 'btn--primary btn--large')

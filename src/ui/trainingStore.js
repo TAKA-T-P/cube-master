@@ -10,10 +10,14 @@
  *         'mistakes' 結果画面の「間違えた問題を復習」（不正解・部分正解の問題すべて）
  *         'saved'    学習記録の「復習する」（ブラウザに保存した、前に間違えた問題）
  *         'cert'     段位認定の結果の「間違えた問題を復習」（いろいろなカテゴリの問題）
+ *         'challenge' 1分チャレンジの結果の「間違えた問題を復習」
+ *
+ * 1分チャレンジ（challenge）は、1つのカテゴリ・難易度で1分間に何問正解できるかに挑戦する（core/timedChallengeSession）。
  */
 import { TrainingSession } from '../core/questionEngine.js';
+import { TimedChallengeSession } from '../core/timedChallengeSession.js';
 import { getCategory, getTemplates, DEFAULT_SETTINGS } from '../questions/questionRegistry.js';
-import { recordFinishedTraining, getSavedReviewQuestions } from './learningStore.js';
+import { recordFinishedTraining, getSavedReviewQuestions, recordChallenge } from './learningStore.js';
 
 const emptyState = () => ({
   settings: null, // { category, difficulty, questionLimit }
@@ -22,6 +26,7 @@ const emptyState = () => ({
   recorded: false, // 学習記録に保存したか（同じトレーニングを2回記録しない）
   review: null, // { kind, number?, category, total, session }
   reviewSummary: null, // 終えた復習の結果
+  challenge: null, // { session, summary, outcome, notice }
 });
 
 let state = emptyState();
@@ -34,7 +39,7 @@ let state = emptyState();
 export function startTraining(settings, { rng } = {}) {
   const category = getCategory(settings.category);
   if (!category?.enabled) throw new Error(`遊べないカテゴリです: ${settings.category}`);
-  const full = { ...DEFAULT_SETTINGS, ...settings };
+  const full = { ...DEFAULT_SETTINGS, ...settings, mode: 'count' };
   const session = new TrainingSession({
     category: full.category,
     templates: getTemplates(full.category),
@@ -45,6 +50,49 @@ export function startTraining(settings, { rng } = {}) {
   state = { ...emptyState(), settings: full, session };
   return session;
 }
+
+/**
+ * 1分チャレンジを始める（まだタイマーは動かない）
+ * @param {{ category: string, difficulty?: 1|2|3|'all' }} settings
+ */
+export function startChallenge(settings, { rng, now } = {}) {
+  const category = getCategory(settings.category);
+  if (!category?.enabled) throw new Error(`遊べないカテゴリです: ${settings.category}`);
+  const full = { ...DEFAULT_SETTINGS, ...(state.settings?.category === settings.category ? state.settings : {}), ...settings, mode: 'challenge' };
+  const session = new TimedChallengeSession({ category: full.category, templates: getTemplates(full.category), difficulty: full.difficulty, rng, now });
+  state = { ...emptyState(), settings: full, challenge: { session, summary: null, outcome: null, notice: null } };
+  return session;
+}
+
+export const getChallengeSession = () => state.challenge?.session ?? null;
+
+/** 1分チャレンジを最後まで終えた（最高記録を保存する） */
+export function finishChallenge() {
+  const c = state.challenge;
+  if (!c?.session) return null;
+  const summary = c.session.finish();
+  const outcome = recordChallenge(summary);
+  state.challenge = { ...c, session: null, summary, outcome };
+  return { summary, outcome };
+}
+
+/** 1分チャレンジを中断した（記録しない） */
+export function abortChallenge(notice = null) {
+  state.challenge?.session?.abort();
+  state.challenge = { session: null, summary: null, outcome: null, notice };
+}
+
+export const getChallengeResult = () => (state.challenge?.summary ? { summary: state.challenge.summary, outcome: state.challenge.outcome } : null);
+
+/** 1分チャレンジのお知らせ（中断したときなど）を1回だけ受け取る */
+export function takeChallengeNotice() {
+  const n = state.challenge?.notice ?? null;
+  if (state.challenge) state.challenge.notice = null;
+  return n;
+}
+
+/** 1分チャレンジで間違えた問題を解き直す */
+export const startChallengeReview = (questions) => (state.challenge?.summary ? beginReview('challenge', state.challenge.summary.category, questions) : null);
 
 export const getSession = () => state.session;
 export const getSettings = () => state.settings;

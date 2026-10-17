@@ -31,12 +31,11 @@ export function mountCategoryScreen(container, { navigate }) {
 
   const detailName = h('h2', { class: 'category-detail__name' });
   const detailDesc = h('p', { class: 'category-detail__desc' });
-  const detailGrades = h('p', { class: 'category-detail__grades' });
   const nextButton = button('次へ', () => selectedId && navigate('setup', { category: selectedId }), 'btn--primary btn--large');
   const detail = h(
     'section',
     { class: 'category-detail', hidden: true, 'aria-live': 'polite' },
-    h('div', { class: 'category-detail__text' }, detailName, detailDesc, detailGrades),
+    h('div', { class: 'category-detail__text' }, detailName, detailDesc),
     nextButton,
   );
 
@@ -46,7 +45,6 @@ export function mountCategoryScreen(container, { navigate }) {
     for (const card of cards) card.setAttribute('aria-pressed', String(card.dataset.category === id));
     detailName.textContent = c.name;
     detailDesc.textContent = c.description;
-    detailGrades.textContent = `対象：${c.grades}`;
     detail.hidden = false;
   }
 

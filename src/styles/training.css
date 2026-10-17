@@ -1192,3 +1192,20 @@ ul.setup-note {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
+
+/* トレーニング設定：問題数を選ぶ ⇄ 1分チャレンジ */
+.setup-mode-panel {
+  display: grid;
+  gap: 6px;
+}
+
+.challenge-record {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-size: 18px;
+  font-weight: 900;
+  text-align: center;
+}

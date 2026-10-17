@@ -12,6 +12,8 @@
  *       byDifficulty: { 1: { answered, correct }, 2: {…}, 3: {…} },
  *       recent: [{ date, difficulty, answered, correct }]（新しい順・最大 RECENT_LIMIT 件）,
  *       reviewAnswered, reviewCorrect,   // 復習で解いた数・正解した数
+ *       challengeBest: { 1, 2, 3, all },  // 1分チャレンジの最高記録（正解数）。難易度ごと。通常の累計には入れない
+ *       challengeAttempts,
  *     }
  *   },
  * }
@@ -25,6 +27,8 @@ const MAX_CATEGORIES = 40;
 
 const count = (v) => (Number.isInteger(v) && v >= 0 ? v : 0);
 const emptyDifficulty = () => ({ 1: { answered: 0, correct: 0 }, 2: { answered: 0, correct: 0 }, 3: { answered: 0, correct: 0 } });
+export const CHALLENGE_DIFFICULTIES = Object.freeze([1, 2, 3, 'all']);
+const emptyChallengeBest = () => ({ 1: 0, 2: 0, 3: 0, all: 0 });
 
 export const createEmptyHistory = () => ({ version: HISTORY_VERSION, categories: {} });
 
@@ -38,12 +42,16 @@ export const emptyCategoryRecord = () => ({
   recent: [],
   reviewAnswered: 0,
   reviewCorrect: 0,
+  challengeBest: emptyChallengeBest(),
+  challengeAttempts: 0,
 });
 
 function normalizeRecord(raw) {
   const r = emptyCategoryRecord();
   if (!raw || typeof raw !== 'object') return r;
-  for (const k of ['playedSessions', 'answeredCount', 'correctCount', 'partialCount', 'hintUsedCount', 'reviewAnswered', 'reviewCorrect']) r[k] = count(raw[k]);
+  for (const k of ['playedSessions', 'answeredCount', 'correctCount', 'partialCount', 'hintUsedCount', 'reviewAnswered', 'reviewCorrect', 'challengeAttempts']) r[k] = count(raw[k]);
+  // 1分チャレンジの記録（前のバージョンの保存データにはないので 0）
+  for (const d of CHALLENGE_DIFFICULTIES) r.challengeBest[d] = count(raw.challengeBest?.[d]);
   r.correctCount = Math.min(r.correctCount, r.answeredCount);
   r.reviewCorrect = Math.min(r.reviewCorrect, r.reviewAnswered);
   for (const d of [1, 2, 3]) {
@@ -112,6 +120,25 @@ export function recordReviewAnswer(history, category, isCorrect) {
   next.categories[category] = rec;
   return next;
 }
+
+/**
+ * 1分チャレンジの結果を記録する（最高記録は下がらない。中断・0問は記録しない）
+ * @returns {{ history, previousBest: number, newBest: number, improved: boolean }}
+ */
+export function recordChallengeResult(history, summary) {
+  const next = normalizeHistory(history);
+  const d = CHALLENGE_DIFFICULTIES.includes(summary?.difficulty) ? summary.difficulty : null;
+  const rec = next.categories[summary?.category] ?? emptyCategoryRecord();
+  const previousBest = d === null ? 0 : rec.challengeBest[d];
+  if (d === null || summary.aborted || summary.answeredCount <= 0) return { history: next, previousBest, newBest: previousBest, improved: false };
+  rec.challengeAttempts += 1;
+  rec.challengeBest[d] = Math.max(previousBest, count(summary.correctCount));
+  next.categories[summary.category] = rec;
+  return { history: next, previousBest, newBest: rec.challengeBest[d], improved: rec.challengeBest[d] > previousBest };
+}
+
+/** 1分チャレンジの最高記録（正解数。記録がなければ 0） */
+export const getChallengeBest = (history, category, difficulty) => history?.categories?.[category]?.challengeBest?.[difficulty] ?? 0;
 
 /** 表示用の集計（記録がなければ null） */
 export function getCategoryStats(history, category) {

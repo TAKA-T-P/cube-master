@@ -18,6 +18,8 @@ import { mountTrainingResultScreen } from './ui/trainingResultScreen.js';
 import { mountReviewResultScreen } from './ui/reviewScreen.js';
 import { mountLearningHistoryScreen } from './ui/learningHistoryScreen.js';
 import { mountCertificationSetupScreen } from './ui/certificationSetupScreen.js';
+import { mountChallengeQuestionScreen } from './ui/challengeQuestionScreen.js';
+import { mountChallengeResultScreen } from './ui/challengeResultScreen.js';
 import { mountCertificationQuestionScreen } from './ui/certificationQuestionScreen.js';
 import { mountCertificationResultScreen } from './ui/certificationResultScreen.js';
 import { mountCertificationRecordsScreen } from './ui/certificationRecordsScreen.js';
@@ -33,6 +35,8 @@ const ROUTES = {
   result: mountTrainingResultScreen,
   'review-result': mountReviewResultScreen,
   history: mountLearningHistoryScreen,
+  'challenge-play': mountChallengeQuestionScreen,
+  'challenge-result': mountChallengeResultScreen,
   certification: mountCertificationSetupScreen,
   'certification-play': mountCertificationQuestionScreen,
   'certification-result': mountCertificationResultScreen,

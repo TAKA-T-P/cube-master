@@ -46,7 +46,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   const isReview = !cert && params?.review !== undefined;
   const review = isReview ? getReview() : null;
   if (isReview && !review) {
-    navigate(params?.review === 'cert' ? 'certification-result' : 'result');
+    navigate(params?.review === 'cert' ? 'certification-result' : params?.review === 'challenge' ? 'challenge-result' : 'result');
     return { unmount() {} };
   }
   const session = cert?.session ?? review?.session ?? getSession();
@@ -104,8 +104,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   // 回答前は「回答する」、回答後は同じ場所のまま「次の問題へ」（最後は「結果を見る」）に変わる
   const submitButton = button('回答する', () => (session.state.answerLocked ? goNext() : submit()), 'btn--primary btn--large');
   // 段位認定：「回答する」の左に「パス」（問題を入れかえる。残り時間が減る）
-  const passButton = cert ? button('パス', () => confirmPass(), 'btn--large btn--pass') : null;
-  const actionRow = h('div', { class: `quiz-actions ${cert ? 'quiz-actions--with-pass' : ''}` }, passButton, submitButton);
+  const passButton = cert?.allowPass ? button('パス', () => confirmPass(), 'btn--large btn--pass') : null;
+  const actionRow = h('div', { class: `quiz-actions ${passButton ? 'quiz-actions--with-pass' : ''}` }, passButton, submitButton);
 
   const resultTitle = h('p', { class: 'feedback__title', role: 'status' });
   const resultDetail = h('p', { class: 'feedback__detail' });

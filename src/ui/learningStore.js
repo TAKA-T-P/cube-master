@@ -6,7 +6,7 @@
  * メモリの中だけで記録し（ページを閉じると消える）、練習はそのまま続けられる。
  */
 import { createStorage } from '../core/storageManager.js';
-import { normalizeHistory, recordTrainingResult, recordReviewAnswer as addReviewAnswer, getCategoryStats } from '../core/learningHistory.js';
+import { normalizeHistory, recordTrainingResult, recordReviewAnswer as addReviewAnswer, getCategoryStats, recordChallengeResult, getChallengeBest as readChallengeBest } from '../core/learningHistory.js';
 import { normalizeReviewStore, addReviewEntries, recordReviewResult, getReviewEntries } from '../core/reviewManager.js';
 import { getCategory } from '../questions/questionRegistry.js';
 import { showToast } from '../utils/dom.js';
@@ -103,6 +103,21 @@ export function recordReviewAnswer(question, isCorrect) {
   const id = entryIds.get(question);
   if (id) reviewStore = recordReviewResult(reviewStore, id, isCorrect);
   save();
+}
+
+/** 1分チャレンジの結果を記録する（最高記録は下がらない） */
+export function recordChallenge(summary) {
+  ensureLoaded();
+  const result = recordChallengeResult(history, summary);
+  history = result.history;
+  save();
+  return result;
+}
+
+/** 1分チャレンジの最高記録（正解数） */
+export function getChallengeBest(category, difficulty) {
+  ensureLoaded();
+  return readChallengeBest(history, category, difficulty);
 }
 
 /** 保存してある復習待ちの問題（カテゴリ別。新しく間違えた順） */
