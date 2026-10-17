@@ -360,17 +360,23 @@ describe('結果画面', () => {
     expect(container.querySelectorAll('.result-history__item')).toHaveLength(5);
   });
 
-  it('もう一度挑戦・設定を変更・カテゴリ選択に戻る', () => {
+  it('もう一度挑戦・設定を変更・カテゴリ選択・タイトルへ（難易度と「第◯問」の間に2行×2列）', () => {
     finishWith([true]);
     const navigate = vi.fn();
     mountTrainingResultScreen(container, { navigate });
+    const grid = container.querySelector('.result-grid-actions');
+    expect([...grid.children].map((b) => b.textContent)).toEqual(['もう一度挑戦', '設定を変更', 'カテゴリ選択', 'タイトルへ']);
+    // 難易度（result-meta）のすぐ下、「第◯問」（result-history）の上
+    expect(grid.previousElementSibling.classList).toContain('result-meta');
+    expect(grid.nextElementSibling.classList).toContain('result-history');
     const before = store.getSession();
     buttonByText(container, 'もう一度挑戦').click();
     expect(store.getSession()).not.toBe(before);
     expect(store.getSession().state).toMatchObject({ answeredCount: 0, difficulty: 2, questionLimit: 5 });
     buttonByText(container, '設定を変更').click();
-    buttonByText(container, 'カテゴリ選択に戻る').click();
-    expect(navigate.mock.calls).toEqual([['question'], ['setup', { category: 'position' }], ['categories']]);
+    buttonByText(container, 'カテゴリ選択').click();
+    buttonByText(container, 'タイトルへ').click();
+    expect(navigate.mock.calls).toEqual([['question'], ['setup', { category: 'position' }], ['categories'], ['home']]);
   });
 
   it('「第◯問」のカードを押すと、同じ問題をもう一度解ける。解いても結果は変わらず、「結果に戻る」で戻る', () => {

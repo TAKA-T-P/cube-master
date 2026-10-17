@@ -276,6 +276,8 @@ describe('結果発表・段位・記録', () => {
     expect(container.querySelector('[data-testid="cert-best"]')).not.toBeNull();
     expect(sounds.playRankUpSound).toHaveBeenCalled();
     expect(container.querySelector('[data-testid="cert-correct"]').textContent).toBe('6問（6問中）');
+    expect(container.textContent).toContain('多答問題ボーナス');
+    expect(container.textContent).not.toContain('多答問題の時間ボーナス');
   });
 
   it('同じ段位なら昇段の演出は出さない。低い成績で最高段位は下がらない', () => {
@@ -303,7 +305,7 @@ describe('結果発表・段位・記録', () => {
     s.submit([q.choices.find((c) => !q.correctAnswers.includes(c.id)).id]);
     certStore.finishCertification();
     const navigate = mount(mountCertificationResultScreen);
-    buttonByText(container, '間違えた問題をトレーニングで復習（1問）').click();
+    buttonByText(container, '間違えた問題を復習（1問）').click();
     expect(navigate).toHaveBeenCalledWith('question', { review: 'cert' });
     expect(trainingStore.getReview()).toMatchObject({ kind: 'cert', total: 1 });
     buttonByText(container, 'レベルを変更').click();

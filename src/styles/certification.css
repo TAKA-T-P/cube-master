@@ -225,6 +225,8 @@
   margin: 0;
   font-size: 22px;
   font-weight: 800;
+  /* 点数の上下の余白を半分に（行の高さ 1.6 → 1.05 で、上下それぞれ約 31px → 約 15px） */
+  line-height: 1.05;
 }
 
 .cert-result__score-value {

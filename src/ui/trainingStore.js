@@ -9,7 +9,7 @@
  *   kind: 'card'     結果画面の「第◯問」から1問だけ（解いたら結果画面へ戻る）
  *         'mistakes' 結果画面の「間違えた問題を復習」（不正解・部分正解の問題すべて）
  *         'saved'    学習記録の「復習する」（ブラウザに保存した、前に間違えた問題）
- *         'cert'     段位認定の結果の「間違えた問題をトレーニングで復習」（いろいろなカテゴリの問題）
+ *         'cert'     段位認定の結果の「間違えた問題を復習」（いろいろなカテゴリの問題）
  */
 import { TrainingSession } from '../core/questionEngine.js';
 import { getCategory, getTemplates, DEFAULT_SETTINGS } from '../questions/questionRegistry.js';

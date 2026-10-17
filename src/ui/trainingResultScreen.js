@@ -76,12 +76,24 @@ export function mountTrainingResultScreen(container, { navigate }) {
           h('dt', {}, '難易度'),
           h('dd', {}, difficultyLabel(summary.difficulty)),
         ),
+        // 難易度の下・「第◯問」の上に、2行×2列で並べる
+        h(
+          'div',
+          { class: 'result-grid-actions' },
+          button(
+            'もう一度挑戦',
+            () => {
+              startTraining(settings);
+              navigate('question');
+            },
+            'btn--primary',
+          ),
+          button('設定を変更', () => navigate('setup', { category: summary.category })),
+          button('カテゴリ選択', () => navigate('categories')),
+          button('タイトルへ', () => navigate('home')),
+        ),
         summary.history.length > 0 ? historyList : null,
         summary.history.length > 0 ? h('p', { class: 'setup-note' }, '「第◯問」を押すと、その問題をもう一度解けます（結果は変わりません）。') : null,
-      ),
-      h(
-        'div',
-        { class: 'result-actions' },
         // 不正解・部分正解の問題を、同じ問題のまま解き直す（0問ならボタンを出さない）
         mistakes > 0
           ? button(
@@ -92,16 +104,6 @@ export function mountTrainingResultScreen(container, { navigate }) {
               'btn--accent btn--large',
             )
           : null,
-        button(
-          'もう一度挑戦',
-          () => {
-            startTraining(settings);
-            navigate('question');
-          },
-          'btn--primary btn--large',
-        ),
-        button('設定を変更', () => navigate('setup', { category: summary.category })),
-        button('カテゴリ選択に戻る', () => navigate('categories'), 'btn--ghost'),
       ),
     ),
   );

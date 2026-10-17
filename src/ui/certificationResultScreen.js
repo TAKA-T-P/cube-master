@@ -58,7 +58,7 @@ export function mountCertificationResultScreen(container, { navigate }) {
       h('dd', {}, `${summary.maxStreak}問`),
       h('dt', {}, '誤答の減点'),
       h('dd', {}, summary.deductionTotal > 0 ? `−${summary.deductionTotal}点（${summary.mistakeCount}回）` : 'なし'),
-      h('dt', {}, '多答問題の時間ボーナス'),
+      h('dt', {}, '多答問題ボーナス'),
       h('dd', {}, summary.timeBonusTotalMs > 0 ? `+${Math.round(summary.timeBonusTotalMs / 1000)}秒` : 'なし'),
       h('dt', {}, 'パス'),
       h('dd', {}, summary.passCount > 0 ? `${summary.passCount}回（残り時間 −${Math.round(summary.passPenaltyTotalMs / 1000)}秒）` : 'なし'),
@@ -117,7 +117,7 @@ export function mountCertificationResultScreen(container, { navigate }) {
           'btn--primary btn--large',
         ),
         mistakes.length > 0
-          ? button(`間違えた問題をトレーニングで復習（${mistakes.length}問）`, () => {
+          ? button(`間違えた問題を復習（${mistakes.length}問）`, () => {
               if (startCertificationReview(mistakes)) navigate('question', { review: 'cert' });
             })
           : null,
