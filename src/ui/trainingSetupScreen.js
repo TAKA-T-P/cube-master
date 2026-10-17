@@ -40,21 +40,18 @@ export function mountTrainingSetupScreen(container, { navigate, params }) {
   const limit = slider('問題数', { min, max, unit: '問' }, initialLimit, () => {});
 
   // 問題数を選ぶ ⇄ 1分チャレンジ（同じ行に横並び）
-  const countPanel = h('div', { class: 'setup-mode-panel' }, h('p', { class: 'setup-mode-lead' }, PLAY_MODES[0].lead), limit.el, h('p', { class: 'setup-note' }, 'タイマーはありません。ヒントを見たり、解説の3Dを何度も見直したりできます。'));
-  const challengePanel = h(
-    'div',
-    { class: 'setup-mode-panel' },
-    h('p', { class: 'setup-mode-lead' }, PLAY_MODES[1].lead),
-    recordEl,
-    h(
-      'p',
-      { class: 'setup-note' },
-      `まちがえると残り時間が${CHALLENGE_RULES.mistakePenaltyMs / 1000}秒へります。ヒント・パスはありません。答え合わせの間は時間が止まります。`,
-    ),
+  // 説明（ルールの注意）は「スタート」の下に出す
+  const countPanel = h('div', { class: 'setup-mode-panel' }, h('p', { class: 'setup-mode-lead' }, PLAY_MODES[0].lead), limit.el);
+  const countNote = h('p', { class: 'setup-note setup-note--after-start' }, 'タイマーはありません。ヒントを見たり、解説の3Dを何度も見直したりできます。');
+  const challengePanel = h('div', { class: 'setup-mode-panel' }, h('p', { class: 'setup-mode-lead' }, PLAY_MODES[1].lead), recordEl);
+  const challengeNote = h(
+    'p',
+    { class: 'setup-note setup-note--after-start' },
+    `まちがえると残り時間が${CHALLENGE_RULES.mistakePenaltyMs / 1000}秒へります。ヒント・パスはありません。答え合わせの間は時間が止まります。`,
   );
   const showMode = (value) => {
-    countPanel.hidden = value === 'challenge';
-    challengePanel.hidden = value !== 'challenge';
+    countPanel.hidden = countNote.hidden = value === 'challenge';
+    challengePanel.hidden = challengeNote.hidden = value !== 'challenge';
   };
   const mode = segmented('出題のしかた', PLAY_MODES, initial.mode === 'challenge' ? 'challenge' : 'count', (value) => showMode(value));
   mode.el.classList.add('setup-mode');
@@ -96,6 +93,8 @@ export function mountTrainingSetupScreen(container, { navigate, params }) {
         countPanel,
         challengePanel,
         start,
+        countNote,
+        challengeNote,
       ),
     ),
   );

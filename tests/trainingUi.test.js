@@ -138,6 +138,16 @@ describe('カテゴリ選択・設定画面', () => {
     const range = container.querySelector('input[type="range"]');
     expect([range.min, range.max, range.value]).toEqual(['1', '20', '5']);
     expect(container.querySelector('.slider__value').textContent).toBe('5問');
+    // 説明は「スタート」のすぐ下（出題のしかたに合わせて切りかわる）
+    const startBtn = buttonByText(container, 'スタート');
+    const visibleNotes = () => [...container.querySelectorAll('.setup-note--after-start')].filter((n) => !n.hidden);
+    expect(visibleNotes()).toHaveLength(1);
+    expect(startBtn.nextElementSibling).toBe(visibleNotes()[0]);
+    expect(visibleNotes()[0].textContent).toContain('タイマーはありません');
+    buttonByText(container, '1分チャレンジ').click();
+    expect(visibleNotes()[0].textContent).toContain('10秒へります');
+    expect(startBtn.compareDocumentPosition(visibleNotes()[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    buttonByText(container, '問題数を選ぶ').click();
     buttonByText(container, '標準').click();
     range.value = '13';
     range.dispatchEvent(new Event('input'));
