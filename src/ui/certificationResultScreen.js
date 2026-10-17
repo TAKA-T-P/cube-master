@@ -66,7 +66,7 @@ export function mountCertificationResultScreen(container, { navigate }) {
       h('dd', {}, summary.answeredCount > 0 ? `${sec(summary.averageAnswerMs)}秒` : '－'),
     ),
     categoryRows.length > 0 ? h('ul', { class: 'cert-result__categories', 'aria-label': 'カテゴリ別の正解数' }, categoryRows) : null,
-    h('p', { class: 'cert-result__next' }, next ? `次の段位「${next.label}」まで あと${next.remaining}点（${next.score}点）` : '最高段位です！'),
+    h('p', { class: 'cert-result__next' }, next ? `次の段位「${next.label}」まで あと${next.remaining}点` : '最高段位です！'),
   );
 
   // 演出の最後（タップでもここまで進む）

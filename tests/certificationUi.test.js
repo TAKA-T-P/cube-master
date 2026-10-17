@@ -278,6 +278,8 @@ describe('結果発表・段位・記録', () => {
     expect(sounds.playRankUpSound).toHaveBeenCalled();
     expect(container.querySelector('[data-testid="cert-correct"]').textContent).toBe('6問（6問中）');
     expect(container.textContent).not.toContain('TIME UP');
+    const nextRank = container.querySelector('.cert-result__next')?.textContent ?? '';
+    if (nextRank.startsWith('次の段位')) expect(nextRank).toMatch(/まで あと\d+点$/); // 次の段位の必要スコア（○点）は出さない
     expect(container.textContent).toContain('多答問題ボーナス');
     expect(container.textContent).not.toContain('多答問題の時間ボーナス');
   });

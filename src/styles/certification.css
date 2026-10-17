@@ -89,7 +89,15 @@
   position: sticky;
   top: 0;
   z-index: 5;
+  padding-block: 3px;
   background: var(--color-bg);
+}
+
+/* 上の帯を低くするため、「やめる」も少し小さく */
+.quiz-header--certification .btn {
+  min-height: 34px;
+  padding-block: 2px;
+  font-size: 14px;
 }
 
 .cert-timer {
@@ -97,7 +105,7 @@
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
-  padding: 2px 12px;
+  padding: 1px 10px;
   border-radius: 999px;
   background: var(--color-primary-soft);
   color: var(--color-primary-strong);
@@ -110,7 +118,7 @@
 
 .cert-timer__value {
   min-width: 4.2em;
-  font-size: 22px;
+  font-size: 18px;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -147,7 +155,7 @@
 
 .cert-score {
   margin-left: auto;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 900;
   color: var(--color-success);
   font-variant-numeric: tabular-nums;
