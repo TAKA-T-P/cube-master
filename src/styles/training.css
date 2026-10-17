@@ -1326,3 +1326,103 @@ ul.setup-note {
 .viewport--figure-only .cut-point-label {
   display: none !important;
 }
+
+/* 出題できる問題がないときの案内（設定画面） */
+.setup-unavailable {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: #fff4e5;
+  color: #8a4b00;
+  font-size: 14px;
+}
+
+.setup-unavailable[hidden] {
+  display: none;
+}
+
+/* ----- 学習ヘルプ（問題の下の「？」・あそびかたの「学習ヘルプ」） ----- */
+.quiz-learning-help {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.quiz-learning-help[hidden] {
+  display: none;
+}
+
+.btn--learning-help {
+  border-color: #f0a35e;
+  color: #b4530a;
+  background: #fff7ef;
+}
+
+.dialog--wide {
+  width: min(100%, 520px);
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+
+.help-topic {
+  display: grid;
+  gap: 8px;
+}
+
+.help-topic__lead {
+  font-weight: 700;
+}
+
+.help-topic__formula {
+  justify-self: start;
+  padding: 4px 12px;
+  border-radius: var(--radius-md);
+  background: #fff4e5;
+  color: #8a4b00;
+  font-weight: 900;
+}
+
+.help-topic__figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.help-figure {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  margin: 0;
+}
+
+.help-figure figcaption {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-sub);
+  text-align: center;
+}
+
+.help-figure__svg {
+  height: auto;
+  max-width: 100%;
+}
+
+.help-topic__points {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 14px;
+}
+
+/* カテゴリの番号（①〜⑩） */
+.category-card__num {
+  flex: none;
+  margin-right: 6px;
+  color: var(--color-primary);
+  font-weight: 900;
+}

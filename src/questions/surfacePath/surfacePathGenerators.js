@@ -20,6 +20,43 @@ import { shuffle, pick } from '../../utils/random.js';
 import { buildElementChoices } from '../questionUtils.js';
 import { describeEdgePoint } from '../../core/cubeCutting.js';
 import * as X from './surfacePathExplanations.js';
+import { PYTHAGOREAN_AND_ROOT } from '../../core/learningPrerequisites.js';
+import { CUBE_SYMMETRIES } from '../surfacePoints.js';
+
+// ---------- 三平方の定理・√ を使わずにくらべられるか ----------
+// 次の2つは、長さを計算しなくても図形の性質だけでわかる。
+//  ・同じ面の並びの上で、一直線の道は、折れ曲がった道より短い（展開図の上で、2点を結ぶ線は直線がいちばん短い）
+//  ・P・Q を動かさない立方体の対称（回す・裏返す）で、ぴったり重なる2本の道は、同じ長さ
+
+/** P・Q を動かさない対称で、道 a が道 b にぴったり重なるか */
+export function symmetricPaths(p, q, a, b) {
+  const num = (pt) => qvec(pt).map((x) => x.toNumber());
+  const [P, Qn] = [num(p), num(q)];
+  const A = a.polyline.map(num);
+  const B = b.polyline.map(num);
+  if (A.length !== B.length) return false;
+  const same = (u, v) => u.every((x, i) => Math.abs(x - v[i]) < 1e-9);
+  const apply = (m, v) => m.map((row) => row[0] * v[0] + row[1] * v[1] + row[2] * v[2]);
+  return CUBE_SYMMETRIES.some((m) => same(apply(m, P), P) && same(apply(m, Qn), Qn) && A.every((pt, i) => same(apply(m, pt), B[i])));
+}
+
+/** 同じ面の並びの上で、一直線の道 s と折れ曲がった道 l の組か */
+const straightVsBent = (s, l) => s.kind === 'geodesic' && l.kind === 'bent' && s.faces.join() === l.faces.join();
+
+/** 最短経路の中で、対称で重なる2本 */
+function symmetricShortestPair(shortest, P, Q) {
+  for (let i = 0; i < shortest.length; i++) for (let j = i + 1; j < shortest.length; j++) if (symmetricPaths(P.position, Q.position, shortest[i], shortest[j])) return [shortest[i], shortest[j]];
+  return null;
+}
+
+/** 最短経路のうち、同じ面の並びで折れ曲がった道があるものと、その折れ曲がった道 */
+function straightBentPair(shortest, longer) {
+  for (const s of shortest) {
+    const l = longer.find((x) => straightVsBent(s, x));
+    if (l) return [s, l];
+  }
+  return null;
+}
 
 export const SURFACE_PATH_CATEGORY = 'surfacePath';
 
@@ -115,8 +152,9 @@ const UNFOLD_STEPS = Object.freeze([
   { type: 'pathUnfold', to: 0 },
 ]);
 
-function assemble(template, base, { P, Q, question, type = 'single', choices, correct, explanation, candidates = [], solution, highlight = [] }) {
+function assemble(template, base, { P, Q, question, type = 'single', choices, correct, explanation, candidates = [], solution, highlight = [], prerequisites = [] }) {
   return {
+    prerequisites: [...prerequisites],
     templateId: template.id,
     key: `${template.id}:${base.key}`,
     category: SURFACE_PATH_CATEGORY,
@@ -292,6 +330,25 @@ function distanceDistractors(pair, res, u, [a, b]) {
   return [inside, ...others.slice(0, 2), legSum, off];
 }
 
+/** S05：最短距離を求めるのに三平方の定理・√ が要るか（2面の道がなく、広げた道がまっすぐ1方向なら要らない） */
+function distanceNeedsRoots(res) {
+  const { two } = routeGroups(res);
+  return Boolean(two) || legsOf(res.shortest[0]).every((l) => !l.isZero());
+}
+
+/** 対称で重なる最短経路2本と、そのどちらかを同じ面の上で折り曲げた道（長さを計算せずに判断できる3本） */
+function basicTriple(res, P, Q) {
+  const { shortest, longer } = candidatePaths(res, P, Q);
+  for (let i = 0; i < shortest.length; i++) {
+    for (let j = i + 1; j < shortest.length; j++) {
+      if (!symmetricPaths(P.position, Q.position, shortest[i], shortest[j])) continue;
+      const bent = longer.find((l) => straightVsBent(shortest[i], l) || straightVsBent(shortest[j], l));
+      if (bent) return [shortest[i], shortest[j], bent];
+    }
+  }
+  return null;
+}
+
 export const SURFACE_PATH_TEMPLATES = [
   // ---------------- ★1 基本 ----------------
   {
@@ -336,28 +393,45 @@ export const SURFACE_PATH_TEMPLATES = [
     id: 'S02',
     difficulty: 1,
     title: '2つの道のどちらが短い？',
-    bases: () =>
+    // 三平方の定理・√ を使わないときは、「一直線 と 同じ面の上で折れ曲がった道」か「対称で重なる2本」だけ
+    advanced: 'sometimes',
+    bases: (ctx = {}) =>
       basePairs().flatMap((x) => {
+        const basic = ctx.allowAdvanced === false;
+        const { shortest, longer } = candidatePaths(x.res, x.p, x.q);
         const list = [];
-        if (candidatePaths(x.res, x.p, x.q).longer.length >= 1) list.push(baseOf(x, { key: `${x.key}#a`, group: 'a', variant: 'a' }), baseOf(x, { key: `${x.key}#b`, group: 'b', variant: 'b' }));
-        if (x.res.shortest.length >= 2) list.push(baseOf(x, { key: `${x.key}#same`, group: 'same', variant: 'same' }));
+        const diff = basic ? straightBentPair(shortest, longer) : longer.length >= 1;
+        if (diff) list.push(baseOf(x, { key: `${x.key}#a`, group: 'a', variant: 'a' }), baseOf(x, { key: `${x.key}#b`, group: 'b', variant: 'b' }));
+        const same = basic ? symmetricShortestPair(shortest, ...labelPoints([x.p, x.q], ['P', 'Q'])) : x.res.shortest.length >= 2;
+        if (same) list.push(baseOf(x, { key: `${x.key}#same`, group: 'same', variant: 'same' }));
         return list;
       }),
-    build(base, rng) {
+    build(base, rng, ctx = {}) {
+      const basic = ctx.allowAdvanced === false;
       const pairKey = base.key.split('#')[0];
       const { P, Q, res } = rotatedPair(findPair(pairKey), rng);
       const { shortest, longer } = candidatePaths(res, P, Q, { minRatio: 1.08 });
+      const all = candidatePaths(res, P, Q);
       let pair;
-      if (base.variant === 'same') pair = shuffle(shortest, rng).slice(0, 2);
+      if (base.variant === 'same') pair = basic ? symmetricShortestPair(all.shortest, P, Q) : shuffle(shortest, rng).slice(0, 2);
       else {
-        const s = pick(shortest, rng);
-        const l = pick(longer.length ? longer : candidatePaths(res, P, Q).longer, rng);
-        pair = base.variant === 'a' ? [s, l] : [l, s];
+        let s0;
+        let l0;
+        if (basic) [s0, l0] = straightBentPair(all.shortest, all.longer);
+        else {
+          s0 = pick(shortest, rng);
+          l0 = pick(longer.length ? longer : all.longer, rng);
+        }
+        pair = base.variant === 'a' ? [s0, l0] : [l0, s0];
       }
       const [a, b] = pair.map((c, i) => ({ ...c, id: `path${i}`, label: CHOICE_MARKS[i], color: PATH_COLORS[i] }));
       const cmp = a.length.cmp(b.length);
       const answer = cmp === 0 ? 'same' : cmp < 0 ? 'a' : 'b';
       const winners = answer === 'same' ? [a, b] : [answer === 'a' ? a : b];
+      // 長さを計算しなくてもくらべられるか
+      const symmetric = answer === 'same' && symmetricPaths(P.position, Q.position, a, b);
+      const straightBent = answer !== 'same' && (straightVsBent(a, b) || straightVsBent(b, a));
+      const easy = symmetric || straightBent;
       return assemble(this, base, {
         P,
         Q,
@@ -368,17 +442,23 @@ export const SURFACE_PATH_TEMPLATES = [
           { id: 'same', label: 'どちらも同じ長さ', fixed: true },
         ],
         correct: [answer],
-        explanation: X.explainCompare({ a: fmtLength(a.length), b: fmtLength(b.length), answer }),
+        explanation: easy
+          ? symmetric
+            ? X.explainSymmetric({ labels: ['ア', 'イ'] })
+            : X.explainStraightBent({ straight: answer === 'a' ? 'ア' : 'イ', bent: answer === 'a' ? 'イ' : 'ア', faces: winners[0].faces })
+          : X.explainCompare({ a: fmtLength(a.length), b: fmtLength(b.length), answer }),
         candidates: candidateScene([a, b]),
         solution: solutionOf(winners.filter((w) => w.kind === 'geodesic').length ? winners.filter((w) => w.kind === 'geodesic') : winners, { highlight: winners.map((w) => w.id) }),
+        prerequisites: easy ? [] : PYTHAGOREAN_AND_ROOT,
       });
     },
   },
-  // ---------------- ★2 標準 ----------------
   {
     id: 'S03',
     difficulty: 2,
     title: '2面を通る最短距離',
+    advanced: 'always',
+    prerequisites: [...PYTHAGOREAN_AND_ROOT],
     bases: () => twoFacePairs().map((x) => baseOf(x)),
     build(base, rng) {
       const { P, Q, res } = rotatedPair(findPair(base.key), rng);
@@ -396,6 +476,7 @@ export const SURFACE_PATH_TEMPLATES = [
         correct: [choices[0].id],
         explanation: X.explainDistance({ faces: path.faces, from: P.short, to: Q.short, a: a.mul(u).toNumber(), b: b.mul(u).toNumber(), length2: res.length2.mul(u).mul(u), length, count: res.shortest.length }),
         solution: solutionOf(res.shortest, { label: length.format('cm') }),
+        prerequisites: PYTHAGOREAN_AND_ROOT,
       });
     },
   },
@@ -440,7 +521,9 @@ export const SURFACE_PATH_TEMPLATES = [
     id: 'S05',
     difficulty: 3,
     title: '3面以上を通る道もくらべる最短距離',
-    bases: () => manyFacePairs().map((x) => baseOf(x)),
+    // 向かい合う面の中心どうしのように、2面の道がなく、広げた道がまっすぐ1方向のときだけ √ が要らない
+    advanced: 'sometimes',
+    bases: (ctx = {}) => manyFacePairs().filter((x) => ctx.allowAdvanced !== false || !distanceNeedsRoots(x.res)).map((x) => baseOf(x)),
     build(base, rng) {
       const { P, Q, res } = rotatedPair(findPair(base.key), rng);
       const s = pick([4, 6], rng);
@@ -463,6 +546,7 @@ export const SURFACE_PATH_TEMPLATES = [
           detail: X.explainDistance({ faces: path.faces, from: P.short, to: Q.short, a: a.mul(u).toNumber(), b: b.mul(u).toNumber(), length2: res.length2.mul(u).mul(u), length, count: res.shortest.length }),
         }),
         solution: solutionOf(res.shortest, { label: length.format('cm') }),
+        prerequisites: distanceNeedsRoots(res) ? PYTHAGOREAN_AND_ROOT : [],
       });
     },
   },
@@ -470,14 +554,22 @@ export const SURFACE_PATH_TEMPLATES = [
     id: 'S06',
     difficulty: 3,
     title: '最短経路をすべて選ぶ',
-    bases: () => basePairs().filter((x) => x.res.shortest.length >= 2 && candidatePaths(x.res, x.p, x.q).longer.length >= 1).map((x) => baseOf(x)),
-    build(base, rng) {
+    // 三平方の定理・√ を使わないときは、「対称で重なる最短経路2本」と「そのどちらかを同じ面の上で折り曲げた道」の3本だけ
+    advanced: 'sometimes',
+    bases: (ctx = {}) =>
+      basePairs()
+        .filter((x) => x.res.shortest.length >= 2 && candidatePaths(x.res, x.p, x.q).longer.length >= 1)
+        .filter((x) => ctx.allowAdvanced !== false || basicTriple(x.res, ...labelPoints([x.p, x.q], ['P', 'Q'])))
+        .map((x) => baseOf(x)),
+    build(base, rng, ctx = {}) {
       const { P, Q, res } = rotatedPair(findPair(base.key), rng);
       const { shortest, longer } = candidatePaths(res, P, Q);
       // 図がごちゃごちゃしないように、道は3本（最短経路2本と、長い道1本）
-      const picked = [...shuffle(shortest, rng).slice(0, 2), ...shuffle(longer, rng).slice(0, 1)];
+      const picked = ctx.allowAdvanced === false ? basicTriple(res, P, Q) : [...shuffle(shortest, rng).slice(0, 2), ...shuffle(longer, rng).slice(0, 1)];
       const list = labelCandidates(picked, rng);
       const correct = list.filter((c) => c.kind === 'geodesic');
+      const wrong = list.find((c) => c.kind !== 'geodesic');
+      const easy = correct.length === 2 && symmetricPaths(P.position, Q.position, correct[0], correct[1]) && correct.some((c) => straightVsBent(c, wrong));
       return assemble(this, base, {
         P,
         Q,
@@ -485,13 +577,16 @@ export const SURFACE_PATH_TEMPLATES = [
         question: `${questionStart(P, Q)}色をつけた${list.map((c) => c.label).join('・')}の道のうち、最短経路をすべて選びましょう。`,
         choices: list.map(candidateChoice),
         correct: correct.map((c) => c.id),
-        explanation: X.explainChoice({
-          correctLabels: correct.map((c) => c.label),
-          faces: correct[0].faces,
-          lengths: list.map((c) => ({ label: c.label, length: fmtLength(c.length) })),
-        }) + `${correct.map((c) => c.label).join('・')}は長さが同じで、どれも最短経路です。`,
+        explanation: easy
+          ? X.explainSymmetricChoice({ correct: correct.map((c) => c.label), bent: wrong.label, straight: correct.find((c) => straightVsBent(c, wrong)).label, faces: wrong.faces })
+          : X.explainChoice({
+              correctLabels: correct.map((c) => c.label),
+              faces: correct[0].faces,
+              lengths: list.map((c) => ({ label: c.label, length: fmtLength(c.length) })),
+            }) + `${correct.map((c) => c.label).join('・')}は長さが同じで、どれも最短経路です。`,
         candidates: candidateScene(list),
         solution: solutionOf(correct, { highlight: correct.map((c) => c.id) }),
+        prerequisites: easy ? [] : PYTHAGOREAN_AND_ROOT,
       });
     },
   },

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { QuestionPicker, TrainingSession, shuffleChoices, ENDLESS } from '../src/core/questionEngine.js';
 import { POSITION_TEMPLATES } from '../src/questions/position/positionGenerators.js';
-import { getTemplates, getCategory, CATEGORIES } from '../src/questions/questionRegistry.js';
+import { getTemplates, getCategory, CATEGORIES, categoryNumber } from '../src/questions/questionRegistry.js';
 import { getQuestionErrors } from '../src/core/questionSchema.js';
 import { createRng } from '../src/utils/random.js';
 
@@ -150,8 +150,10 @@ describe('TrainingSession', () => {
 describe('questionRegistry', () => {
   it('10カテゴリすべて遊べる（Phase 7 で②切断・⑧最短経路、Phase 8 で⑤内接立体・⑨長さと角度を追加）', () => {
     expect(CATEGORIES).toHaveLength(10);
-    expect(CATEGORIES.filter((c) => c.enabled).map((c) => c.id)).toEqual(['netMapping', 'cubeCutting', 'position', 'netPuzzle', 'inscribedSolid', 'dice', 'paintedCube', 'surfacePath', 'cubeGeometryChallenge', 'projection']);
-    expect(CATEGORIES.map((c) => c.id)).toEqual(['netMapping', 'cubeCutting', 'position', 'netPuzzle', 'inscribedSolid', 'dice', 'paintedCube', 'surfacePath', 'cubeGeometryChallenge', 'projection']);
+    expect(CATEGORIES.filter((c) => c.enabled).map((c) => c.id)).toEqual(['paintedCube', 'dice', 'projection', 'netPuzzle', 'netMapping', 'cubeCutting', 'position', 'inscribedSolid', 'cubeGeometryChallenge', 'surfacePath']);
+    // 小学生でも取り組みやすい順（内部の id は変えない）。画面の番号は並び順で①〜⑩
+    expect(CATEGORIES.map((c) => c.id)).toEqual(['paintedCube', 'dice', 'projection', 'netPuzzle', 'netMapping', 'cubeCutting', 'position', 'inscribedSolid', 'cubeGeometryChallenge', 'surfacePath']);
+    expect(CATEGORIES.map((c) => categoryNumber(c.id)).join('')).toBe('①②③④⑤⑥⑦⑧⑨⑩');
     expect(CATEGORIES.filter((c) => !c.enabled)).toEqual([]);
     expect(getCategory('inscribedSolid')).toMatchObject({ name: '立方体に内接する立体と体積', description: '立方体の中に隠れた立体を見つけよう！四面体や八面体の形と体積を考えよう！', grades: '小学5年生～中学3年生' });
     expect(getCategory('cubeGeometryChallenge')).toMatchObject({ name: '立方体に隠れた図形・長さ・角度', description: '立方体の中の三角形や対角線を見つけよう！長さや角度のなぞに挑戦！', grades: '小学5年生～中学3年生' });

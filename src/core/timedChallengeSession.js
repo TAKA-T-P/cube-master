@@ -33,7 +33,8 @@ export class TimedChallengeSession {
     this.difficulty = difficulty;
     this.rules = rules;
     const usable = templates.filter((t) => !(rules.excludedTemplates ?? []).includes(t.id));
-    this.picker = new QuestionPicker({ templates: usable, difficulty, rng });
+    // 1分チャレンジでは、タイトル画面の設定にかかわらず、三平方の定理・√ が必要な問題は出さない（core/questionEligibility）
+    this.picker = new QuestionPicker({ templates: usable, difficulty, rng, allowAdvanced: false });
     this.timer = createCertificationTimer({ durationMs: rules.durationMs, now });
     this._seq = 0;
     this._questionStartActiveMs = 0;

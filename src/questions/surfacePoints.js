@@ -105,5 +105,27 @@ export const CUBE_ROTATIONS = Object.freeze(
   })(),
 );
 
+/** 立方体の対称（48通り：回転24通りと、鏡に映す24通り） */
+export const CUBE_SYMMETRIES = Object.freeze(
+  (() => {
+    const perms = [
+      [0, 1, 2],
+      [0, 2, 1],
+      [1, 0, 2],
+      [1, 2, 0],
+      [2, 0, 1],
+      [2, 1, 0],
+    ];
+    const list = [];
+    for (const p of perms) {
+      for (let s = 0; s < 8; s++) {
+        const signs = [s & 1 ? -1 : 1, s & 2 ? -1 : 1, s & 4 ? -1 : 1];
+        list.push(Object.freeze([0, 1, 2].map((r) => Object.freeze([0, 1, 2].map((c) => (p[r] === c ? signs[r] : 0))))));
+      }
+    }
+    return list;
+  })(),
+);
+
 /** 回転を点にかける */
 export const rotatePoint = (m, p) => m.map((row) => row[0] * p[0] + row[1] * p[1] + row[2] * p[2] + 0);

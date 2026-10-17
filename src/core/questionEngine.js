@@ -9,6 +9,10 @@
 import { assertValidQuestion } from './questionSchema.js';
 import { validateAnswer, canSubmitAnswer, normalizeAnswers } from './answerValidator.js';
 import { shuffle, pick } from '../utils/random.js';
+import { requiresAdvancedMath, isTemplateAvailable, NoEligibleQuestionError } from './questionEligibility.js';
+
+/** 出題してよい問題が出るまで作り直す回数の上限（無限に作り直さない） */
+export const MAX_ELIGIBLE_ATTEMPTS = 30;
 
 /** 問題数「エンドレス」 */
 export const ENDLESS = 'endless';
@@ -34,9 +38,14 @@ export class QuestionPicker {
    * @param {{ templates: object[], difficulty?: 1|2|3|'all', rng?: () => number, maxSameTemplateRun?: number }} options
    *   maxSameTemplateRun: 同じテンプレートが連続してよい最大数（既定 2 = 3問以上連続しない）
    */
-  constructor({ templates, difficulty = DIFFICULTY_ALL, rng = Math.random, maxSameTemplateRun = 2 }) {
-    this.templates = templates.filter((t) => difficulty === DIFFICULTY_ALL || t.difficulty === difficulty);
-    if (this.templates.length === 0) throw new Error(`難易度 ${difficulty} の問題がありません`);
+  constructor({ templates, difficulty = DIFFICULTY_ALL, rng = Math.random, maxSameTemplateRun = 2, allowAdvanced = true }) {
+    const byDifficulty = templates.filter((t) => difficulty === DIFFICULTY_ALL || t.difficulty === difficulty);
+    if (byDifficulty.length === 0) throw new Error(`難易度 ${difficulty} の問題がありません`);
+    // 三平方の定理・√ を出さないときは、いつもそれが要るテンプレートを外す（core/questionEligibility）
+    this.allowAdvanced = allowAdvanced;
+    this.templates = byDifficulty.filter((t) => isTemplateAvailable(t, allowAdvanced));
+    if (this.templates.length === 0) throw new NoEligibleQuestionError(`この難易度では、三平方の定理・√を使わない問題がありません`);
+    this._context = Object.freeze({ allowAdvanced });
     this.difficulty = difficulty;
     this.rng = rng;
     this.maxSameTemplateRun = maxSameTemplateRun;
@@ -49,11 +58,27 @@ export class QuestionPicker {
     this._seq = 0;
   }
 
-  /** 次の問題を作る */
+  /**
+   * 次の問題を作る。三平方の定理・√ を出さないときは、それが要る問題になったら作り直す（上限 MAX_ELIGIBLE_ATTEMPTS 回）
+   * @throws {NoEligibleQuestionError} 出題してよい問題が作れなかったとき
+   */
   next() {
-    const template = this._pickTemplate();
-    const base = this._pickBase(template);
-    const raw = template.build(base, this.rng);
+    for (let attempt = 0; attempt < MAX_ELIGIBLE_ATTEMPTS; attempt++) {
+      const template = this._pickTemplate();
+      const base = this._pickBase(template);
+      const raw = template.build(base, this.rng, this._context);
+      const prerequisites = raw.prerequisites ?? template.prerequisites ?? [];
+      if (!this.allowAdvanced && requiresAdvancedMath({ prerequisites })) {
+        // 出題しない問題：同じ基準をくり返し選ばないように、使ったことにして作り直す
+        this._usedKeys.get(template.id)?.add(base.key);
+        continue;
+      }
+      return this._finish(template, base, { ...raw, prerequisites: [...prerequisites] });
+    }
+    throw new NoEligibleQuestionError();
+  }
+
+  _finish(template, base, raw) {
     this._seq += 1;
     // ヒント：問題が持っていなければテンプレートのヒント（文字列か、問題を受け取る関数）を付ける
     const hintText = raw.hint?.text ?? (typeof template.hint === 'function' ? template.hint(raw) : template.hint);
@@ -94,7 +119,7 @@ export class QuestionPicker {
   }
 
   _pickBase(template) {
-    if (!this._bases.has(template.id)) this._bases.set(template.id, template.bases());
+    if (!this._bases.has(template.id)) this._bases.set(template.id, template.bases(this._context));
     const all = this._bases.get(template.id);
     if (!this._usedKeys.has(template.id)) this._usedKeys.set(template.id, new Set());
     const used = this._usedKeys.get(template.id);
@@ -140,7 +165,7 @@ export class TrainingSession {
    *           questionLimit?: number|'endless', rng?: () => number, questions?: object[] }} options
    *   questions：テンプレートから作らずに、この問題を順に出す（復習用）。問題数はその数になる
    */
-  constructor({ category, templates = [], difficulty = DIFFICULTY_ALL, questionLimit = 10, rng = Math.random, questions = null }) {
+  constructor({ category, templates = [], difficulty = DIFFICULTY_ALL, questionLimit = 10, rng = Math.random, questions = null, allowAdvanced = true }) {
     if (questions) questionLimit = questions.length;
     if (!(questionLimit === ENDLESS || (Number.isInteger(questionLimit) && questionLimit > 0))) {
       throw new Error(`無効な問題数です: ${questionLimit}`);
@@ -149,7 +174,7 @@ export class TrainingSession {
       const list = [...questions];
       this.picker = { next: () => list.shift() ?? null };
     } else {
-      this.picker = new QuestionPicker({ templates, difficulty, rng });
+      this.picker = new QuestionPicker({ templates, difficulty, rng, allowAdvanced });
     }
     this._state = {
       category,

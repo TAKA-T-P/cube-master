@@ -1,7 +1,7 @@
 /**
  * ヘルプ（あそびかた）画面
  *
- * 説明が多いので、7つのタブに分けて、短いまとまりで切りかえて読めるようにする。
+ * 説明が多いので、8つのタブに分けて、短いまとまりで切りかえて読めるようにする。
  *   1. CUBE MASTERとは？ 2. トレーニング 3. 1分チャレンジ 4. 段位認定 5. 3Dの操作 6. ヒント・復習・学習記録 7. 記録と設定
  * 3Dの操作は、使っている端末に合った説明を先に表示する。
  */
@@ -9,6 +9,8 @@ import { h, isTouchPrimary, showToast } from '../utils/dom.js';
 import { confirmDialog } from './components.js';
 import { clearLearningData, isLearningStorageAvailable } from './learningStore.js';
 import { soundSettingsPanel } from './soundControls.js';
+import { HELP_TOPICS } from '../core/learningHelp.js';
+import { renderHelpTopic } from './learningHelpVisuals.js';
 import { CERTIFICATION_RULES } from '../core/certificationRules.js';
 import { CHALLENGE_RULES } from '../core/timedChallengeSession.js';
 
@@ -129,6 +131,14 @@ export function mountHelpScreen(container, { navigate }) {
     { id: 'certification', label: '段位認定', body: () => [list(CERTIFICATION)] },
     { id: 'controls', label: '3Dの操作', body: () => order.map((key, i) => control(key, i === 0)) },
     { id: 'support', label: 'ヒント・復習・学習記録', body: () => [list(SUPPORT)] },
+    {
+      id: 'learning',
+      label: '学習ヘルプ',
+      body: () => [
+        h('p', { class: 'setup-note' }, '問題を解くときに使う知識を、図で確かめられます。通常トレーニングでは、問題の下の「？」からも開けます。'),
+        ...HELP_TOPICS.map((t) => h('section', { class: 'help-section', dataset: { topic: t.id } }, h('h3', {}, t.title), renderHelpTopic(t.id))),
+      ],
+    },
     { id: 'records', label: '記録と設定', body: () => recordSection() },
   ];
 

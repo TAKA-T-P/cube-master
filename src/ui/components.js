@@ -182,3 +182,27 @@ export function infoDialog({ title, items }) {
 export function helpButton(ariaLabel, onClick) {
   return h('button', { class: 'help-q', type: 'button', 'aria-label': ariaLabel, title: ariaLabel, onClick }, '？');
 }
+
+/**
+ * 図や説明をのせるポップアップ（「閉じる」・Esc・外側を押すと閉じる）
+ * @param {{ title: string, content: Node }} options
+ */
+export function contentDialog({ title, content }) {
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+  };
+  const close = () => {
+    document.removeEventListener('keydown', onKey);
+    el.remove();
+  };
+  const closeButton = h('button', { class: 'btn btn--primary', type: 'button', onClick: () => close() }, '閉じる');
+  const el = h(
+    'div',
+    { class: 'dialog-backdrop', onClick: (e) => e.target === el && close() },
+    h('div', { class: 'dialog dialog--wide', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dialog-title' }, h('h2', { id: 'dialog-title', class: 'dialog__title' }, title), content, h('div', { class: 'dialog__actions' }, closeButton)),
+  );
+  document.addEventListener('keydown', onKey);
+  document.body.append(el);
+  closeButton.focus();
+  return { el, close };
+}

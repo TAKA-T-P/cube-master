@@ -9,6 +9,7 @@ import { segmented, slider, button, infoDialog, helpButton } from './components.
 import { getCategory, DIFFICULTIES, QUESTION_LIMIT_RANGE, DEFAULT_SETTINGS } from '../questions/questionRegistry.js';
 import { CHALLENGE_RULES } from '../core/timedChallengeSession.js';
 import { startTraining, startChallenge, getSettings, takeChallengeNotice } from './trainingStore.js';
+import { NoEligibleQuestionError } from '../core/questionEligibility.js';
 import { getChallengeBest } from './learningStore.js';
 
 export const PLAY_MODES = Object.freeze([
@@ -64,16 +65,35 @@ export function mountTrainingSetupScreen(container, { navigate, params }) {
   showMode(mode.get());
   updateRecord();
 
+  // この難易度・設定で出題できる問題がないときの案内（難易度や設定を勝手に変えない）
+  const unavailable = h(
+    'div',
+    { class: 'setup-unavailable', role: 'alert', hidden: true },
+    h('p', {}, ''),
+    button('タイトルで出題設定を変える', () => navigate('home'), 'btn--small'),
+  );
+  const showUnavailable = (challenge) => {
+    unavailable.firstChild.textContent = challenge
+      ? 'この難易度の1分チャレンジで出題できる問題がありません（1分チャレンジでは、三平方の定理・√を使う問題は出題しません）。難易度を変えてください。'
+      : 'この難易度で出題できる問題がありません。難易度を変えるか、タイトル画面の「三平方の定理・√を使う問題」を「出題する」にしてください。';
+    unavailable.hidden = false;
+  };
   const start = button(
     'スタート',
     () => {
-      if (mode.get() === 'challenge') {
-        startChallenge({ category: category.id, difficulty: difficulty.get(), questionLimit: limit.get() });
-        navigate('challenge-play');
-        return;
+      unavailable.hidden = true;
+      try {
+        if (mode.get() === 'challenge') {
+          startChallenge({ category: category.id, difficulty: difficulty.get(), questionLimit: limit.get() });
+          navigate('challenge-play');
+          return;
+        }
+        startTraining({ category: category.id, difficulty: difficulty.get(), questionLimit: limit.get() });
+        navigate('question');
+      } catch (err) {
+        if (!(err instanceof NoEligibleQuestionError)) throw err;
+        showUnavailable(mode.get() === 'challenge');
       }
-      startTraining({ category: category.id, difficulty: difficulty.get(), questionLimit: limit.get() });
-      navigate('question');
     },
     'btn--primary btn--large',
   );
@@ -100,6 +120,7 @@ export function mountTrainingSetupScreen(container, { navigate, params }) {
         start,
         countNote,
         challengeNote,
+        unavailable,
       ),
     ),
   );

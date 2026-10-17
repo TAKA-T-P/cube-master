@@ -17,6 +17,7 @@ import { validateAnswer, canSubmitAnswer, normalizeAnswers } from './answerValid
 import { CERTIFICATION_RULES, getRankForScore, isLevel } from './certificationRules.js';
 import { createScoreState, applyAnswer } from './certificationScore.js';
 import { createCertificationTimer } from './certificationTimer.js';
+import { isTemplateAvailable } from './questionEligibility.js';
 
 export class CertificationSession {
   /**
@@ -38,7 +39,8 @@ export class CertificationSession {
     // 出題するカテゴリ（このレベルの難易度の問題があるものだけ）
     this._pool = {};
     for (const category of rules.categories) {
-      const templates = (templatesByCategory[category] ?? []).filter((t) => !rules.excludedTemplates.includes(t.id));
+      // 段位認定では、タイトル画面の設定にかかわらず、三平方の定理・√ が必要な問題は出さない（core/questionEligibility）
+      const templates = (templatesByCategory[category] ?? []).filter((t) => !rules.excludedTemplates.includes(t.id) && isTemplateAvailable(t, false));
       const byDifficulty = {};
       for (const d of this.difficulties) {
         const list = templates.filter((t) => t.difficulty === d);
@@ -97,7 +99,7 @@ export class CertificationSession {
 
   _picker(category, difficulty) {
     const key = `${category}:${difficulty}`;
-    if (!this._pickers.has(key)) this._pickers.set(key, new QuestionPicker({ templates: this._pool[category][difficulty], rng: this.rng }));
+    if (!this._pickers.has(key)) this._pickers.set(key, new QuestionPicker({ templates: this._pool[category][difficulty], rng: this.rng, allowAdvanced: false }));
     return this._pickers.get(key);
   }
 

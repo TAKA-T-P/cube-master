@@ -147,11 +147,11 @@ describe('画面', () => {
     document.body.replaceChildren();
   });
 
-  it('あそびかた：7つのタブで切りかえて読める（矢印キーでも移れる）。効果音の設定と記録の消去がある', async () => {
+  it('あそびかた：8つのタブで切りかえて読める（矢印キーでも移れる）。効果音の設定と記録の消去がある', async () => {
     const { mountHelpScreen } = await import('../src/ui/helpScreen.js');
     mountHelpScreen(container, { navigate: vi.fn() });
     const tabs = [...container.querySelectorAll('[role="tab"]')];
-    expect(tabs.map((t) => t.textContent)).toEqual(['CUBE MASTERとは？', 'トレーニング', '1分チャレンジ', '段位認定', '3Dの操作', 'ヒント・復習・学習記録', '記録と設定']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['CUBE MASTERとは？', 'トレーニング', '1分チャレンジ', '段位認定', '3Dの操作', 'ヒント・復習・学習記録', '学習ヘルプ', '記録と設定']);
     const visible = () => [...container.querySelectorAll('[role="tabpanel"]')].filter((p) => !p.hidden).map((p) => p.dataset.tab);
     expect(visible()).toEqual(['about']);
     tabs[2].click();
@@ -162,7 +162,7 @@ describe('画面', () => {
     expect(visible()).toEqual(['certification']);
     const cert = container.querySelector('#help-certification').textContent;
     for (const text of ['100秒', '240点', '3秒ふえます', '2500点で皆伝', '五段★']) expect(cert).toContain(text);
-    tabs[6].click();
+    tabs[7].click();
     expect(container.querySelector('[data-testid="sound-toggle"]')).not.toBeNull();
     expect([...container.querySelectorAll('button')].some((b) => b.textContent === '学習記録を消去')).toBe(true);
   });

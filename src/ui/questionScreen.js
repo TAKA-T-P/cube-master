@@ -15,7 +15,9 @@
  * WebGL が使えない端末でも、3D なしで問題に答えられる。
  */
 import { h } from '../utils/dom.js';
-import { button, confirmDialog } from './components.js';
+import { button, confirmDialog, contentDialog } from './components.js';
+import { helpTopicsForQuestion } from '../core/learningHelp.js';
+import { renderHelpTopic } from './learningHelpVisuals.js';
 import { createCubeViewer, FACE_DISPLAY_MODES } from '../three/cubeViewer.js';
 import { AnswerSelection } from '../core/answerSelection.js';
 import { ANSWER_STATUS } from '../core/answerValidator.js';
@@ -107,6 +109,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   // ヒント（回答前だけ。答えそのものは出さない）
   const hintText = h('p', { class: 'quiz-hint', hidden: true, role: 'note' });
   const hintButton = button('ヒントを見る', () => toggleHint(), 'btn--small btn--hint');
+  // 学習ヘルプ（問題に必要な知識の説明）。通常トレーニング・復習だけで開ける（時間制のモードでは出さない）
+  const learningHelpRow = h('div', { class: 'quiz-learning-help' });
   const figures = h('div', { class: 'quiz-figures' });
   const viewport = h('div', { class: 'viewport viewport--quiz', 'aria-label': '3D立方体（ドラッグで回転）' });
   const legend = h(
@@ -167,7 +171,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
       h(
         'div',
         { class: 'quiz-scroll' },
-        h('section', { class: 'quiz-question' }, typeHint, questionText, figures, h('div', { class: 'quiz-hint-row' }, hintButton), hintText),
+        h('section', { class: 'quiz-question' }, typeHint, questionText, figures, h('div', { class: 'quiz-hint-row' }, hintButton), hintText, learningHelpRow),
         h('section', { class: 'quiz-answer' }, choicesEl, actionRow, feedback),
       ),
     ),
@@ -299,6 +303,12 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     hintText.hidden = true;
     hintText.textContent = '';
     hintButton.hidden = Boolean(cert) || !q.hint?.text; // 段位認定ではヒントを使えない
+    // 学習ヘルプ：問題で使う知識（角すいの体積・ねじれの位置など）の説明。時間制のモードでは、プレイ中に開けない
+    const topics = cert ? [] : helpTopicsForQuestion(q);
+    learningHelpRow.replaceChildren(
+      ...topics.map((t) => button(`？ ${t.title}`, () => contentDialog({ title: t.title, content: renderHelpTopic(t.id) }), 'btn--small btn--learning-help')),
+    );
+    learningHelpRow.hidden = topics.length === 0;
     hintButton.textContent = 'ヒントを見る';
     hintButton.setAttribute('aria-expanded', 'false');
     renderChoices();

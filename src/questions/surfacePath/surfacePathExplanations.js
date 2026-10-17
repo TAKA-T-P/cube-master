@@ -59,6 +59,19 @@ export function explainCompare({ a, b, answer }) {
   );
 }
 
+/** S02：対称で重なる2本の道（長さを計算しなくてもわかる） */
+export const explainSymmetric = ({ labels }) =>
+  `${labels.join('と')}の道は、立方体を（2つの点を動かさずに）回したり裏返したりすると、ぴったり重なります。だから、どちらも同じ長さです。どちらも、通る面を広げると一直線になる最短経路です。`;
+
+/** S02：同じ面の上の、一直線の道と折れ曲がった道 */
+export const explainStraightBent = ({ straight, bent, faces }) =>
+  `${facesText(faces)}を広げると、${straight}の道は一直線、${bent}の道は同じ面の上で折れ曲がった道になります。2点を結ぶ線は、まっすぐな線がいちばん短いので、${straight}のほうが短くなります。`;
+
+/** S06：対称で重なる最短経路と、折れ曲がった道 */
+export const explainSymmetricChoice = ({ correct, bent, straight, faces }) =>
+  `${correct.join('と')}の道は、立方体を（2つの点を動かさずに）回したり裏返したりするとぴったり重なるので、同じ長さで、どちらも面を広げると一直線になる最短経路です。` +
+  `${bent}の道は、${facesText(faces)}を広げると、${straight}と同じ面の上で折れ曲がっているので、${straight}より長くなります。`;
+
 /** S04：展開図の上の最短経路 */
 export function explainNet({ choiceId, faces, from, to, kinds }) {
   const notes = [];

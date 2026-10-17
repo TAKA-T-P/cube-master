@@ -7,7 +7,7 @@
  */
 import { h } from '../utils/dom.js';
 import { button } from './components.js';
-import { CATEGORIES, getCategory } from '../questions/questionRegistry.js';
+import { CATEGORIES, getCategory, categoryNumber } from '../questions/questionRegistry.js';
 import { getSettings } from './trainingStore.js';
 
 export function mountCategoryScreen(container, { navigate }) {
@@ -25,6 +25,7 @@ export function mountCategoryScreen(container, { navigate }) {
         dataset: { category: c.id },
         onClick: () => c.enabled && select(c.id),
       },
+      h('span', { class: 'category-card__num', 'aria-hidden': 'true' }, categoryNumber(c.id)),
       h('span', { class: 'category-card__name' }, c.name, c.enabled ? null : h('span', { class: 'badge' }, '準備中')),
     ),
   );
@@ -43,7 +44,7 @@ export function mountCategoryScreen(container, { navigate }) {
     selectedId = id;
     const c = getCategory(id);
     for (const card of cards) card.setAttribute('aria-pressed', String(card.dataset.category === id));
-    detailName.textContent = c.name;
+    detailName.textContent = `${categoryNumber(c.id)} ${c.name}`;
     detailDesc.textContent = c.description;
     detail.hidden = false;
   }

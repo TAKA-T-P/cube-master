@@ -59,6 +59,10 @@
  *   scene.model: 'metric' と scene.metric { points, segments, answerSegments, triangles, angle }（長さ・角度・三角形。core/cubeMetricGeometry）
  *     演出 { type: 'metricSegments' } { type: 'metricTriangle', index, label? } { type: 'metricAngle', label? } { type: 'metricExtract', label? }
  *
+ * 問題に必要な知識（省略可）
+ *   prerequisites: string[]  core/learningPrerequisites の ID（'pythagorean'・'squareRoot'・'pyramidVolume' など）。
+ *     三平方の定理・√ が要る問題は、プレイ形式と設定によって出題しない（core/questionEligibility）。前に保存した問題にはないことがある
+ *
  * QUESTION_SCHEMA_VERSION：ブラウザに保存した復習用の問題が、今の形と合うかを確かめるための番号。
  * 問題データの形を互換性のない形に変えたときは、この番号を上げる（古い保存データは読み込まずに除外する）。
  */
@@ -74,6 +78,7 @@ import { planeFromThreePoints, intersectPlaneWithCube } from './cubeCutting.js';
 import { isOnCubeSurface, sharedEdge } from './cubeSurfaceUnfolding.js';
 import { isSurfacePolyline } from './cubeSurfacePath.js';
 import { convexHull, isValidPolyhedron } from './inscribedSolids.js';
+import { isValidPrerequisites } from './learningPrerequisites.js';
 
 export const QUESTION_SCHEMA_VERSION = 1;
 
@@ -273,6 +278,8 @@ export function getQuestionErrors(q) {
   }
   // ヒント
   if (q.hint !== undefined && !isNonEmptyString(q.hint?.text)) errors.push('hint.text が空です');
+  // 必要な知識
+  if (q.prerequisites !== undefined && !isValidPrerequisites(q.prerequisites)) errors.push('prerequisites が不正です');
   return errors;
 }
 

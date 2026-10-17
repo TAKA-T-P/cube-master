@@ -89,9 +89,11 @@ describe('カテゴリ選択・設定画面', () => {
     expect(cards).toHaveLength(10);
     const position = container.querySelector('[data-category="position"]');
     // ボタンは名前だけ（説明・対象学年は書かない）
-    expect(position.textContent).toBe('位置関係');
+    expect(position.querySelector('.category-card__name').textContent).toBe('位置関係');
+    expect(position.textContent).toBe('⑦位置関係');
     expect(position.textContent).not.toContain('小学6年生～中学1年生');
-    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['netMapping', 'cubeCutting', 'position', 'netPuzzle', 'inscribedSolid', 'dice', 'paintedCube', 'surfacePath', 'cubeGeometryChallenge', 'projection']);
+    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['paintedCube', 'dice', 'projection', 'netPuzzle', 'netMapping', 'cubeCutting', 'position', 'inscribedSolid', 'cubeGeometryChallenge', 'surfacePath']);
+    expect([...cards].map((c) => c.querySelector('.category-card__num').textContent).join('')).toBe('①②③④⑤⑥⑦⑧⑨⑩');
     expect(container.querySelectorAll('.category-card .badge')).toHaveLength(0); // 「準備中」はない
     // はじめは下の説明と「次へ」を出さない
     const detail = container.querySelector('.category-detail');
@@ -109,7 +111,7 @@ describe('カテゴリ選択・設定画面', () => {
     buttonByText(container, '次へ').click();
     container.querySelector('[data-category="dice"]').click();
     expect(position.getAttribute('aria-pressed')).toBe('false');
-    expect(detail.querySelector('.category-detail__name').textContent).toBe('サイコロ・回転');
+    expect(detail.querySelector('.category-detail__name').textContent).toBe('② サイコロ・回転');
     buttonByText(container, '次へ').click();
     container.querySelector('[data-category="projection"]').click();
     buttonByText(container, '次へ').click();

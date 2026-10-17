@@ -18,6 +18,8 @@ import { TrainingSession } from '../core/questionEngine.js';
 import { TimedChallengeSession } from '../core/timedChallengeSession.js';
 import { getCategory, getTemplates, DEFAULT_SETTINGS } from '../questions/questionRegistry.js';
 import { recordFinishedTraining, getSavedReviewQuestions, recordChallenge } from './learningStore.js';
+import { isPythagoreanAllowed } from './soundSettings.js';
+import { allowsAdvancedMath, PLAY_MODES } from '../core/questionEligibility.js';
 
 const emptyState = () => ({
   settings: null, // { category, difficulty, questionLimit }
@@ -36,16 +38,19 @@ let state = emptyState();
  * @param {{ category: string, difficulty?: 1|2|3|'all', questionLimit?: number|'endless' }} settings
  * @param {{ rng?: () => number }} [options]
  */
-export function startTraining(settings, { rng } = {}) {
+export function startTraining(settings, { rng, allowPythagoreanQuestions = isPythagoreanAllowed() } = {}) {
   const category = getCategory(settings.category);
   if (!category?.enabled) throw new Error(`遊べないカテゴリです: ${settings.category}`);
-  const full = { ...DEFAULT_SETTINGS, ...settings, mode: 'count' };
+  // 三平方の定理・√ を使う問題を出すかは、始めたときのタイトル画面の設定で決め、プレイの途中では変えない
+  // （「もう一度挑戦」も、そのときの設定で始める）
+  const full = { ...DEFAULT_SETTINGS, ...settings, mode: 'count', allowPythagoreanQuestions };
   const session = new TrainingSession({
     category: full.category,
     templates: getTemplates(full.category),
     difficulty: full.difficulty,
     questionLimit: full.questionLimit,
     rng,
+    allowAdvanced: allowsAdvancedMath(PLAY_MODES.TRAINING, { allowPythagoreanQuestions }),
   });
   state = { ...emptyState(), settings: full, session };
   return session;

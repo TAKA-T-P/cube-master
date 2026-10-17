@@ -25,6 +25,13 @@ import { buildElementChoices, multipleChoiceTotal } from '../questionUtils.js';
 import { CHOICE_MARKS } from '../decoratedCube.js';
 import { shuffle, pick } from '../../utils/random.js';
 import * as X from './cubeCuttingExplanations.js';
+import { PREREQUISITES as PRE, PYTHAGOREAN_AND_ROOT } from '../../core/learningPrerequisites.js';
+
+/**
+ * 切り口の面積を求めるのに、三平方の定理・√ が要るか（辺の長さ・面積のどれかが √ をふくむ）。
+ * 立方体の面に平行な切り口（正方形・長方形で、辺が立方体の辺の長さ）だけは要らない
+ */
+export const areaNeedsRoots = (record) => !(record.shape.sideLengths2.every((l2) => Surd.sqrt(l2).isRational()) && Surd.sqrt(record.area2).isRational());
 
 export const CUTTING_CATEGORY = 'cubeCutting';
 
@@ -99,8 +106,9 @@ const facesOpposite = (faces) => faces.some((f) => faces.some((g) => g !== f && 
 /** 切り口の演出（平面が入る → 切り口が現れる → 2つに分かれる） */
 const CUT_STEPS = Object.freeze([{ type: 'cutPlane' }, { type: 'cutSection' }, { type: 'cutSplit', to: 1 }]);
 
-function assemble(template, base, { record, given, question, type = 'single', choices, correct, explanation, highlight = [], steps = CUT_STEPS }) {
+function assemble(template, base, { record, given, question, type = 'single', choices, correct, explanation, highlight = [], steps = CUT_STEPS, prerequisites = [] }) {
   return {
+    prerequisites: [...prerequisites],
     templateId: template.id,
     key: `${template.id}:${base.key}`,
     category: CUTTING_CATEGORY,
@@ -495,9 +503,11 @@ export const CUTTING_TEMPLATES = [
     id: 'K05',
     difficulty: 3,
     title: '切り口の面積',
-    bases: () =>
+    // 三平方の定理・√ を使えるときは、√ をふくむ面積も出題する。使わないときは、立方体の面に平行な切り口だけ
+    advanced: 'sometimes',
+    bases: (ctx = {}) =>
       allCuts()
-        .filter((c) => AREA_SHAPES.includes(c.shape.name) && pickSide(SIDES, (u) => areaOk(c, u)))
+        .filter((c) => AREA_SHAPES.includes(c.shape.name) && pickSide(SIDES, (u) => areaOk(c, u)) && (ctx.allowAdvanced !== false || !areaNeedsRoots(c)))
         .map((c) => baseOf(c, c.shape.name)),
     build(base, rng) {
       const record = findCut(base.key);
@@ -518,6 +528,7 @@ export const CUTTING_TEMPLATES = [
           correct: [choices[0].id],
           explanation: text,
           steps: [{ type: 'cutPlane' }, { type: 'cutSection', label: area.format('cm²') }, { type: 'cutSplit', to: 1 }],
+          prerequisites: areaNeedsRoots(record) ? PYTHAGOREAN_AND_ROOT : [],
         });
     },
   },
@@ -548,6 +559,7 @@ export const CUTTING_TEMPLATES = [
           correct: [choices[0].id],
           explanation: `${res.text}（大きいほうの立体は、${s * s * s}−${res.volume}＝${res.big}cm³です。）`,
           steps: [{ type: 'cutPlane' }, { type: 'cutSection' }, { type: 'cutSplit', to: 1, highlightSmall: true, label: V.format('cm³') }],
+          prerequisites: [res.kind === 'tetrahedron' ? PRE.PYRAMID_VOLUME : PRE.PRISM_VOLUME],
         });
     },
   },

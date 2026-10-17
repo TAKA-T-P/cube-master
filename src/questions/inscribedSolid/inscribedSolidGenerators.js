@@ -15,6 +15,7 @@ import { VERTEX_POINTS, MIDPOINTS, FACE_CENTERS, CUBE_CENTER_POINT, labelPoints,
 import { surdChoices } from '../cubeCutting/cubeCuttingGenerators.js';
 import { shuffle, pick } from '../../utils/random.js';
 import * as X from './inscribedSolidExplanations.js';
+import { PREREQUISITES as PRE } from '../../core/learningPrerequisites.js';
 
 export const INSCRIBED_CATEGORY = 'inscribedSolid';
 
@@ -44,8 +45,9 @@ function chooseSide(candidates, ok, rng) {
 
 const scenePoints = (given) => given.map((p) => ({ kind: p.kind, id: p.id, label: p.label, position: [...p.position] }));
 
-function assemble(template, base, { given = [], question, choices, correct, explanation, outlines = [], solids, steps, referenceElements = [], type = 'single', view }) {
+function assemble(template, base, { given = [], question, choices, correct, explanation, outlines = [], solids, steps, referenceElements = [], type = 'single', view, prerequisites = [] }) {
   return {
+    prerequisites: [...prerequisites],
     templateId: template.id,
     key: `${template.id}:${base.key}`,
     category: INSCRIBED_CATEGORY,
@@ -212,6 +214,7 @@ export const INSCRIBED_TEMPLATES = [
         explanation: X.explainName({ count: given.length, name: c.info.name, faces: c.info.faceCount, vertices: c.info.vertexCount, regular: c.info.regular && c.info.name === '三角すい' }),
         solids: [{ role: 'main', points: nums(c.points) }],
         steps: [...BUILD, { type: 'solidLift', to: 1 }],
+        prerequisites: [PRE.SOLID_TYPES],
       });
     },
   },
@@ -236,6 +239,7 @@ export const INSCRIBED_TEMPLATES = [
         solids: [{ role: 'main', points: nums(FACE_CENTERS) }],
         steps: [...BUILD, { type: 'solidLift', to: 1 }],
         view: 'default',
+        prerequisites: [PRE.SOLID_TYPES, PRE.REGULAR_POLYHEDRA],
       });
     },
   },
@@ -274,6 +278,7 @@ export const INSCRIBED_TEMPLATES = [
         solids: [{ role: 'main', points: nums(pts) }],
         steps: [...BUILD, { type: 'solidLift', to: 1, label: `${volume}cm³` }],
         referenceElements: p.kind === 'quad' ? [p.face] : [],
+        prerequisites: [PRE.PYRAMID_VOLUME],
       });
     },
   },
@@ -305,6 +310,7 @@ export const INSCRIBED_TEMPLATES = [
         solids: [{ role: 'main', points: nums(FACE_CENTERS) }, ...apexes.map((a) => ({ role: 'part', points: nums([a, ...ring]) }))],
         steps: [...BUILD, { type: 'solidSplit', label: inverse ? '立方体＝正八面体×6' : '正八面体＝立方体×1/6' }],
         view: 'default',
+        prerequisites: [PRE.REGULAR_POLYHEDRA, PRE.PYRAMID_VOLUME],
       });
     },
   },
@@ -352,6 +358,7 @@ export const INSCRIBED_TEMPLATES = [
         outlines: [nums(c.points)],
         solids,
         steps,
+        prerequisites: c.regular ? [PRE.PYRAMID_VOLUME, PRE.REGULAR_POLYHEDRA] : [PRE.PYRAMID_VOLUME],
       });
     },
   },
@@ -399,6 +406,7 @@ export const INSCRIBED_TEMPLATES = [
         outlines: [r.removed],
         solids: [{ role: 'removed', points: r.removed }, ...r.remaining.map((pts) => ({ role: 'remaining', points: pts }))],
         steps: [{ type: 'solidRemove', label: `残り ${remaining}cm³` }],
+        prerequisites: [PRE.PYRAMID_VOLUME],
         referenceElements: r.kind === 'corner' ? [] : [r.face],
       });
     },

@@ -7,7 +7,7 @@
  *   segments（0〜1）：答えの線分（緑）が順に現れる
  *   triangles（三角形ごとに 0〜1）：三角形の辺と面（うすい緑）・直角の印が現れる
  *   angle（0〜1）：角の弧がのびる
- *   extract（0〜1）：立方体をうすい線だけにして、三角形を立方体から取り出し、カメラの正面に向ける（形・大きさは変えない）
+ *   extract（0〜1）：立方体をうすい線だけにして、三角形を目立たせる（三角形は立方体の中の本来の位置から動かさない）
  * 回答前は、問題で示す点・線分（オレンジ）だけを表示する。
  */
 import * as THREE from 'three';
@@ -18,8 +18,6 @@ import { tubeSegments, createTubeGeometries, polygonsGeometry, cubeEdgeSegments 
 const toV = (p) => new THREE.Vector3(...p);
 const MARK = 0.16; // 直角の印の大きさ
 const ARC = 0.38; // 角の弧の半径
-/** 取り出した三角形を置く、立方体の中心からカメラの向きへの距離 */
-const EXTRACT_DISTANCE = 1.5;
 
 /**
  * @param {{ cubeRoot?, cubeGroups?, labels?, onInfo? }} [options] cubeGroups：立方体を隠すときも、頂点の文字は残す
@@ -90,25 +88,6 @@ export function createCubeMetricModel({ cubeRoot = null, cubeGroups = null, labe
     return { group, center, local };
   }
 
-  /** 取り出した三角形の向き：三角形の面をカメラに向け、いちばん長い辺を画面の横にする */
-  function extractTarget(tri) {
-    const [p0, p1, p2] = tri.local;
-    const sides = [
-      [p0, p1],
-      [p1, p2],
-      [p2, p0],
-    ].sort((x, y) => y[0].distanceTo(y[1]) - x[0].distanceTo(x[1]));
-    const e1 = sides[0][1].clone().sub(sides[0][0]).normalize();
-    let n = p1.clone().sub(p0).cross(p2.clone().sub(p0)).normalize();
-    if (n.dot(view) < 0) n.negate();
-    const z = view.clone();
-    const xs = new THREE.Vector3(0, 1, 0).cross(z).normalize();
-    const from = new THREE.Matrix4().makeBasis(e1, n.clone().cross(e1), n);
-    const to = new THREE.Matrix4().makeBasis(xs, z.clone().cross(xs), z);
-    const rot = to.multiply(from.transpose());
-    return { quaternion: new THREE.Quaternion().setFromRotationMatrix(rot), position: z.clone().multiplyScalar(EXTRACT_DISTANCE) };
-  }
-
   function build() {
     const disposables = [];
     const labelObjs = [];
@@ -156,7 +135,7 @@ export function createCubeMetricModel({ cubeRoot = null, cubeGroups = null, labe
     const wire = new THREE.LineSegments(wireGeometry, materials.wire);
     wire.visible = false;
     root.add(wire);
-    built = { markers, given, answers, triangles, arc, wire, disposables, labels: labelObjs, target: triangles.length ? extractTarget(triangles.at(-1)) : null };
+    built = { markers, given, answers, triangles, arc, wire, disposables, labels: labelObjs };
     apply();
   }
 
@@ -188,18 +167,12 @@ export function createCubeMetricModel({ cubeRoot = null, cubeGroups = null, labe
         b.arc.geometry.setFromPoints(pts);
       }
     }
-    // 取り出す（いちばん後ろの三角形）
+    // 立方体をうすい線だけにして、三角形（いちばん後ろの三角形）を目立たせる。三角形の位置は動かさない
     const e = progress.extract;
     setCubeVisible(e === 0);
     b.wire.visible = e > 0;
-    if (e > 0 && b.target) {
-      const t = b.triangles.at(-1);
-      t.group.visible = true;
-      t.group.position.copy(t.center).lerp(b.target.position, e);
-      t.group.quaternion.identity().slerp(b.target.quaternion, e);
-      // 立方体の中の線分・点は、取り出したあとは目立たないように
-      b.given.visible = e < 1;
-    } else b.given.visible = true;
+    if (e > 0 && b.triangles.length) b.triangles.at(-1).group.visible = true;
+    b.given.visible = true;
     onInfo(infoText ? [{ text: infoText, kind: 'total' }] : []);
   }
 
@@ -207,7 +180,7 @@ export function createCubeMetricModel({ cubeRoot = null, cubeGroups = null, labe
     root,
     /**
      * @param {object|null} next scene.metric
-     * @param {{ view?: 'default'|number[] }} [options] 取り出した三角形を向けるカメラの向き（scene.cameraPreset）
+     * @param {{ view?: 'default'|number[] }} [options] カメラの向き（scene.cameraPreset。今は使っていない）
      */
     set(next, { view: dir = 'default' } = {}) {
       clear();
@@ -264,19 +237,12 @@ export function createCubeMetricModel({ cubeRoot = null, cubeGroups = null, labe
         cubeVisible: isCubeVisible(),
       };
     },
-    /** 三角形の頂点の、いまの位置（世界座標。テスト用：取り出しても形・大きさは変わらない） */
+    /** 三角形の頂点の、いまの位置（世界座標。テスト用：演出のあとも本来の位置のまま） */
     getTrianglePoints(index) {
       const t = built?.triangles[index];
       if (!t) return [];
       t.group.updateMatrixWorld(true);
       return t.local.map((p) => p.clone().applyMatrix4(t.group.matrixWorld).toArray());
-    },
-    /** 取り出したときの三角形の面の向き（カメラの向きとの内積。テスト用） */
-    getExtractFacing() {
-      const t = built?.triangles.at(-1);
-      if (!t) return null;
-      const [a, b, c] = this.getTrianglePoints(built.triangles.length - 1).map(toV);
-      return Math.abs(b.clone().sub(a).cross(c.clone().sub(a)).normalize().dot(view));
     },
     dispose() {
       clear();

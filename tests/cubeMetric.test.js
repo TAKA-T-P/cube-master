@@ -164,7 +164,7 @@ describe('長さ・角度の 3D モデルと演出', () => {
     return { model, state, highlights, metric, manager, controls };
   }
 
-  it('三角形を取り出すと、形・大きさは変わらず、カメラの正面を向く。リプレイで立方体の中に戻る', async () => {
+  it('演出の最後も、三角形は立方体の中の本来の位置から動かない（立方体はうすい線だけになる）。リプレイではじめから', async () => {
     for (const q of [...questions(byId.G06, [2], 2), ...questions(byId.G04, [5], 2)]) {
       const { state, highlights, metric, manager, controls } = setup(q);
       const before = metric.getTrianglePoints(0).map((p) => new THREE.Vector3(...p));
@@ -172,9 +172,8 @@ describe('長さ・角度の 3D モデルと演出', () => {
       for (let t = 0; manager.isActive() && t < 60000; t += 50) manager.tick(t);
       await done;
       const after = metric.getTrianglePoints(0).map((p) => new THREE.Vector3(...p));
-      const sides = (pts) => [0, 1, 2].map((i) => pts[i].distanceTo(pts[(i + 1) % 3]));
-      sides(after).forEach((d, i) => expect(d).toBeCloseTo(sides(before)[i], 9));
-      expect(metric.getExtractFacing()).toBeCloseTo(1, 6);
+      after.forEach((p, i) => expect(p.distanceTo(before[i])).toBeLessThan(1e-9));
+      after.forEach((p, i) => expect(p.distanceTo(new THREE.Vector3(...q.scene.metric.triangles[0].points[i]))).toBeLessThan(1e-9));
       expect(metric.getState()).toMatchObject({ extract: 1, cubeVisible: false });
       expect(metric.getState().info).not.toBe('');
       const again = manager.play(createQuestionReveal({ state, controls, highlights, metric }, { steps: q.explanation.reveal.steps }));

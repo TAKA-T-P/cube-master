@@ -6,6 +6,59 @@
 import { h } from '../utils/dom.js';
 import { soundToggleButton } from './soundControls.js';
 import { createHomeCube } from './homeCube.js';
+import { isPythagoreanAllowed, setPythagoreanAllowed } from './soundSettings.js';
+import { infoDialog, helpButton } from './components.js';
+
+const SETTING_TEXT = Object.freeze({
+  off: '三平方の定理や√を使わない問題を出題します。立体の名前や体積など、知らない内容はヘルプで確認できます。',
+  on: '三平方の定理や√を使う問題も出題します。',
+});
+export const SETTING_NOTE = '※この設定は通常トレーニングにのみ反映されます。1分チャレンジ・段位認定では、どちらの設定でも出題されません。';
+
+/** 「三平方の定理・√を使う問題」の設定（出題しない＝初期値・おすすめ／出題する）。タイトル画面で変え、次に始めるトレーニングから使う */
+function questionSetting() {
+  const options = [
+    { value: false, label: '出題しない（おすすめ）' },
+    { value: true, label: '出題する' },
+  ];
+  const desc = h('p', { class: 'home-setting__desc', 'data-testid': 'pythagorean-desc' });
+  const buttons = options.map((o) =>
+    h('button', { class: 'home-setting__option', type: 'button', role: 'radio', dataset: { value: String(o.value) }, onClick: () => select(o.value) }, o.label),
+  );
+  function render() {
+    const v = isPythagoreanAllowed();
+    buttons.forEach((b, i) => b.setAttribute('aria-checked', String(options[i].value === v)));
+    desc.textContent = v ? SETTING_TEXT.on : SETTING_TEXT.off;
+  }
+  function select(v) {
+    setPythagoreanAllowed(v);
+    render();
+  }
+  render();
+  return h(
+    'section',
+    { class: 'home-setting', 'aria-label': '三平方の定理・√を使う問題', 'data-testid': 'pythagorean-setting' },
+    h(
+      'div',
+      { class: 'home-setting__head' },
+      h('span', { class: 'home-setting__title' }, '三平方の定理・√を使う問題'),
+      helpButton('この設定について', () =>
+        infoDialog({
+          title: '三平方の定理・√を使う問題',
+          items: [
+            '「出題しない」（はじめの設定）にすると、三平方の定理や√を知らなくても解ける問題だけを出題します。',
+            '「出題しない」にしても、小学校で習う内容だけになるわけではありません。立体の名前・角柱や角すいの体積・ねじれの位置などは出題します。わからないときは、問題画面の「？」やあそびかたの「学習ヘルプ」で確かめられます。',
+            '設定は、次に始める通常トレーニングから使われます。',
+            '1分チャレンジ・段位認定では、設定にかかわらず、三平方の定理・√を使う問題は出題しません。',
+          ],
+        }),
+      ),
+    ),
+    h('div', { class: 'home-setting__options', role: 'radiogroup', 'aria-label': '三平方の定理・√を使う問題' }, buttons),
+    desc,
+    h('p', { class: 'home-setting__note' }, SETTING_NOTE),
+  );
+}
 
 export const MENU_ITEMS = [
   { id: 'training', label: 'トレーニング', route: 'categories', enabled: true, primary: true },
@@ -49,6 +102,7 @@ export function mountHomeScreen(container, { navigate, version }) {
         h('p', { class: 'home-subtitle' }, '立方体を極める！空間認識トレーニング'),
       ),
       menu,
+      questionSetting(),
       h('footer', { class: 'home-footer' }, h('span', {}, `Ver.${version}`)),
       h('p', { class: 'home-copyright', 'data-testid': 'copyright' }, '©2026 T.TAKEMOTO / KEC Glows'),
     ),
