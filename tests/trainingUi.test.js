@@ -82,7 +82,7 @@ describe('カテゴリ選択・設定画面', () => {
     container = document.createElement('main');
   });
 
-  it('10カテゴリを表示し、遊べる6カテゴリだけを選べる', () => {
+  it('10カテゴリを表示し、遊べる8カテゴリだけを選べる', () => {
     const navigate = vi.fn();
     mountCategoryScreen(container, { navigate });
     const cards = container.querySelectorAll('.category-card');
@@ -91,11 +91,11 @@ describe('カテゴリ選択・設定画面', () => {
     // ボタンは名前だけ（説明・対象学年は書かない）
     expect(position.textContent).toBe('位置関係');
     expect(position.textContent).not.toContain('小学6年生～中学1年生');
-    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['netMapping', 'position', 'netPuzzle', 'dice', 'paintedCube', 'projection']);
+    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['netMapping', 'cubeCutting', 'position', 'netPuzzle', 'dice', 'paintedCube', 'surfacePath', 'projection']);
     // はじめは下の説明と「次へ」を出さない
     const detail = container.querySelector('.category-detail');
     expect(detail.hidden).toBe(true);
-    container.querySelector('[data-category="cutting"]').click(); // 準備中
+    container.querySelector('[data-category="inscribedSolid"]').click(); // 準備中
     expect(detail.hidden).toBe(true);
     // 押すと下に説明・対象学年と「次へ」が出る（まだ移動しない）
     position.click();
@@ -1072,7 +1072,7 @@ describe('学習記録', () => {
     expect(dice.querySelector('[data-testid="pending"]').textContent).toBe('復習待ち 1問');
     expect(dice.textContent).toContain('ヒント1回');
     expect(card('position').textContent).toContain('まだ記録がありません');
-    expect(container.querySelectorAll('.history-card')).toHaveLength(6);
+    expect(container.querySelectorAll('.history-card')).toHaveLength(8);
   });
 
   it('ブラウザを開き直しても記録が残り、保存した問題を同じ問題のまま復習できる。正解すると復習待ちから外れる', () => {

@@ -36,6 +36,9 @@ const RESULT_TITLES = {
 /** 文字と並べて小さく表示する図（色見本・サイコロの目）。それ以外の図の選択肢は大きなボタンにする */
 const INLINE_VISUALS = ['swatch', 'pip'];
 
+/** ふつうの立方体として表示するモデル（色や数字の面がない。半透明・頂点の文字つき） */
+const PLAIN_CUBE_MODELS = ['cube', 'cutting', 'surfacePath'];
+
 /** 選択肢の文字数がこれより長ければ1列で表示する */
 const LONG_LABEL = 9;
 
@@ -210,7 +213,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     figures.hidden = !q.visuals?.length;
 
     // 3D：前の問題の演出・強調・選択を消し、この問題の立方体（装飾・向き）や積み木にする
-    const decorated = q.scene.model !== 'cube';
+    // 切断・最短経路は、ふつうの立方体（半透明・頂点の文字つき）に点や道を重ねる
+    const decorated = !PLAIN_CUBE_MODELS.includes(q.scene.model);
     const isBlocks = q.scene.model === 'blocks';
     previewEl.replaceChildren(...(q.scene.preview ? [renderVisual(q.scene.preview)] : []));
     legend.hidden = decorated; // 基準・正解・まちがいの色分けは位置関係の問題だけ
@@ -222,6 +226,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
       viewer.setBlocks(isBlocks ? q.scene.blocks : null, { arrows: q.scene.arrows ?? [], ...(q.scene.counting ? { countingRoom: true } : {}) });
       viewer.setNet?.(q.scene.model === 'net' ? q.scene.net : null);
       viewer.setSubcubes?.(q.scene.model === 'subcubes' ? q.scene.subcubes : null);
+      viewer.setCutting?.(q.scene.model === 'cutting' ? q.scene.cutting : null);
+      viewer.setSurfacePath?.(q.scene.model === 'surfacePath' ? q.scene.surfacePath : null);
       viewer.setCubeOrientation(q.scene.orientation ?? INITIAL_ORIENTATION);
       viewer.setLabelsVisible(q.scene.showLabels ?? true);
       // 色や数字の立方体は、隠れた面が透けて見えないように不透明にする

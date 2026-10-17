@@ -26,6 +26,8 @@ import { createFaceDecorations } from './faceDecoration.js';
 import { createBlockModel } from './blockModel.js';
 import { createNetModel } from './cubeNetModel.js';
 import { createSubdividedCubeModel } from './subdividedCubeModel.js';
+import { createCuttingModel } from './cubeCuttingModel.js';
+import { createSurfacePathModel } from './surfacePathModel.js';
 import { tween } from './animationManager.js';
 import { createOrientationState, createTurnSequence, createQuestionReveal, DEFAULT_TURN_DURATION, DEFAULT_TURN_PAUSE } from './cubeRotationAnimations.js';
 
@@ -80,6 +82,11 @@ export function createCubeViewer(container) {
   // 小立方体に分けた立方体（小立方体の個数・着色の問題のときだけ表示する）
   const subcubes = createSubdividedCubeModel();
   sceneManager.scene.add(subcubes.root);
+  // 切断・最短経路（ふつうの立方体に重ねて表示する。演出の間は立方体を隠すことがある）
+  const cutting = createCuttingModel({ cubeRoot: model.root });
+  sceneManager.scene.add(cutting.root);
+  const surface = createSurfacePathModel({ cubeRoot: model.root });
+  sceneManager.scene.add(surface.root);
   const updateCubeVisibility = () => {
     model.root.visible = !blocks.root.visible && !net.root.visible && !subcubes.root.visible;
   };
@@ -258,6 +265,28 @@ export function createCubeViewer(container) {
       );
     },
 
+    // ----- 切断・最短経路（Phase 7） -----
+    /**
+     * 切断の問題の3点を表示する（null で消す）
+     * @param {{ points: object[] }|null} spec scene.cutting
+     */
+    setCutting(spec) {
+      cutting.set(spec ?? null);
+      if (!spec) updateCubeVisibility();
+      render();
+    },
+    getCuttingState: () => cutting.getState(),
+    /**
+     * 表面の道の問題を表示する（null で消す）
+     * @param {object|null} spec scene.surfacePath
+     */
+    setSurfacePath(spec) {
+      surface.set(spec ?? null);
+      if (!spec) updateCubeVisibility();
+      render();
+    },
+    getSurfacePathState: () => surface.getState(),
+
     highlightBlocks(cubes) {
       blocks.highlight(cubes);
       render();
@@ -287,7 +316,7 @@ export function createCubeViewer(container) {
      * @param {{ orientation?, cameraPreset?, steps?, wrong?, correct? }} spec cubeRotationAnimations.createQuestionReveal 参照
      */
     playQuestionReveal: (spec) =>
-      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, blocks, net, subcubes, onUpdate: render }, spec)),
+      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, blocks, net, subcubes, cutting, surface, onUpdate: render }, spec)),
 
     /**
      * 回答後の正解演出（誤選択を赤 → 正解を1つずつ緑）。完了時に { status } で解決
@@ -309,6 +338,8 @@ export function createCubeViewer(container) {
       blocks.dispose();
       net.dispose();
       subcubes.dispose();
+      cutting.dispose();
+      surface.dispose();
       model.dispose();
       sceneManager.dispose();
       events.clear();

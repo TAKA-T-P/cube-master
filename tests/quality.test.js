@@ -1,4 +1,4 @@
-// 全51テンプレートの総点検（乱数のシードを変えて多数の問題を作り、表示・データの品質を確かめる）
+// 全63テンプレートの総点検（乱数のシードを変えて多数の問題を作り、表示・データの品質を確かめる）
 // 失敗したときは、メッセージのシードで同じ問題を作り直せる（createRng(seed) → template.build(base, rng)）
 import { describe, it, expect } from 'vitest';
 import { CATEGORIES } from '../src/questions/questionRegistry.js';
@@ -14,10 +14,10 @@ const BAD_TEXT = /undefined|NaN|null|\[object Object\]/;
 const templates = CATEGORIES.filter((c) => c.enabled).flatMap((c) => c.templates.map((t) => ({ category: c.id, t })));
 
 describe('全テンプレートの総点検', () => {
-  it('テンプレートは6カテゴリ・51種類', () => {
-    expect(new Set(templates.map((x) => x.category)).size).toBe(6);
-    expect(templates).toHaveLength(51);
-    expect(new Set(templates.map((x) => x.t.id)).size).toBe(51);
+  it('テンプレートは8カテゴリ・63種類（Phase 7 で切断 K01〜K06・最短経路 S01〜S06 を追加）', () => {
+    expect(new Set(templates.map((x) => x.category)).size).toBe(8);
+    expect(templates).toHaveLength(63);
+    expect(new Set(templates.map((x) => x.t.id)).size).toBe(63);
   });
 
   describe.each(templates.map((x) => [x.t.id, x]))('%s', (id, { t }) => {

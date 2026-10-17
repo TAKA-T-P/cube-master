@@ -47,6 +47,12 @@
  *   積み木の個数：scene.counting（段ごとに持ち上げる演出の余白）、図の種類 'blocksPair'（今の形と完成形）、
  *     演出 { type: 'countLayers', hidden } { type: 'countLayer', level, cubes } { type: 'addBlocks', cubes }
  *
+ * Phase 7 で追加した項目（省略可）
+ *   scene.model: 'cutting' と scene.cutting { points: [{ kind, id, label, position }] }（切る平面を決める3点。core/cubeCutting）
+ *     演出 { type: 'cutPlane' } { type: 'cutSection', label? } { type: 'cutSplit', to, highlightSmall?, label? }、図の種類 'section'（切り口の形）
+ *   scene.model: 'surfacePath' と scene.surfacePath { points, candidates, solution }（表面の道。core/cubeSurfacePath）
+ *     演出 { type: 'pathHighlight' } { type: 'pathTravel' } { type: 'pathUnfold', to }、図の種類 'pathNet'（一部の面の展開図と道）
+ *
  * QUESTION_SCHEMA_VERSION：ブラウザに保存した復習用の問題が、今の形と合うかを確かめるための番号。
  * 問題データの形を互換性のない形に変えたときは、この番号を上げる（古い保存データは読み込まずに除外する）。
  */
@@ -58,11 +64,38 @@ import { getBlockErrors } from './blockGeometry.js';
 import { foldNet } from './cubeNetFolding.js';
 import { PROJECTION_DIRECTIONS } from './blockProjection.js';
 import { isValidDivisions, getSubcubeListErrors, CUBE_SIDES } from './subdividedCube.js';
+import { planeFromThreePoints, intersectPlaneWithCube } from './cubeCutting.js';
+import { isOnCubeSurface, sharedEdge } from './cubeSurfaceUnfolding.js';
+import { isSurfacePolyline } from './cubeSurfacePath.js';
 
 export const QUESTION_SCHEMA_VERSION = 1;
 
-export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube', 'blocks', 'net', 'subcubes']);
-export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'pip', 'moves', 'faceList', 'blocks', 'projection', 'projectionPair', 'net', 'subcubes', 'blocksPair']);
+export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube', 'blocks', 'net', 'subcubes', 'cutting', 'surfacePath']);
+export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'pip', 'moves', 'faceList', 'blocks', 'projection', 'projectionPair', 'net', 'subcubes', 'blocksPair', 'section', 'pathNet']);
+
+/** 立方体の表面の点の一覧として正しいか */
+const surfacePointsValid = (points, count) => Array.isArray(points) && (count === undefined || points.length === count) && points.every((p) => isOnCubeSurface(p?.position));
+
+/** 切断の 3D：3点が表面の上にあり、立方体を2つに分ける平面が決まる */
+function getCuttingErrors(cutting) {
+  if (!cutting || !surfacePointsValid(cutting.points, 3)) return ['scene.cutting.points は表面の上の3点'];
+  const plane = planeFromThreePoints(...cutting.points.map((p) => p.position));
+  if (!plane || !intersectPlaneWithCube(plane).valid) return ['scene.cutting の3点で、立方体を切る平面が決まりません'];
+  return [];
+}
+
+/** 最短経路の 3D：点・道が表面の上にあり、広げる面がとなり合って並んでいる */
+function getSurfacePathErrors(sp) {
+  const errors = [];
+  if (!sp || !surfacePointsValid(sp.points)) return ['scene.surfacePath.points は表面の上の点'];
+  const lines = [...(sp.candidates ?? []).map((c) => c?.polyline), ...(sp.solution?.polylines ?? [])];
+  for (const line of lines) {
+    if (!Array.isArray(line) || !line.every((p) => isOnCubeSurface(p)) || !isSurfacePolyline(line)) errors.push('scene.surfacePath の道が表面の上にありません');
+  }
+  const faces = sp.solution?.unfold?.faces;
+  if (faces !== undefined && (!Array.isArray(faces) || faces.length === 0 || faces.some((f, i) => i > 0 && !sharedEdge(faces[i - 1], f)))) errors.push('scene.surfacePath の広げる面が不正です');
+  return errors;
+}
 const INTERACTION_KEYS = ['allowCameraRotationBeforeAnswer', 'allowZoomBeforeAnswer', 'allowCameraRotationAfterAnswer'];
 
 export class QuestionValidationError extends Error {
@@ -130,6 +163,10 @@ export function getQuestionErrors(q) {
       for (const e of getSubcubeListErrors(sc.removed ?? [], sc.divisions)) errors.push(`scene.subcubes.removed: ${e}`);
     }
     if (scene.preview !== undefined && !VISUAL_TYPES.includes(scene.preview?.type)) errors.push('scene.preview が不正です');
+  } else if (scene?.model === 'cutting') {
+    errors.push(...getCuttingErrors(scene.cutting));
+  } else if (scene?.model === 'surfacePath') {
+    errors.push(...getSurfacePathErrors(scene.surfacePath));
   } else if (scene && scene.model !== 'cube') {
     const faces = scene.faces ?? {};
     for (const f of FACES) {
@@ -182,6 +219,12 @@ export function getQuestionErrors(q) {
         const list = step.type === 'countLayers' ? step.hidden ?? [] : step.cubes;
         if (scene?.model !== 'blocks' || !Array.isArray(list) || !list.every((c) => keys.has(`${c?.x},${c?.y},${c?.z}`))) errors.push(`reveal の ${step.type} が不正です`);
         if (step.type === 'countLayer' && !(Number.isInteger(step.level) && step.level >= 1)) errors.push('reveal の段の指定が不正です');
+      } else if (step.type === 'cutPlane' || step.type === 'cutSection' || step.type === 'cutSplit') {
+        if (scene?.model !== 'cutting') errors.push(`reveal の ${step.type} は切断の問題だけ`);
+        if (step.type === 'cutSplit' && !(step.to >= 0 && step.to <= 1)) errors.push('reveal の切り分けが不正です');
+      } else if (step.type === 'pathHighlight' || step.type === 'pathTravel' || step.type === 'pathUnfold') {
+        if (scene?.model !== 'surfacePath') errors.push(`reveal の ${step.type} は最短経路の問題だけ`);
+        if (step.type === 'pathUnfold' && !(step.to >= 0 && step.to <= 1)) errors.push('reveal の展開が不正です');
       } else if (step.type !== 'pause' && step.type !== 'divide') errors.push(`reveal の種類が不正です: ${step.type}`);
     }
   }

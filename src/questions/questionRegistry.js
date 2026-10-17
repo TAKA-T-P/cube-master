@@ -11,6 +11,8 @@ import { NET_MAPPING_TEMPLATES } from './netMapping/netMappingGenerators.js';
 import { NET_PUZZLE_TEMPLATES } from './netPuzzle/netPuzzleGenerators.js';
 import { PAINTED_CUBE_TEMPLATES } from './paintedCube/paintedCubeGenerators.js';
 import { BLOCK_COUNT_TEMPLATES } from './paintedCube/blockCountGenerators.js';
+import { CUTTING_TEMPLATES } from './cubeCutting/cubeCuttingGenerators.js';
+import { SURFACE_PATH_TEMPLATES } from './surfacePath/surfacePathGenerators.js';
 import { withHints } from './hints.js';
 
 export const DIFFICULTIES = Object.freeze([
@@ -44,8 +46,16 @@ export const CATEGORIES = Object.freeze([
     templates: withHints(NET_MAPPING_TEMPLATES),
     levelNotes: ['基本：重なる点・向かい合う面', '標準：重なる辺・となり合う面', '応用：完成した立方体・点と辺の組み合わせ'],
   },
-  // ②
-  { id: 'cutting', name: '切断', description: '立方体を平面で切ったときの切り口を考えよう。', grades: '中学1年生～中学3年生', enabled: false },
+  // ② 立方体の切断（Phase 7）
+  {
+    id: 'cubeCutting',
+    name: '立方体の切断',
+    description: '立方体をスパッと切ると、どんな形になる？切り口を予想しよう！',
+    grades: '中学1年生～中学3年生',
+    enabled: true,
+    templates: CUTTING_TEMPLATES,
+    levelNotes: ['基本：切り口は何角形・切り口が通る辺', '標準：切り口の形の図・中点を通る切り口の形', '応用：切り口の面積・切り分けた立体の体積'],
+  },
   // ③
   {
     id: 'position',
@@ -66,8 +76,8 @@ export const CATEGORIES = Object.freeze([
     templates: withHints(NET_PUZZLE_TEMPLATES),
     levelNotes: ['基本：立方体になる展開図・あと1マス', '標準：いらない1マス・1マスを動かす', '応用：同じ種類・ちがう種類の展開図'],
   },
-  // ⑤
-  { id: 'volume', name: '体積・表面積', description: '立体の大きさを計算しよう。', grades: '小学5年生～中学1年生', enabled: false },
+  // ⑤ 立方体に内接する立体と体積（Phase 8 で追加予定）
+  { id: 'inscribedSolid', name: '立方体に内接する立体と体積', description: '立方体の中には、どんな立体が隠れている？体積のひみつを見つけよう！', grades: '中学1年生～中学3年生', enabled: false },
   // ⑥
   {
     id: 'dice',
@@ -93,9 +103,18 @@ export const CATEGORIES = Object.freeze([
       '応用：条件の組み合わせ・取り除く・分けた数の逆算・完成形まであと何個',
     ],
   },
-  // ⑧〜⑨
-  { id: 'stacking', name: '積み木', description: '積み重ねた立方体の数を数えよう。', grades: '小学4年生～小学6年生', enabled: false },
-  { id: 'path', name: '最短経路', description: '立方体の表面を通る一番短い道を探そう。', grades: '中学1年生～中学3年生', enabled: false },
+  // ⑧ 立方体の表面の最短経路（Phase 7）
+  {
+    id: 'surfacePath',
+    name: '立方体の表面の最短経路',
+    description: '立方体の表面を進むとき、いちばん短い道はどれ？展開図で考えよう！',
+    grades: '中学1年生～中学3年生',
+    enabled: true,
+    templates: SURFACE_PATH_TEMPLATES,
+    levelNotes: ['基本：最短経路はどの道・2つの道の長さくらべ', '標準：2面を通る最短距離・展開図の上の最短経路', '応用：3面以上を通る最短距離・最短経路をすべて選ぶ'],
+  },
+  // ⑨ 立方体に隠れた図形・長さ・角度（Phase 8 で追加予定）
+  { id: 'cubeGeometryChallenge', name: '立方体に隠れた図形・長さ・角度', description: '立方体の中の三角形や対角線を見つけよう！長さや角度のなぞに挑戦！', grades: '中学1年生～中学3年生', enabled: false },
   // ⑩
   {
     id: 'projection',

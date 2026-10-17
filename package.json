@@ -1,7 +1,7 @@
 {
   "name": "cube-master",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "CUBE MASTER（仮）- 立方体をテーマにした空間図形の学習Webアプリ",
   "type": "module",
   "engines": {

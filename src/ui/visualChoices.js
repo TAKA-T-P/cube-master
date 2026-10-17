@@ -15,6 +15,8 @@ import { renderBlockVisual } from './blockVisuals.js';
 import { markShape } from './markShape.js';
 import { renderNetVisual } from './netVisuals.js';
 import { renderSubcubesVisual } from './paintedCubeVisuals.js';
+import { renderSectionVisual } from './cuttingVisuals.js';
+import { renderPathNetVisual } from './surfacePathVisuals.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -183,6 +185,11 @@ export function renderVisual(visual) {
   // 小立方体に分けた立方体
   const subcubes = renderSubcubesVisual(visual);
   if (subcubes) return subcubes;
+  // 切り口の形・一部の面の展開図と道
+  const section = renderSectionVisual(visual);
+  if (section) return section;
+  const pathNet = renderPathNetVisual(visual);
+  if (pathNet) return pathNet;
   switch (visual.type) {
     case 'cube':
       return h(

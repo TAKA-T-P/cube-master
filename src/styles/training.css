@@ -94,13 +94,15 @@
   transform: translateY(1px);
 }
 
+/* 選んだカテゴリ：文字は濃い青（読みやすいように、背景は明るい青・枠を濃く太く） */
 .category-card[aria-pressed='true'] {
-  background: var(--color-primary);
-  box-shadow: var(--shadow-md);
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary-strong);
+  box-shadow: 0 0 0 2px var(--color-primary-strong), var(--shadow-md);
 }
 
 .category-card[aria-pressed='true'] .category-card__name {
-  color: #fff;
+  color: var(--color-primary-strong);
 }
 
 .category-card--disabled {
@@ -1220,4 +1222,60 @@ ul.setup-note {
 .badge--mode {
   background: var(--color-primary);
   color: #fff;
+}
+
+/* ----- 切断・最短経路（Phase 7） ----- */
+/* 切る点・出発点と到着点の文字（P・Q・R） */
+.cut-point-label {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 88%);
+  color: #c2410c;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.4;
+  box-shadow: 0 0 0 1px rgb(240 106 0 / 35%);
+  pointer-events: none;
+}
+
+/* 候補の道の名前（ア・イ…）。道と同じ色の枠 */
+.path-label {
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--path-color, #1f4e9c);
+  border: 2px solid var(--path-color, #1f4e9c);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+/* 面積・体積・道のりの表示 */
+.cut-value-label {
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: rgb(23 163 74 / 92%);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 900;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.vertex-label--small {
+  font-size: 13px;
+  padding: 0 4px;
+}
+
+.choice--figure .figure--section {
+  width: min(100%, 92px);
+}
+
+.choice--figure .figure--path-net {
+  width: min(100%, 132px);
+}
+
+.choice--figure .figure--path-net .figure-svg {
+  max-height: 96px;
 }

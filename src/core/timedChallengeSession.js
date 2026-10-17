@@ -15,6 +15,11 @@ import { TIMED_REVEAL } from './revealSettings.js';
 export const CHALLENGE_RULES = Object.freeze({
   durationMs: 60000,
   mistakePenaltyMs: 10000,
+  /**
+   * 1分チャレンジでは出題しないテンプレート（解くのに時間がかかりすぎるもの）。プレイテストで時間を確かめてから、ここに入れる。
+   * どのカテゴリ・難易度にも、出題できるテンプレートが1つ以上残るようにする
+   */
+  excludedTemplates: Object.freeze([]),
   // カウントダウン・演出の速さは段位認定と同じ（core/revealSettings）
   ...TIMED_REVEAL,
 });
@@ -27,7 +32,8 @@ export class TimedChallengeSession {
     this.category = category;
     this.difficulty = difficulty;
     this.rules = rules;
-    this.picker = new QuestionPicker({ templates, difficulty, rng });
+    const usable = templates.filter((t) => !(rules.excludedTemplates ?? []).includes(t.id));
+    this.picker = new QuestionPicker({ templates: usable, difficulty, rng });
     this.timer = createCertificationTimer({ durationMs: rules.durationMs, now });
     this._seq = 0;
     this._questionStartActiveMs = 0;

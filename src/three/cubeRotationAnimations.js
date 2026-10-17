@@ -13,6 +13,8 @@ import { tween, wait, sequence } from './animationManager.js';
 import { easeInOutCubic } from '../utils/easing.js';
 import { createPop } from './cubeAnimations.js';
 import { createLayerCounting, createLayerFocus, createBlockAdding } from './blockCountingAnimations.js';
+import { createCutPlane, createCutSection, createCutSplit } from './cubeCuttingAnimations.js';
+import { createPathHighlight, createPathTravel, createPathUnfold } from './surfacePathAnimations.js';
 
 /** 回転 1 回の標準の時間（ms） */
 export const DEFAULT_TURN_DURATION = 800;
@@ -154,8 +156,10 @@ export function createCameraMove(controls, direction, { duration = 900, onUpdate
  *        | { type: 'countLayers', hidden? }              積み木を段ごとに分けて、各段の個数と合計を表示（hidden：見えない積み木）
  *        | { type: 'countLayer', level }                 指定した段だけを取り出して1個ずつ数える
  *        | { type: 'addBlocks', cubes }                  加える積み木を1つずつ置いて完成形にする
+ *        | { type: 'cutPlane' } / { type: 'cutSection', label? } / { type: 'cutSplit', to, highlightSmall?, label? }  切断（three/cubeCuttingAnimations）
+ *        | { type: 'pathHighlight' } / { type: 'pathTravel' } / { type: 'pathUnfold', to }  最短経路（three/surfacePathAnimations）
  */
-export function createQuestionReveal({ state, controls, highlights, blocks = null, net = null, subcubes = null, onUpdate = () => {} }, spec) {
+export function createQuestionReveal({ state, controls, highlights, blocks = null, net = null, subcubes = null, cutting = null, surface = null, onUpdate = () => {} }, spec) {
   const { orientation = INITIAL_ORIENTATION, cameraPreset = 'default', steps = [], wrong = [], correct = [] } = spec;
   const parts = [];
   if (wrong.length > 0) parts.push(createPop(highlights, wrong, { layer: 'wrong', duration: 400, onUpdate }), wait(250));
@@ -221,6 +225,18 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
       parts.push(createLayerFocus(blocks, { level: step.level, onUpdate }), wait(300));
     } else if (step.type === 'addBlocks' && blocks) {
       parts.push(createBlockAdding(blocks, { cubes: step.cubes, onUpdate }), wait(300));
+    } else if (step.type === 'cutPlane' && cutting) {
+      parts.push(createCutPlane(cutting, { onUpdate }));
+    } else if (step.type === 'cutSection' && cutting) {
+      parts.push(createCutSection(cutting, { label: step.label ?? '', onUpdate }));
+    } else if (step.type === 'cutSplit' && cutting) {
+      parts.push(createCutSplit(cutting, { to: step.to ?? 1, highlightSmall: Boolean(step.highlightSmall), label: step.label ?? '', onUpdate }));
+    } else if (step.type === 'pathHighlight' && surface) {
+      parts.push(createPathHighlight(surface, { onUpdate }));
+    } else if (step.type === 'pathTravel' && surface) {
+      parts.push(createPathTravel(surface, { onUpdate }));
+    } else if (step.type === 'pathUnfold' && surface) {
+      parts.push(createPathUnfold(surface, { to: step.to ?? 1, controls, onUpdate }));
     } else if (step.type === 'highlightBlocks' && blocks) {
       parts.push(
         tween({
@@ -249,6 +265,8 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
     subcubes?.clearHighlights();
     subcubes?.setDivision(0);
     subcubes?.setSeparation(0);
+    cutting?.reset(); // 切断：切る3点だけの状態から
+    surface?.reset(); // 最短経路：候補の道だけの状態から
     state.set(orientation);
     controls.setHomeDirection(cameraPreset);
     controls.resetCamera({ animate: false });
@@ -270,3 +288,4 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
     end: () => onUpdate(),
   };
 }
+

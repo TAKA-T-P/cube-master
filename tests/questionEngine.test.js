@@ -148,10 +148,13 @@ describe('TrainingSession', () => {
 });
 
 describe('questionRegistry', () => {
-  it('10カテゴリがあり、遊べるのは展開図と頂点・辺・位置関係・展開図パズル・サイコロ・回転・立方体の個数・着色・積み木の見え方・投影図', () => {
+  it('10カテゴリがあり、遊べるのは8カテゴリ（Phase 7 で②切断・⑧最短経路を追加。⑤⑨は準備中）', () => {
     expect(CATEGORIES).toHaveLength(10);
-    expect(CATEGORIES.filter((c) => c.enabled).map((c) => c.id)).toEqual(['netMapping', 'position', 'netPuzzle', 'dice', 'paintedCube', 'projection']);
-    expect(CATEGORIES.map((c) => c.id)[6]).toBe('paintedCube'); // ⑦
+    expect(CATEGORIES.filter((c) => c.enabled).map((c) => c.id)).toEqual(['netMapping', 'cubeCutting', 'position', 'netPuzzle', 'dice', 'paintedCube', 'surfacePath', 'projection']);
+    expect(CATEGORIES.map((c) => c.id)).toEqual(['netMapping', 'cubeCutting', 'position', 'netPuzzle', 'inscribedSolid', 'dice', 'paintedCube', 'surfacePath', 'cubeGeometryChallenge', 'projection']);
+    expect(CATEGORIES.filter((c) => !c.enabled).map((c) => c.id)).toEqual(['inscribedSolid', 'cubeGeometryChallenge']);
+    expect(getCategory('cubeCutting')).toMatchObject({ name: '立方体の切断', description: '立方体をスパッと切ると、どんな形になる？切り口を予想しよう！' });
+    expect(getCategory('surfacePath')).toMatchObject({ name: '立方体の表面の最短経路', description: '立方体の表面を進むとき、いちばん短い道はどれ？展開図で考えよう！' });
     expect(getCategory('paintedCube')).toMatchObject({ name: '立方体の個数・着色', grades: '小学5年生～中学2年生' });
     expect(getCategory('netMapping')).toMatchObject({ name: '展開図と頂点・辺', grades: '小学5年生～中学1年生' });
     expect(getCategory('netPuzzle')).toMatchObject({ name: '展開図パズル', grades: '小学4年生～中学1年生' });
