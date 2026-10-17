@@ -23,6 +23,7 @@ import { mountChallengeResultScreen } from './ui/challengeResultScreen.js';
 import { mountCertificationQuestionScreen } from './ui/certificationQuestionScreen.js';
 import { mountCertificationResultScreen } from './ui/certificationResultScreen.js';
 import { mountCertificationRecordsScreen } from './ui/certificationRecordsScreen.js';
+import { installButtonSound } from './ui/answerSound.js';
 import { h, showToast } from './utils/dom.js';
 
 const ROUTES = {
@@ -101,6 +102,9 @@ window.addEventListener('unhandledrejection', (event) => {
   console.error(event.reason);
   showToast('エラーが発生しました。うまく動かない場合は再読み込みしてください。', { type: 'error' });
 });
+
+// ボタンを押したときの効果音（ポッ）
+installButtonSound(document);
 
 window.addEventListener('hashchange', render);
 render();

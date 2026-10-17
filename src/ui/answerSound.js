@@ -5,6 +5,7 @@
  * - おしい：ポンポン（同じ高さの音が2つ）
  * - 不正解：ブッブー（低いブザー）
  * - 結果画面へ（決めた問題数を解き終えたとき）：ファンファーレ（ド・ミ・ソ・ド）
+ * - ボタンを押したとき：ポッ（低く短い音。高さを少し下げて丸い音にする）
  * - 段位認定：カウントダウン（3・2・1 はピッ、START! はピーン）・時間切れ（ピッ・ピッ・ピー）・昇段（キラキラ）
  *
  * 効果音のオン／オフ・音量は ui/soundSettings（ブラウザに保存）。オフのときは何も鳴らさない。
@@ -47,6 +48,8 @@ const TONES = {
     { freq: 660, at: 0.2, length: 0.18, volume: 0.15, type: 'square' },
     { freq: 440, at: 0.4, length: 0.5, volume: 0.15, type: 'square' },
   ],
+  // ボタンを押したとき（freqEnd まで高さを下げる）
+  click: [{ freq: 330, freqEnd: 150, at: 0, length: 0.07, volume: 0.22 }],
   finish: [
     { freq: 523.25, at: 0, length: 0.16, volume: 0.18, type: 'triangle' },
     { freq: 659.25, at: 0.14, length: 0.16, volume: 0.18, type: 'triangle' },
@@ -85,6 +88,24 @@ export const playCountdownSound = (start = false) => playTones(start ? TONES.cou
 /** 段位認定：時間切れ */
 export const playTimeUpSound = () => playTones(TONES.timeUp);
 
+/** ボタンを押したとき：ポッ */
+export const playClickSound = () => playTones(TONES.click);
+
+/**
+ * 画面のどのボタンを押しても「ポッ」と鳴らす（無効なボタンは押せないので鳴らない）。
+ * data-click-sound="off" のボタン（「回答する」：すぐあとに正誤の音が鳴る）では鳴らさない
+ * @param {Document|HTMLElement} [root]
+ * @returns {() => void} 取り外す関数
+ */
+export function installButtonSound(root = document) {
+  const onClick = (event) => {
+    const btn = event.target?.closest?.('button:not(:disabled)');
+    if (btn && btn.dataset.clickSound !== 'off') playClickSound();
+  };
+  root.addEventListener('click', onClick, true);
+  return () => root.removeEventListener('click', onClick, true);
+}
+
 function playTones(tones) {
   if (!tones || !isSoundEnabled()) return;
   const volume = getSoundVolume();
@@ -99,6 +120,10 @@ function playTones(tones) {
       const gain = ctx.createGain();
       osc.type = tone.type ?? 'sine';
       osc.frequency.value = tone.freq;
+      if (tone.freqEnd) {
+        osc.frequency.setValueAtTime(tone.freq, now + tone.at);
+        osc.frequency.exponentialRampToValueAtTime(tone.freqEnd, now + tone.at + tone.length);
+      }
       const start = now + tone.at;
       const end = start + tone.length;
       gain.gain.setValueAtTime(0.0001, start);

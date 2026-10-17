@@ -56,7 +56,7 @@ export function mountTrainingResultScreen(container, { navigate }) {
     h(
       'div',
       { class: 'page page--narrow' },
-      h('header', { class: 'page-header' }, h('h1', {}, '結果')),
+      h('header', { class: 'page-header' }, h('h1', {}, 'トレーニング結果')),
       h(
         'section',
         { class: 'result-card' },

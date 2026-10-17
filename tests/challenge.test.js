@@ -255,6 +255,7 @@ describe('1分チャレンジの画面', () => {
 
     const nav = mount(mountChallengeResultScreen);
     expect(container.querySelector('[data-testid="challenge-result-correct"]').textContent).toBe('1');
+    expect(container.textContent).not.toContain('TIME UP'); // 結果画面には出さない（プレイ画面の最後に出す）
     expect(container.querySelector('[data-testid="challenge-best-updated"]').textContent).toBe('自己ベスト更新！');
     const grid = container.querySelector('.result-grid-actions');
     expect([...grid.children].map((b) => b.textContent)).toEqual(['もう一度挑戦', '設定を変更', 'カテゴリ選択', 'タイトルへ']);

@@ -218,12 +218,6 @@
   text-align: center;
 }
 
-.cert-result__timeup {
-  margin: 0;
-  color: var(--color-danger);
-  font-weight: 900;
-}
-
 .cert-result__score {
   margin: 0;
   font-size: 22px;

@@ -113,8 +113,31 @@ describe('サイコロ：正解が数学的に正しく、提示した情報だ�
     }
   });
 
-  it('D03 は、はじめ見えていなかった面を問う（ルールか一覧が必ず示される）', () => {
-    for (const { q } of questionsOf('D03')) expect(hasRule(q) || hasHiddenList(q)).toBe(true);
+  it('水平に回す動き（水平に右へ・左へ）は、問題の手順にも正解演出にも出さない（前後左右に転がすだけ）', () => {
+    for (const t of DICE_TEMPLATES) {
+      for (const { q } of questionsOf(t.id)) {
+        const moves = [...(movesOf(q) ?? []), ...q.explanation.reveal.steps.flatMap((st) => st.moves ?? [])];
+        expect(moves.every((m) => ['right', 'left', 'forward', 'backward'].includes(m)), `${t.id}: ${moves.join(',')}`).toBe(true);
+        expect(q.question).not.toContain('水平');
+      }
+    }
+  });
+
+  it('D03 は、はじめ見えていなかった面を問う（ふつうのサイコロで、和が7のルールが必ず示される）', () => {
+    for (const { q } of questionsOf('D03')) {
+      expect(hasRule(q)).toBe(true);
+      expect(Object.values(q.scene.faces).every((f) => f.kind === 'number')).toBe(true);
+    }
+  });
+
+  it('見えていない面の一覧は出さない。マークのサイコロは、見えている面だけで答えが決まる問題にだけ使う', () => {
+    for (const id of ['D01', 'D03', 'D04', 'D06']) {
+      for (const { q } of questionsOf(id)) {
+        expect(hasHiddenList(q)).toBe(false);
+        const marked = Object.values(q.scene.faces).some((f) => f.kind === 'symbol');
+        if (marked) expect(hasRule(q)).toBe(false); // マークでは、見えている3面だけで決まる（ルール文も一覧もなし）
+      }
+    }
   });
 
   it('ふつうのサイコロは目、和が7ではない配置はマーク（〇◎×●◇◆）で表し、マークでは和7のルールを使わない', () => {
@@ -122,7 +145,9 @@ describe('サイコロ：正解が数学的に正しく、提示した情報だ�
       const qs = questionsOf(id).map(({ q }) => q);
       const kinds = (q) => new Set(Object.values(q.scene.faces).map((f) => f.kind));
       const marked = qs.filter((q) => kinds(q).has('symbol'));
-      expect(marked.length).toBeGreaterThan(0);
+      // D03 は見えていなかった面を問うので、いつもふつうのサイコロ
+      if (id === 'D03') expect(marked).toHaveLength(0);
+      else expect(marked.length).toBeGreaterThan(0);
       for (const q of qs) expect(kinds(q).size).toBe(1); // 目とマークは混ざらない
       for (const q of marked) {
         expect(hasRule(q)).toBe(false);
@@ -148,6 +173,11 @@ describe('サイコロ：正解が数学的に正しく、提示した情報だ�
       const result = solveUnique({ values: Object.values(values(q.scene.faces)), known, views }, (l) => l[opposite]);
       expect(result.unique).toBe(true);
       expect(result.answers.map(String)).toEqual(q.correctAnswers);
+      // 6つの面がすべてちがうマークであることを問題文で示す（答えが1つに決まる前提）
+      expect(q.question).toContain('このサイコロは、6つの面がすべてちがうマークです。');
+      expect(new Set(Object.values(values(q.scene.faces))).size).toBe(6);
+      // 図の数と問題文が合う（図1と図2／図1〜図3）
+      expect(q.question).toContain(others.length === 1 ? '図1と図2は' : '図1〜図3は');
       // 和が7のルールが使えない配置なので、目ではなくマークで表す
       expect(Object.values(q.scene.faces).every((f) => f.kind === 'symbol')).toBe(true);
     }

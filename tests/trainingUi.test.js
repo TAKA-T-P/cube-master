@@ -358,6 +358,7 @@ describe('結果画面', () => {
     expect(container.querySelector('[data-testid="correct-count"]').textContent).toBe('3');
     expect(container.textContent).toContain('/ 5 問正解');
     expect(container.textContent).toContain('正答率 60%');
+    expect(container.querySelector('h1').textContent).toBe('トレーニング結果');
     expect(container.textContent).toContain('標準');
     expect(container.querySelectorAll('.result-history__item')).toHaveLength(5);
   });

@@ -100,7 +100,6 @@ export function mountCertificationResultScreen(container, { navigate }) {
       h(
         'section',
         { class: 'result-card cert-result__card' },
-        h('p', { class: 'cert-result__timeup' }, 'TIME UP！'),
         h('p', { class: 'cert-result__score' }, scoreValue, h('span', {}, '点')),
         rankEl,
         badges,

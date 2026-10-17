@@ -3,15 +3,16 @@
  *
  * - 正解は回転エンジン（core/cubeOrientation・cubeRotations）で計算する
  * - 出題前に cubePuzzle.solveUnique で「提示した情報だけで答えが1つに決まる」ことを確かめ、
- *   見えている面だけで決まらないときは「向かい合う面の和は7」のルールか、見えていない面の一覧を提示する
+ *   見えている面だけで決まらないときは、ふつうのサイコロ（目）にして「向かい合う面の和は7」のルールを示す。
+ *   マークのサイコロは、見えている面だけで答えが決まる問題にだけ使う（見えていない面の一覧は出さない）
  * - 回答前は視点を回せない（隠れた面が見えてしまうため）
  */
 import { getEdgesOfFace } from '../../core/cubeGeometry.js';
 import { ALL_ORIENTATIONS, INITIAL_ORIENTATION, rotateOrientationSequence, findRotationPath, sequenceMatrix, orientationKey } from '../../core/cubeOrientation.js';
-import { MOVE_IDS, ROLL_MOVE_IDS, ROTATION_MOVES, rotateLabeling, ALL_ROTATIONS, getOppositeDirection, DIRECTIONS, matrixKey, IDENTITY } from '../../core/cubeRotations.js';
+import { ROLL_MOVE_IDS, ROTATION_MOVES, rotateLabeling, ALL_ROTATIONS, getOppositeDirection, DIRECTIONS, matrixKey, IDENTITY } from '../../core/cubeRotations.js';
 import { STANDARD_DICE, numberFaces, numberFace, byDirection, pipLabel, markLabel, randomSymbolAssignment, symbolFaces, facesFromValues } from '../../core/cubeFaceLabels.js';
 import { solveUnique, viewOf, mirrorView, viewKey, canMatchView, VIEW_DIRECTIONS } from '../../core/cubePuzzle.js';
-import { cubeVisual, viewOnlyVisual, movesVisual, hiddenFacesVisual, markChoice, figureChoice, assembleQuestion } from '../decoratedCube.js';
+import { cubeVisual, viewOnlyVisual, movesVisual, markChoice, figureChoice, assembleQuestion } from '../decoratedCube.js';
 import { shuffle, pick } from '../../utils/random.js';
 import * as X from './diceExplanations.js';
 
@@ -19,6 +20,7 @@ export const DICE_CATEGORY = 'dice';
 
 const ASKED_LABELS = { top: '上の面', front: '前の面', right: '右の面' };
 const RULE_NOTE = 'このサイコロは、向かい合う面の目の数の和が7です。';
+const SYMBOL_NOTE = 'このサイコロは、6つの面がすべてちがうマークです。';
 const POSE_VARIANTS = [0, 5, 11, 17, 23];
 
 /** 面 ID の4辺（正解の面を緑の枠で示す。面の目を隠さないため） */
@@ -36,14 +38,17 @@ function setupDie(rng, { preferStandard } = {}) {
 
 /**
  * 答えを決めるのに必要な情報を選ぶ
- * @returns {'visible'|'rule'|'list'} visible: 見えている3面で決まる / rule: 和が7のルール / list: 見えていない面の一覧
+ * @returns {'visible'|'rule'|null} visible: 見えている3面で決まる / rule: 和が7のルール（ふつうのサイコロ）/
+ *   null: マークのサイコロでは見えている面だけで決まらない（ふつうのサイコロに作り直す）
  */
-function chooseInfo({ byDir, answerOf, standard, rng }) {
+function chooseInfo({ byDir, answerOf, standard }) {
   const values = Object.values(byDir);
   const known = Object.fromEntries(VIEW_DIRECTIONS.map((d) => [d, byDir[d]]));
   if (solveUnique({ values, known }, answerOf).unique) return 'visible';
-  if (standard && rng() < 0.65 && solveUnique({ values, known, oppositeSum: 7 }, answerOf).unique) return 'rule';
-  return 'list';
+  if (!standard) return null;
+  // ふつうのサイコロは、見えている3面と「和が7」で6面すべてが決まる
+  if (solveUnique({ values, known, oppositeSum: 7 }, answerOf).unique) return 'rule';
+  throw new Error('和が7のルールでも答えが決まりません');
 }
 
 /** 面の選択肢（4択）。priority の面を優先して誤答にする */
@@ -71,7 +76,9 @@ function trackingQuestion(template, base, rng, { moves, askedDir, pose, preferSt
   const answer = byFace[answerFace];
   if (answerOf(byDir) !== answer) throw new Error('回転の計算が一致しません');
 
-  const info = chooseInfo({ byDir, answerOf, standard, rng });
+  const info = chooseInfo({ byDir, answerOf, standard });
+  // マークのサイコロで、見えている面だけでは決まらない → ふつうのサイコロ（目）で出題する
+  if (info === null) return trackingQuestion(template, base, rng, { moves, askedDir, pose, preferStandard: true });
   const inverseMoves = moves.map((m) => ROTATION_MOVES[m].inverse);
   const finalByDir = byDirection(byFace, finalOrientation);
   const priority = [
@@ -82,7 +89,6 @@ function trackingQuestion(template, base, rng, { moves, askedDir, pose, preferSt
 
   // はじめの向きの図には「上・前・右」を書き添える（問題文の「前の面」などがどこかわかるように）
   const visuals = [cubeVisual(pose, faces, { caption: 'はじめの向き', showDirections: true }), movesVisual(moves)];
-  if (info === 'list') visuals.push(hiddenFacesVisual(faces, pose));
   const note = info === 'rule' ? RULE_NOTE : '';
 
   return assembleQuestion(template, base, DICE_CATEGORY, {
@@ -117,7 +123,8 @@ const movesChange = (moves, asked) => X.tracePath(moves, asked)[0] !== asked;
 
 /** 2つの向きをつなぐ、いちばん短い回転の手順 */
 function pathBetween(from, to) {
-  return findRotationPath(from, to) ?? [];
+  // 正解演出も、前後左右に転がす動きだけで向きを変える（転がすだけで24通りすべての向きにできる）
+  return findRotationPath(from, to, ROLL_MOVE_IDS) ?? [];
 }
 
 export const DICE_TEMPLATES = [
@@ -177,19 +184,20 @@ export const DICE_TEMPLATES = [
       ).slice(0, 3);
       const choices = [answer, ...others].map((v) => markChoice(v, { elementId: faceOf(v) }));
 
-      // 正解演出：基準のマークを前に向けてから、水平に 180° 回して向かい合う面を前に出す
+      // 正解演出：基準のマークを前に向けてから、後ろへ2回転がして向かい合う面を前に出す
       const targetFace = pose[base.dir];
       const toFront = ALL_ORIENTATIONS.filter((o) => o.front === targetFace)
         .map((o) => pathBetween(pose, o))
         .sort((a, b) => a.length - b.length)[0];
       const steps = [];
       if (toFront.length > 0) steps.push({ type: 'rotate', moves: toFront, pauseAfter: 700 });
-      steps.push({ type: 'rotate', moves: ['turnRight', 'turnRight'] });
+      steps.push({ type: 'rotate', moves: ['backward', 'backward'] });
 
       const neighbors = DIRECTIONS.filter((d) => d !== base.dir && d !== answerDir).map((d) => markLabel(byDir[d]));
       return assembleQuestion(this, base, DICE_CATEGORY, {
         type: 'single',
-        question: `${markLabel(target)}の面と向かい合う面のマークはどれですか。図1と図2は、同じサイコロを別の向きから見たものです。`,
+        // 6つの面がすべてちがうマークであることを示す（同じマークが2つあると、答えが1つに決まらないことがある）
+        question: `${markLabel(target)}の面と向かい合う面のマークはどれですか。${extras.length === 1 ? '図1と図2' : '図1〜図3'}は、同じサイコロを別の向きから見たものです。${SYMBOL_NOTE}`,
         visuals: [
           cubeVisual(pose, faces, { caption: '図1' }),
           ...extras.map((m, i) => cubeVisual(rotateLabeling(pose, m), faces, { caption: `図${i + 2}` })),
@@ -209,9 +217,9 @@ export const DICE_TEMPLATES = [
     id: 'D03',
     difficulty: 2,
     title: '見えなかった面',
-    // 回転のあと、はじめは見えていなかった面がくる方向を問う
+    // 回転のあと、はじめは見えていなかった面がくる方向を問う（転がす4方向だけ。水平に回す動きは出さない）
     bases: () =>
-      MOVE_IDS.flatMap((move) =>
+      ROLL_MOVE_IDS.flatMap((move) =>
         VISIBLE_DIRS.filter((asked) => HIDDEN_DIRS.includes(X.tracePath([move], asked)[0])).flatMap((asked) =>
           POSE_VARIANTS.map((pose) => ({ key: `${move}-${asked}-${pose}`, refs: [], move, asked, pose, group: move })),
         ),
@@ -302,7 +310,8 @@ export const DICE_TEMPLATES = [
     difficulty: 3,
     title: '3回転チャレンジ',
     bases: () =>
-      sequences(3, MOVE_IDS)
+      // 前後左右に転がす動きだけ（水平に回す動きは、わかりにくいので出題しない）
+      sequences(3, ROLL_MOVE_IDS)
         .filter((moves) => new Set(moves).size > 1)
         .flatMap((moves) =>
           VISIBLE_DIRS.filter((asked) => movesChange(moves, asked)).map((asked) => ({

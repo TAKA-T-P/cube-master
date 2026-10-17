@@ -38,6 +38,7 @@ export function mountHomeScreen(container, { navigate, version }) {
     h(
       'div',
       { class: 'home' },
+      h('div', { class: 'home-corner' }, soundToggleButton({ icon: true })),
       h(
         'header',
         { class: 'home-hero' },
@@ -46,7 +47,8 @@ export function mountHomeScreen(container, { navigate, version }) {
         h('p', { class: 'home-subtitle' }, '立方体を極める！空間認識トレーニング'),
       ),
       menu,
-      h('footer', { class: 'home-footer' }, soundToggleButton(), h('span', {}, `Ver.${version}`)),
+      h('footer', { class: 'home-footer' }, h('span', {}, `Ver.${version}`)),
+      h('p', { class: 'home-copyright', 'data-testid': 'copyright' }, '©2026 T.TAKEMOTO / KEC Glows'),
     ),
   );
 

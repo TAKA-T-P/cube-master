@@ -105,6 +105,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   const choicesEl = h('div', { class: 'choices', role: 'group', 'aria-label': '選択肢' });
   // 回答前は「回答する」、回答後は同じ場所のまま「次の問題へ」（最後は「結果を見る」）に変わる
   const submitButton = button('回答する', () => (session.state.answerLocked ? goNext() : submit()), 'btn--primary btn--large');
+  // 「回答する」のときは、すぐあとに正解・不正解の音が鳴るので、ボタンの「ポッ」は鳴らさない（「次の問題へ」などでは鳴らす）
+  submitButton.dataset.clickSound = 'off';
   // 段位認定：「回答する」の左に「パス」（問題を入れかえる。残り時間が減る）
   const passButton = cert?.allowPass ? button('パス', () => confirmPass(), 'btn--large btn--pass') : null;
   const actionRow = h('div', { class: `quiz-actions ${passButton ? 'quiz-actions--with-pass' : ''}` }, passButton, submitButton);
@@ -263,6 +265,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
 
     feedback.hidden = true;
     submitButton.textContent = '回答する';
+    submitButton.dataset.clickSound = 'off';
     if (passButton) {
       passButton.hidden = false;
       passButton.disabled = false;
@@ -380,6 +383,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     hintText.hidden = true;
     // 回答後にだけ見せる印（立方体にならない展開図の重なるマスなど）を表示する
     choicesEl.classList.add('choices--answered');
+    delete submitButton.dataset.clickSound;
     submitButton.textContent = cert
       ? session.hasNextQuestion()
         ? '次の問題へ'

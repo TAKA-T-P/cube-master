@@ -277,6 +277,7 @@ describe('結果発表・段位・記録', () => {
     expect(container.querySelector('[data-testid="cert-best"]')).not.toBeNull();
     expect(sounds.playRankUpSound).toHaveBeenCalled();
     expect(container.querySelector('[data-testid="cert-correct"]').textContent).toBe('6問（6問中）');
+    expect(container.textContent).not.toContain('TIME UP');
     expect(container.textContent).toContain('多答問題ボーナス');
     expect(container.textContent).not.toContain('多答問題の時間ボーナス');
   });

@@ -55,7 +55,7 @@ describe('効果音の設定', () => {
         this.destination = {};
       }
       createOscillator() {
-        const o = { frequency: {}, connect: (g) => g, start: vi.fn(), stop: vi.fn() };
+        const o = { frequency: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() }, connect: (g) => g, start: vi.fn(), stop: vi.fn() };
         oscillators.push(o);
         return o;
       }
@@ -83,6 +83,37 @@ describe('効果音の設定', () => {
     settings.setSoundEnabled(true);
     sound.playAnswerSound('correct');
     expect(oscillators.length).toBeGreaterThan(0);
+  });
+
+  it('ボタンを押すと「ポッ」と鳴る（高さを下げる短い音）。無効なボタン・ボタン以外・オフのときは鳴らない', async () => {
+    const { settings, sound, oscillators } = await setup();
+    const root = document.createElement('div');
+    const btn = document.createElement('button');
+    btn.append(document.createElement('span'));
+    const off = document.createElement('button');
+    off.disabled = true;
+    const text = document.createElement('p');
+    root.append(btn, off, text);
+    document.body.append(root);
+    const remove = sound.installButtonSound(root);
+    btn.firstChild.click();
+    expect(oscillators).toHaveLength(1);
+    expect(oscillators[0].frequency.value).toBeLessThan(400);
+    off.click();
+    text.click();
+    expect(oscillators).toHaveLength(1);
+    btn.dataset.clickSound = 'off';
+    btn.click();
+    expect(oscillators).toHaveLength(1);
+    delete btn.dataset.clickSound;
+    settings.setSoundEnabled(false);
+    btn.click();
+    expect(oscillators).toHaveLength(1);
+    settings.setSoundEnabled(true);
+    remove();
+    btn.click();
+    expect(oscillators).toHaveLength(1);
+    root.remove();
   });
 
   it('音量で大きさが変わり、0 なら鳴らない。こわれた保存値は既定値にもどす', async () => {
@@ -142,9 +173,14 @@ describe('画面', () => {
     const { mountHomeScreen } = await import('../src/ui/homeScreen.js');
     mountHomeScreen(container, { navigate: vi.fn(), version: '0.7.0' });
     const toggle = container.querySelector('[data-testid="sound-toggle"]');
-    expect(toggle.textContent).toBe('効果音：オン');
+    expect([...container.querySelectorAll('.home-menu button')].map((b) => b.textContent)).toEqual(['トレーニング', '段位認定', '3D立方体をためす', 'あそびかた']);
+    expect(container.querySelector('[data-testid="copyright"]').textContent).toBe('©2026 T.TAKEMOTO / KEC Glows');
+    expect(toggle.closest('.home-corner')).not.toBeNull();
+    expect(toggle.querySelector('svg')).not.toBeNull();
+    expect(toggle.getAttribute('aria-label')).toBe('効果音：オン');
     toggle.click();
-    expect(toggle.textContent).toBe('効果音：オフ');
+    expect(toggle.getAttribute('aria-label')).toBe('効果音：オフ');
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
     expect(settings.isSoundEnabled()).toBe(false);
   });
 });
