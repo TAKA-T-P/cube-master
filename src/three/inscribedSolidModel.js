@@ -7,8 +7,8 @@
  * 表示の段階（どれも 0〜1。演出は three/inscribedSolidAnimations）
  *   build  ：点を結ぶ辺が順に現れ、そのあと面が現れる（main）
  *   fade   ：ふつうの立方体を隠して、うすい線だけの立方体にする
- *   lift   ：main の立体を少し持ち上げる
- *   split  ：main を part（たとえば正八面体の上下2つの四角すい）に分けて、はなす
+ *   lift   ：完成した立体を見せる時間（位置は動かさない。立方体の中の本来の位置のまま）
+ *   split  ：main を part（たとえば正八面体の上下2つの四角すい）に分けて表示する（位置は動かさない）
  *   remove ：removed（黄色）を立方体の外へ動かし、remaining（緑）を残す
  * 回答前は、問題で示す点（オレンジ）と、示した立体の辺（オレンジの線）だけを表示する。
  */
@@ -19,8 +19,8 @@ import { vToNumbers } from '../core/rational.js';
 import { CUBE_COLORS } from '../core/cubeConstants.js';
 import { tubeSegments, createTubeGeometries, polygonsGeometry, cubeEdgeSegments } from './tubes.js';
 
-const LIFT = 0.35;
-const SPLIT_GAP = 0.45;
+// 正八面体を2つの四角すいに分けるときも、位置は動かさない（2つの四角すいの境目の正方形が見えるだけ）
+const SPLIT_GAP = 0;
 const REMOVE_GAP = 0.6;
 const COLORS = { green: 0x37b864, greenEdge: 0x177a3a, yellow: 0xffc24d, yellowEdge: 0xc77700, outline: CUBE_COLORS.reference, wire: 0x6b84a8 };
 
@@ -124,7 +124,7 @@ export function createInscribedSolidModel({ cubeRoot = null, cubeGroups = null, 
 
   function apply() {
     if (!built) return;
-    const { build: tb, fade, lift, split, remove } = progress;
+    const { build: tb, fade, split, remove } = progress;
     // 立方体を隠すかどうか
     const hideCube = fade > 0 || remove > 0;
     setCubeVisible(!hideCube);
@@ -140,7 +140,6 @@ export function createInscribedSolidModel({ cubeRoot = null, cubeGroups = null, 
         const shown = Math.ceil(Math.min(1, tb * 2) * n);
         s.edgeGroup.children.forEach((c, i) => (c.visible = i < shown));
         s.faceMaterial.opacity = 0.5 * Math.max(0, tb * 2 - 1);
-        s.group.position.y = LIFT * lift;
       } else if (s.role === 'part') {
         s.group.visible = split > 0;
         s.faceMaterial.opacity = 0.5;

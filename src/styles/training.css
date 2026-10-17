@@ -1319,8 +1319,10 @@ ul.setup-note {
   font-weight: 900;
 }
 
-/* 「図のみ表示」：文字（右側の表示・1個ずつの番号）を隠す */
+/* 「図のみ表示」：文字（右側の表示・1個ずつの番号・頂点の記号 A〜H・点の記号 P・Q・R など）を隠す */
 .viewport--figure-only .viewport-info,
-.viewport--figure-only .block-count-label {
+.viewport--figure-only .block-count-label,
+.viewport--figure-only .vertex-label,
+.viewport--figure-only .cut-point-label {
   display: none !important;
 }

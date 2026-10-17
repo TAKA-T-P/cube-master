@@ -263,11 +263,11 @@ describe('問題画面', () => {
     expect(container.querySelector('.quiz-score').textContent).toBe('正解 0');
   });
 
-  it('「もう一度見る」でリプレイする。「スキップ」ボタンはない。文字が出ない問題では「図のみ表示」を出さない', () => {
+  it('「もう一度見る」でリプレイする。「スキップ」ボタンはない。頂点の記号（A〜H）が出る問題では「図のみ表示」を出す', () => {
     start({ difficulty: 1, questionLimit: 5 });
     answer(container);
     expect(buttonByText(container, 'スキップ')).toBeUndefined();
-    expect(buttonByText(container, '図のみ表示').hidden).toBe(true);
+    expect(buttonByText(container, '図のみ表示').hidden).toBe(false);
     buttonByText(container, 'もう一度見る').click();
     expect(viewer.playAnswerReveal).toHaveBeenCalledTimes(2);
   });

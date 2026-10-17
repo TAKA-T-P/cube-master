@@ -135,6 +135,20 @@ describe('図の右側の文字と「図のみ表示」', () => {
     blocks.dispose();
   });
 
+  it('文字も頂点の記号も出ない問題（サイコロ）では「図のみ表示」を出さない', async () => {
+    store.resetTrainingStore();
+    const container = document.createElement('main');
+    document.body.append(container);
+    store.startTraining({ category: 'dice', difficulty: 1, questionLimit: 3 }, { rng: createRng(4) });
+    mountQuestionScreen(container, { navigate: vi.fn(), params: {} });
+    const q = store.getSession().state.currentQuestion;
+    for (const id of q.correctAnswers) container.querySelector(`[data-choice="${id}"]`).click();
+    [...container.querySelectorAll('button')].find((b) => b.textContent === '回答する').click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect([...container.querySelectorAll('button')].find((b) => b.textContent === '図のみ表示').hidden).toBe(true);
+    container.remove();
+  });
+
   it('個数の文字が出る問題では、回答後に「図のみ表示」で文字を隠せる（押すと「文字も表示」）。次の問題では文字を表示に戻す', async () => {
     store.resetTrainingStore();
     const container = document.createElement('main');

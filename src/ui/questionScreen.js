@@ -33,9 +33,15 @@ const RESULT_TITLES = {
   [ANSWER_STATUS.INCORRECT]: '不正解',
 };
 
-/** 回答後の 3D に、個数・面積・体積・道のりなどの文字が出る問題か（「図のみ表示」ボタンを出す） */
+/**
+ * 回答後の 3D に文字が出る問題か（「図のみ表示」ボタンを出す）
+ * 個数・面積・体積・道のりなどの文字か、頂点の記号（A〜H）・点の記号（P・Q・R など）が出る問題
+ */
 function hasInfoText(q) {
   const steps = q.explanation?.reveal?.steps ?? [];
+  const scene = q.scene ?? {};
+  const pointLabels = [scene.cutting, scene.surfacePath, scene.solid, scene.metric].some((x) => x?.points?.some((p) => p.label));
+  if ((scene.showLabels ?? true) || pointLabels) return true;
   return (
     steps.some((s) => ['countLayers', 'countLayer', 'addBlocks'].includes(s.type) || (s.type === 'highlightSubcubes' && s.label) || (/^(cut|solid|metric)/.test(s.type) && s.label)) ||
     Boolean(q.scene?.surfacePath?.solution?.label)

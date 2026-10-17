@@ -192,7 +192,7 @@ describe('内接立体の 3D モデルと演出', () => {
     return done;
   };
 
-  it('回答前は点と示した辺だけ。I04：正八面体ができて、上下2つの四角すいに分かれ、体積比を表示する', async () => {
+  it('回答前は点と示した辺だけ。I04：正八面体ができて、上下2つの四角すいに分けて（位置は動かさずに）体積比を表示する', async () => {
     const [q] = questions(byId.I04, [2], 1);
     const { model, state, highlights, solid, manager, controls } = setup(q);
     let s = solid.getState();
@@ -203,9 +203,15 @@ describe('内接立体の 3D モデルと演出', () => {
     expect(s.info).toMatch(/1\/6|×6/);
     const parts = s.solids.filter((x) => x.role === 'part');
     expect(parts.every((x) => x.visible)).toBe(true);
-    // 2つの四角すいは反対向きにはなれる
-    expect(parts[0].offset.map((v, i) => v + parts[1].offset[i]).every((v) => Math.abs(v) < 1e-9)).toBe(true);
+    // 2つの四角すいは、もとの位置のまま（はなさない）
+    for (const p of parts) expect(Math.hypot(...p.offset)).toBe(0);
     expect(s.solids.find((x) => x.role === 'main').visible).toBe(false);
+    // 完成した立体は、立方体の中の本来の位置から動かさない
+    const [i01] = questions(byId.I01, [1], 1);
+    const other = setup(i01);
+    await run(other.manager, createQuestionReveal({ state: other.state, controls: other.controls, highlights: other.highlights, solid: other.solid }, { steps: i01.explanation.reveal.steps }));
+    expect(other.solid.getState().solids.find((x) => x.role === 'main')).toMatchObject({ visible: true, offset: [0, 0, 0] });
+    other.solid.dispose();
     // リプレイ：はじめから（立方体を表示し、立体は隠す）
     const again = manager.play(createQuestionReveal({ state, controls, highlights, solid }, { steps: q.explanation.reveal.steps }));
     expect(solid.getState()).toMatchObject({ build: 0, split: 0, cubeVisible: true, info: '' });
