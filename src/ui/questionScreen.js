@@ -37,7 +37,7 @@ const RESULT_TITLES = {
 function hasInfoText(q) {
   const steps = q.explanation?.reveal?.steps ?? [];
   return (
-    steps.some((s) => ['countLayers', 'countLayer', 'addBlocks'].includes(s.type) || (s.type === 'highlightSubcubes' && s.label) || ((s.type === 'cutSection' || s.type === 'cutSplit') && s.label)) ||
+    steps.some((s) => ['countLayers', 'countLayer', 'addBlocks'].includes(s.type) || (s.type === 'highlightSubcubes' && s.label) || (/^(cut|solid|metric)/.test(s.type) && s.label)) ||
     Boolean(q.scene?.surfacePath?.solution?.label)
   );
 }
@@ -46,7 +46,7 @@ function hasInfoText(q) {
 const INLINE_VISUALS = ['swatch', 'pip'];
 
 /** ふつうの立方体として表示するモデル（色や数字の面がない。半透明・頂点の文字つき） */
-const PLAIN_CUBE_MODELS = ['cube', 'cutting', 'surfacePath'];
+const PLAIN_CUBE_MODELS = ['cube', 'cutting', 'surfacePath', 'solid', 'metric'];
 
 /** 選択肢の文字数がこれより長ければ1列で表示する */
 const LONG_LABEL = 9;
@@ -236,6 +236,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
       viewer.setSubcubes?.(q.scene.model === 'subcubes' ? q.scene.subcubes : null);
       viewer.setCutting?.(q.scene.model === 'cutting' ? q.scene.cutting : null);
       viewer.setSurfacePath?.(q.scene.model === 'surfacePath' ? q.scene.surfacePath : null);
+      viewer.setSolid?.(q.scene.model === 'solid' ? q.scene.solid : null);
+      viewer.setMetric?.(q.scene.model === 'metric' ? q.scene.metric : null, { view: q.scene.cameraPreset });
       viewer.setCubeOrientation(q.scene.orientation ?? INITIAL_ORIENTATION);
       viewer.setLabelsVisible(q.scene.showLabels ?? true);
       // 色や数字の立方体は、隠れた面が透けて見えないように不透明にする

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Phase 7：切断・最短経路の画面への組み込み（図の描画・問題画面・1分チャレンジ・段位認定に入れないこと）
+// Phase 7・8：切断・最短経路・内接立体・長さと角度の画面への組み込み（図の描画・問題画面・1分チャレンジ・段位認定に入れないこと）
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createEventBus } from '../src/core/eventBus.js';
 import { createRng } from '../src/utils/random.js';
@@ -29,7 +29,7 @@ globalThis.__createFakeViewer = () => {
     events: createEventBus(),
     animations: { cancel: vi.fn(), skip: vi.fn(), setSpeed: vi.fn() },
     ...Object.fromEntries(
-      ['setFigureOnly', 'setSelectionEnabled', 'setFaceDisplayMode', 'clearHighlights', 'clearSelection', 'highlightElements', 'setCameraPreset', 'resetCamera', 'dispose', 'setFaceDecorations', 'setCubeOrientation', 'setLabelsVisible', 'enableRotation', 'disableRotation', 'enableZoom', 'disableZoom', 'setBlocks', 'setNet', 'playNetFold', 'setSubcubes', 'playSubcubeSeparation', 'setCutting', 'setSurfacePath'].map((k) => [k, vi.fn()]),
+      ['setFigureOnly', 'setSelectionEnabled', 'setFaceDisplayMode', 'clearHighlights', 'clearSelection', 'highlightElements', 'setCameraPreset', 'resetCamera', 'dispose', 'setFaceDecorations', 'setCubeOrientation', 'setLabelsVisible', 'enableRotation', 'disableRotation', 'enableZoom', 'disableZoom', 'setBlocks', 'setNet', 'playNetFold', 'setSubcubes', 'playSubcubeSeparation', 'setCutting', 'setSurfacePath', 'setSolid', 'setMetric'].map((k) => [k, vi.fn()]),
     ),
     playAnswerReveal: vi.fn(() => Promise.resolve({ status: 'completed' })),
     playQuestionReveal: vi.fn(() => Promise.resolve({ status: 'completed' })),
@@ -86,11 +86,13 @@ describe('問題画面', () => {
   it.each([
     ['cubeCutting', 'setCutting', 'cutting'],
     ['surfacePath', 'setSurfacePath', 'surfacePath'],
+    ['inscribedSolid', 'setSolid', 'solid'],
+    ['cubeGeometryChallenge', 'setMetric', 'metric'],
   ])('%s：半透明のふつうの立方体に点や道を重ね、回答前から回して見られる。回答すると正解の演出', async (category, setter, key) => {
     store.startTraining({ category, difficulty: 'all', questionLimit: 3 }, { rng: createRng(4) });
     mountQuestionScreen(container, { navigate: vi.fn(), params: {} });
     const q = store.getSession().state.currentQuestion;
-    expect(viewer[setter]).toHaveBeenLastCalledWith(q.scene[key]);
+    expect(viewer[setter].mock.calls.at(-1)[0]).toEqual(q.scene[key]);
     expect(viewer.setFaceDisplayMode).toHaveBeenLastCalledWith('translucent');
     expect(viewer.enableRotation).toHaveBeenCalled();
     expect(viewer.setLabelsVisible).toHaveBeenLastCalledWith(true);
@@ -161,8 +163,8 @@ describe('図の右側の文字と「図のみ表示」', () => {
 });
 
 describe('1分チャレンジ・段位認定', () => {
-  it('新しい2カテゴリは、1分チャレンジで遊べる（どの難易度でも問題が出る）', () => {
-    for (const category of ['cubeCutting', 'surfacePath']) {
+  it('Phase 7・8 の4カテゴリは、1分チャレンジで遊べる（どの難易度でも問題が出る）', () => {
+    for (const category of ['cubeCutting', 'surfacePath', 'inscribedSolid', 'cubeGeometryChallenge']) {
       for (const difficulty of [1, 2, 3, 'all']) {
         const session = new TimedChallengeSession({ category, templates: getTemplates(category), difficulty, rng: createRng(2), now: () => 0 });
         const q = session.nextQuestion();
@@ -189,5 +191,7 @@ describe('1分チャレンジ・段位認定', () => {
     expect(CERTIFICATION_RULES.rulesVersion).toBe(3);
     expect(getCategory('cubeCutting').enabled).toBe(true);
     expect(getCategory('surfacePath').enabled).toBe(true);
+    expect(getCategory('inscribedSolid').enabled).toBe(true);
+    expect(getCategory('cubeGeometryChallenge').enabled).toBe(true);
   });
 });

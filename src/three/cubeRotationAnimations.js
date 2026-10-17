@@ -15,6 +15,7 @@ import { createPop } from './cubeAnimations.js';
 import { createLayerCounting, createLayerFocus, createBlockAdding } from './blockCountingAnimations.js';
 import { createCutPlane, createCutSection, createCutSplit } from './cubeCuttingAnimations.js';
 import { createPathHighlight, createPathTravel, createPathUnfold } from './surfacePathAnimations.js';
+import * as SA from './inscribedSolidAnimations.js';
 
 /** 回転 1 回の標準の時間（ms） */
 export const DEFAULT_TURN_DURATION = 800;
@@ -158,8 +159,10 @@ export function createCameraMove(controls, direction, { duration = 900, onUpdate
  *        | { type: 'addBlocks', cubes }                  加える積み木を1つずつ置いて完成形にする
  *        | { type: 'cutPlane' } / { type: 'cutSection', label? } / { type: 'cutSplit', to, highlightSmall?, label? }  切断（three/cubeCuttingAnimations）
  *        | { type: 'pathHighlight' } / { type: 'pathTravel' } / { type: 'pathUnfold', to }  最短経路（three/surfacePathAnimations）
+ *        | { type: 'solidBuild' | 'solidFade' | 'solidLift' | 'solidSplit' | 'solidRemove', label? }  内接立体（three/inscribedSolidAnimations）
+ *        | { type: 'metricSegments' | 'metricTriangle' | 'metricAngle' | 'metricExtract', index?, label? }  長さ・角度
  */
-export function createQuestionReveal({ state, controls, highlights, blocks = null, net = null, subcubes = null, cutting = null, surface = null, onUpdate = () => {} }, spec) {
+export function createQuestionReveal({ state, controls, highlights, blocks = null, net = null, subcubes = null, cutting = null, surface = null, solid = null, metric = null, onUpdate = () => {} }, spec) {
   const { orientation = INITIAL_ORIENTATION, cameraPreset = 'default', steps = [], wrong = [], correct = [] } = spec;
   const parts = [];
   if (wrong.length > 0) parts.push(createPop(highlights, wrong, { layer: 'wrong', duration: 400, onUpdate }), wait(250));
@@ -237,6 +240,24 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
       parts.push(createPathTravel(surface, { onUpdate }));
     } else if (step.type === 'pathUnfold' && surface) {
       parts.push(createPathUnfold(surface, { to: step.to ?? 1, controls, onUpdate }));
+    } else if (step.type === 'solidBuild' && solid) {
+      parts.push(SA.createSolidBuild(solid, { onUpdate }));
+    } else if (step.type === 'solidFade' && solid) {
+      parts.push(SA.createSolidFade(solid, { onUpdate }));
+    } else if (step.type === 'solidLift' && solid) {
+      parts.push(SA.createSolidLift(solid, { to: step.to ?? 1, label: step.label ?? '', onUpdate }));
+    } else if (step.type === 'solidSplit' && solid) {
+      parts.push(SA.createSolidSplit(solid, { label: step.label ?? '', onUpdate }));
+    } else if (step.type === 'solidRemove' && solid) {
+      parts.push(SA.createSolidRemove(solid, { label: step.label ?? '', onUpdate }));
+    } else if (step.type === 'metricSegments' && metric) {
+      parts.push(SA.createMetricSegments(metric, { onUpdate }));
+    } else if (step.type === 'metricTriangle' && metric) {
+      parts.push(SA.createMetricTriangle(metric, { index: step.index ?? 0, label: step.label ?? '', onUpdate }));
+    } else if (step.type === 'metricAngle' && metric) {
+      parts.push(SA.createMetricAngle(metric, { label: step.label ?? '', onUpdate }));
+    } else if (step.type === 'metricExtract' && metric) {
+      parts.push(SA.createMetricExtract(metric, { label: step.label ?? '', onUpdate }));
     } else if (step.type === 'highlightBlocks' && blocks) {
       parts.push(
         tween({
@@ -267,6 +288,8 @@ export function createQuestionReveal({ state, controls, highlights, blocks = nul
     subcubes?.setSeparation(0);
     cutting?.reset(); // 切断：切る3点だけの状態から
     surface?.reset(); // 最短経路：候補の道だけの状態から
+    solid?.reset(); // 内接立体：示した点だけの状態から
+    metric?.reset(); // 長さ・角度：示した点・線分だけの状態から
     state.set(orientation);
     controls.setHomeDirection(cameraPreset);
     controls.resetCamera({ animate: false });

@@ -148,11 +148,13 @@ describe('TrainingSession', () => {
 });
 
 describe('questionRegistry', () => {
-  it('10カテゴリがあり、遊べるのは8カテゴリ（Phase 7 で②切断・⑧最短経路を追加。⑤⑨は準備中）', () => {
+  it('10カテゴリすべて遊べる（Phase 7 で②切断・⑧最短経路、Phase 8 で⑤内接立体・⑨長さと角度を追加）', () => {
     expect(CATEGORIES).toHaveLength(10);
-    expect(CATEGORIES.filter((c) => c.enabled).map((c) => c.id)).toEqual(['netMapping', 'cubeCutting', 'position', 'netPuzzle', 'dice', 'paintedCube', 'surfacePath', 'projection']);
+    expect(CATEGORIES.filter((c) => c.enabled).map((c) => c.id)).toEqual(['netMapping', 'cubeCutting', 'position', 'netPuzzle', 'inscribedSolid', 'dice', 'paintedCube', 'surfacePath', 'cubeGeometryChallenge', 'projection']);
     expect(CATEGORIES.map((c) => c.id)).toEqual(['netMapping', 'cubeCutting', 'position', 'netPuzzle', 'inscribedSolid', 'dice', 'paintedCube', 'surfacePath', 'cubeGeometryChallenge', 'projection']);
-    expect(CATEGORIES.filter((c) => !c.enabled).map((c) => c.id)).toEqual(['inscribedSolid', 'cubeGeometryChallenge']);
+    expect(CATEGORIES.filter((c) => !c.enabled)).toEqual([]);
+    expect(getCategory('inscribedSolid')).toMatchObject({ name: '立方体に内接する立体と体積', description: '立方体の中に隠れた立体を見つけよう！四面体や八面体の形と体積を考えよう！', grades: '小学5年生～中学3年生' });
+    expect(getCategory('cubeGeometryChallenge')).toMatchObject({ name: '立方体に隠れた図形・長さ・角度', description: '立方体の中の三角形や対角線を見つけよう！長さや角度のなぞに挑戦！', grades: '小学5年生～中学3年生' });
     expect(getCategory('cubeCutting')).toMatchObject({ name: '立方体の切断', description: '立方体をスパッと切ると、どんな形になる？切り口を予想しよう！' });
     expect(getCategory('surfacePath')).toMatchObject({ name: '立方体の表面の最短経路', description: '立方体の表面を進むとき、いちばん短い道はどれ？展開図で考えよう！' });
     expect(getCategory('paintedCube')).toMatchObject({ name: '立方体の個数・着色', grades: '小学5年生～中学2年生' });

@@ -53,6 +53,12 @@
  *   scene.model: 'surfacePath' と scene.surfacePath { points, candidates, solution }（表面の道。core/cubeSurfacePath）
  *     演出 { type: 'pathHighlight' } { type: 'pathTravel' } { type: 'pathUnfold', to }、図の種類 'pathNet'（一部の面の展開図と道）
  *
+ * Phase 8 で追加した項目（省略可）
+ *   scene.model: 'solid' と scene.solid { points, outlines, solids: [{ role: 'main'|'part'|'removed'|'remaining', points }] }（内接立体。core/inscribedSolids）
+ *     演出 { type: 'solidBuild' } { type: 'solidFade' } { type: 'solidLift', to, label? } { type: 'solidSplit', label? } { type: 'solidRemove', label? }
+ *   scene.model: 'metric' と scene.metric { points, segments, answerSegments, triangles, angle }（長さ・角度・三角形。core/cubeMetricGeometry）
+ *     演出 { type: 'metricSegments' } { type: 'metricTriangle', index, label? } { type: 'metricAngle', label? } { type: 'metricExtract', label? }
+ *
  * QUESTION_SCHEMA_VERSION：ブラウザに保存した復習用の問題が、今の形と合うかを確かめるための番号。
  * 問題データの形を互換性のない形に変えたときは、この番号を上げる（古い保存データは読み込まずに除外する）。
  */
@@ -67,10 +73,12 @@ import { isValidDivisions, getSubcubeListErrors, CUBE_SIDES } from './subdivided
 import { planeFromThreePoints, intersectPlaneWithCube } from './cubeCutting.js';
 import { isOnCubeSurface, sharedEdge } from './cubeSurfaceUnfolding.js';
 import { isSurfacePolyline } from './cubeSurfacePath.js';
+import { convexHull, isValidPolyhedron } from './inscribedSolids.js';
 
 export const QUESTION_SCHEMA_VERSION = 1;
 
-export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube', 'blocks', 'net', 'subcubes', 'cutting', 'surfacePath']);
+export const SCENE_MODELS = Object.freeze(['cube', 'dice', 'colorCube', 'blocks', 'net', 'subcubes', 'cutting', 'surfacePath', 'solid', 'metric']);
+export const SOLID_ROLES = Object.freeze(['main', 'part', 'removed', 'remaining']);
 export const VISUAL_TYPES = Object.freeze(['cube', 'face', 'swatch', 'pip', 'moves', 'faceList', 'blocks', 'projection', 'projectionPair', 'net', 'subcubes', 'blocksPair', 'section', 'pathNet']);
 
 /** 立方体の表面の点の一覧として正しいか */
@@ -81,6 +89,32 @@ function getCuttingErrors(cutting) {
   if (!cutting || !surfacePointsValid(cutting.points, 3)) return ['scene.cutting.points は表面の上の3点'];
   const plane = planeFromThreePoints(...cutting.points.map((p) => p.position));
   if (!plane || !intersectPlaneWithCube(plane).valid) return ['scene.cutting の3点で、立方体を切る平面が決まりません'];
+  return [];
+}
+
+/** 立方体の内部または表面の点か */
+const insideCube = (p) => Array.isArray(p) && p.length === 3 && p.every((x) => Number.isFinite(x) && Math.abs(x) <= 1 + 1e-9);
+
+/** 内接立体の 3D：点が立方体の中にあり、どの立体も体積のある凸多面体になる */
+function getSolidErrors(solid) {
+  const errors = [];
+  if (!solid || !Array.isArray(solid.points) || !solid.points.every((p) => insideCube(p?.position))) return ['scene.solid.points は立方体の中の点'];
+  for (const o of solid.outlines ?? []) if (!Array.isArray(o) || !o.every(insideCube)) errors.push('scene.solid.outlines が不正です');
+  if (!Array.isArray(solid.solids) || solid.solids.length === 0) errors.push('scene.solid.solids がありません');
+  for (const x of solid.solids ?? []) {
+    if (!SOLID_ROLES.includes(x?.role) || !Array.isArray(x.points) || !x.points.every(insideCube) || !isValidPolyhedron(convexHull(x.points))) errors.push('scene.solid.solids の立体が不正です');
+  }
+  return errors;
+}
+
+/** 長さ・角度の 3D：点・線分・三角形が立方体の中にある */
+function getMetricErrors(metric) {
+  if (!metric || !Array.isArray(metric.points) || !metric.points.every((p) => insideCube(p?.position))) return ['scene.metric.points は立方体の中の点'];
+  const segs = [...(metric.segments ?? []), ...(metric.answerSegments ?? [])];
+  if (!segs.every((sg) => insideCube(sg?.from) && insideCube(sg?.to))) return ['scene.metric の線分が不正です'];
+  if (!(metric.triangles ?? []).every((t) => Array.isArray(t?.points) && t.points.length === 3 && t.points.every(insideCube))) return ['scene.metric.triangles が不正です'];
+  const a = metric.angle;
+  if (a !== undefined && !(insideCube(a?.at) && insideCube(a?.a) && insideCube(a?.b))) return ['scene.metric.angle が不正です'];
   return [];
 }
 
@@ -167,6 +201,10 @@ export function getQuestionErrors(q) {
     errors.push(...getCuttingErrors(scene.cutting));
   } else if (scene?.model === 'surfacePath') {
     errors.push(...getSurfacePathErrors(scene.surfacePath));
+  } else if (scene?.model === 'solid') {
+    errors.push(...getSolidErrors(scene.solid));
+  } else if (scene?.model === 'metric') {
+    errors.push(...getMetricErrors(scene.metric));
   } else if (scene && scene.model !== 'cube') {
     const faces = scene.faces ?? {};
     for (const f of FACES) {
@@ -225,6 +263,11 @@ export function getQuestionErrors(q) {
       } else if (step.type === 'pathHighlight' || step.type === 'pathTravel' || step.type === 'pathUnfold') {
         if (scene?.model !== 'surfacePath') errors.push(`reveal の ${step.type} は最短経路の問題だけ`);
         if (step.type === 'pathUnfold' && !(step.to >= 0 && step.to <= 1)) errors.push('reveal の展開が不正です');
+      } else if (['solidBuild', 'solidFade', 'solidLift', 'solidSplit', 'solidRemove'].includes(step.type)) {
+        if (scene?.model !== 'solid') errors.push(`reveal の ${step.type} は内接立体の問題だけ`);
+      } else if (['metricSegments', 'metricTriangle', 'metricAngle', 'metricExtract'].includes(step.type)) {
+        if (scene?.model !== 'metric') errors.push(`reveal の ${step.type} は長さ・角度の問題だけ`);
+        if (step.type === 'metricTriangle' && !scene?.metric?.triangles?.[step.index]) errors.push('reveal の三角形の番号が不正です');
       } else if (step.type !== 'pause' && step.type !== 'divide') errors.push(`reveal の種類が不正です: ${step.type}`);
     }
   }

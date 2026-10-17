@@ -28,6 +28,8 @@ import { createNetModel } from './cubeNetModel.js';
 import { createSubdividedCubeModel } from './subdividedCubeModel.js';
 import { createCuttingModel } from './cubeCuttingModel.js';
 import { createSurfacePathModel } from './surfacePathModel.js';
+import { createInscribedSolidModel } from './inscribedSolidModel.js';
+import { createCubeMetricModel } from './cubeMetricModel.js';
 import { tween } from './animationManager.js';
 import { createOrientationState, createTurnSequence, createQuestionReveal, DEFAULT_TURN_DURATION, DEFAULT_TURN_PAUSE } from './cubeRotationAnimations.js';
 
@@ -114,6 +116,11 @@ export function createCubeViewer(container) {
   sceneManager.scene.add(cutting.root);
   const surface = createSurfacePathModel({ cubeRoot: model.root, onInfo: infoFrom('surface') });
   sceneManager.scene.add(surface.root);
+  // 内接立体・長さと角度（Phase 8）
+  const solid = createInscribedSolidModel({ cubeRoot: model.root, cubeGroups: model.groups, onInfo: infoFrom('solid') });
+  sceneManager.scene.add(solid.root);
+  const metric = createCubeMetricModel({ cubeRoot: model.root, cubeGroups: model.groups, onInfo: infoFrom('metric') });
+  sceneManager.scene.add(metric.root);
   const updateCubeVisibility = () => {
     model.root.visible = !blocks.root.visible && !net.root.visible && !subcubes.root.visible;
   };
@@ -322,6 +329,25 @@ export function createCubeViewer(container) {
       render();
     },
     getSurfacePathState: () => surface.getState(),
+    // ----- 内接立体・長さと角度（Phase 8） -----
+    /** 内接立体の問題を表示する（null で消す） @param {object|null} spec scene.solid */
+    setSolid(spec) {
+      solid.set(spec ?? null);
+      if (!spec) updateCubeVisibility();
+      render();
+    },
+    getSolidState: () => solid.getState(),
+    /**
+     * 長さ・角度の問題を表示する（null で消す）
+     * @param {object|null} spec scene.metric
+     * @param {{ view?: 'default'|number[] }} [options] 取り出した三角形を向けるカメラの向き
+     */
+    setMetric(spec, options) {
+      metric.set(spec ?? null, options);
+      if (!spec) updateCubeVisibility();
+      render();
+    },
+    getMetricState: () => metric.getState(),
 
     highlightBlocks(cubes) {
       blocks.highlight(cubes);
@@ -352,7 +378,7 @@ export function createCubeViewer(container) {
      * @param {{ orientation?, cameraPreset?, steps?, wrong?, correct? }} spec cubeRotationAnimations.createQuestionReveal 参照
      */
     playQuestionReveal: (spec) =>
-      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, blocks, net, subcubes, cutting, surface, onUpdate: render }, spec)),
+      animations.play(createQuestionReveal({ state: cubeState, controls: cameraControls, highlights, blocks, net, subcubes, cutting, surface, solid, metric, onUpdate: render }, spec)),
 
     /**
      * 回答後の正解演出（誤選択を赤 → 正解を1つずつ緑）。完了時に { status } で解決
@@ -376,6 +402,8 @@ export function createCubeViewer(container) {
       subcubes.dispose();
       cutting.dispose();
       surface.dispose();
+      solid.dispose();
+      metric.dispose();
       infoPanel.remove();
       container.classList.remove('viewport--figure-only');
       model.dispose();

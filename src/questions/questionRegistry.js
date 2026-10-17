@@ -13,6 +13,8 @@ import { PAINTED_CUBE_TEMPLATES } from './paintedCube/paintedCubeGenerators.js';
 import { BLOCK_COUNT_TEMPLATES } from './paintedCube/blockCountGenerators.js';
 import { CUTTING_TEMPLATES } from './cubeCutting/cubeCuttingGenerators.js';
 import { SURFACE_PATH_TEMPLATES } from './surfacePath/surfacePathGenerators.js';
+import { INSCRIBED_TEMPLATES } from './inscribedSolid/inscribedSolidGenerators.js';
+import { GEOMETRY_TEMPLATES } from './cubeGeometryChallenge/cubeGeometryGenerators.js';
 import { withHints } from './hints.js';
 
 export const DIFFICULTIES = Object.freeze([
@@ -76,8 +78,16 @@ export const CATEGORIES = Object.freeze([
     templates: withHints(NET_PUZZLE_TEMPLATES),
     levelNotes: ['基本：立方体になる展開図・あと1マス', '標準：いらない1マス・1マスを動かす', '応用：同じ種類・ちがう種類の展開図'],
   },
-  // ⑤ 立方体に内接する立体と体積（Phase 8 で追加予定）
-  { id: 'inscribedSolid', name: '立方体に内接する立体と体積', description: '立方体の中には、どんな立体が隠れている？体積のひみつを見つけよう！', grades: '中学1年生～中学3年生', enabled: false },
+  // ⑤ 立方体に内接する立体と体積（Phase 8）
+  {
+    id: 'inscribedSolid',
+    name: '立方体に内接する立体と体積',
+    description: '立方体の中に隠れた立体を見つけよう！四面体や八面体の形と体積を考えよう！',
+    grades: '小学5年生～中学3年生',
+    enabled: true,
+    templates: INSCRIBED_TEMPLATES,
+    levelNotes: ['基本：点を結んでできる立体の名前・面の中心を結んだ立体', '標準：角すいの体積・正八面体と立方体の体積比', '応用：4つの頂点の四面体の体積・取り除いた残りの体積'],
+  },
   // ⑥
   {
     id: 'dice',
@@ -113,8 +123,16 @@ export const CATEGORIES = Object.freeze([
     templates: SURFACE_PATH_TEMPLATES,
     levelNotes: ['基本：最短経路が通る辺・2つの道の長さくらべ', '標準：2面を通る最短距離・展開図の上の最短経路', '応用：3面以上を通る最短距離・最短経路をすべて選ぶ'],
   },
-  // ⑨ 立方体に隠れた図形・長さ・角度（Phase 8 で追加予定）
-  { id: 'cubeGeometryChallenge', name: '立方体に隠れた図形・長さ・角度', description: '立方体の中の三角形や対角線を見つけよう！長さや角度のなぞに挑戦！', grades: '中学1年生～中学3年生', enabled: false },
+  // ⑨ 立方体に隠れた図形・長さ・角度（Phase 8）
+  {
+    id: 'cubeGeometryChallenge',
+    name: '立方体に隠れた図形・長さ・角度',
+    description: '立方体の中の三角形や対角線を見つけよう！長さや角度のなぞに挑戦！',
+    grades: '小学5年生～中学3年生',
+    enabled: true,
+    templates: GEOMETRY_TEMPLATES,
+    levelNotes: ['基本：面の対角線・立方体の対角線を探す', '標準：対角線の長さ・3つの点を結んだ三角形の形', '応用：立方体の中の角度・三角形の面積'],
+  },
   // ⑩
   {
     id: 'projection',

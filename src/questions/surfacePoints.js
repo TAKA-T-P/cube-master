@@ -15,6 +15,9 @@ export const MIDPOINTS = Object.freeze(EDGES.map((e) => Object.freeze({ kind: 'm
 /** 面の対角線の交点（面の中心） */
 export const FACE_CENTERS = Object.freeze(FACES.map((f) => Object.freeze({ kind: 'faceCenter', id: f.id, position: avg(f.vertices) })));
 
+/** 立方体の中心（対角線の交点）。文字は O */
+export const CUBE_CENTER_POINT = Object.freeze({ kind: 'center', id: 'O', position: [0, 0, 0] });
+
 export const pointKey = (pt) => `${pt.kind}:${pt.id}`;
 
 /** 座標から表面の点を探す（頂点・辺の中点・面の中心のどれでもなければ null） */
@@ -32,6 +35,7 @@ export function findSurfacePoint(position) {
 export function describePoint(pt, label) {
   if (pt.kind === 'vertex') return { text: `頂点${pt.id}`, name: `頂点${pt.id}`, short: pt.id };
   if (pt.kind === 'midpoint') return { text: `辺${pt.id}の中点${label}`, name: label, short: label };
+  if (pt.kind === 'center') return { text: '立方体の中心O', name: 'O', short: 'O' };
   return { text: `面${pt.id}の対角線の交点${label}`, name: label, short: label };
 }
 
@@ -39,7 +43,7 @@ export function describePoint(pt, label) {
 export function labelPoints(points, letters = ['P', 'Q', 'R', 'S']) {
   let i = 0;
   return points.map((pt) => {
-    const label = pt.kind === 'vertex' ? null : letters[i++];
+    const label = pt.kind === 'vertex' ? null : pt.kind === 'center' ? 'O' : letters[i++];
     return { ...pt, label, ...describePoint(pt, label) };
   });
 }
@@ -64,9 +68,12 @@ export function viewDirectionForPoints(positions) {
     [-4, -3, -5],
   ];
   const normals = (p) => FACES.filter((f) => f.normal.every((n, i) => n === 0 || p[i] === n)).map((f) => f.normal);
+  // 立方体の内部の点（中心など）は、どの向きからでも見えるので数えない
+  const onSurface = positions.filter((p) => normals(p).length > 0);
   const score = (d) => {
     const len = Math.hypot(...d);
-    return Math.min(...positions.map((p) => Math.max(...normals(p).map((n) => (n[0] * d[0] + n[1] * d[1] + n[2] * d[2]) / len))));
+    if (onSurface.length === 0) return 0;
+    return Math.min(...onSurface.map((p) => Math.max(...normals(p).map((n) => (n[0] * d[0] + n[1] * d[1] + n[2] * d[2]) / len))));
   };
   let best = dirs[0];
   for (const d of dirs) if (score(d) > score(best) + 1e-9) best = d;
