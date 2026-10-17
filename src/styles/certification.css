@@ -71,17 +71,19 @@
 }
 
 .cert-start {
-  display: grid;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 12px var(--gutter) 0;
 }
 
-.cert-rules {
-  display: grid;
-  gap: 4px;
-  margin: 14px var(--gutter) 0;
-  padding-left: 1.2em;
-  font-size: 14px;
-  color: var(--color-text-sub);
+.cert-start > .btn {
+  flex: 1;
+}
+
+.cert-start > .help-q {
+  width: 32px;
+  height: 32px;
 }
 
 /* ----- プレイ中：上の帯 ----- */

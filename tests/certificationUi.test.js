@@ -102,14 +102,22 @@ const COUNTDOWN = R.countdownMs + 500;
 const AUTO_ADVANCE = R.revealMaxMs + R.advanceDelayMs + 50;
 
 describe('レベル選択', () => {
-  it('3レベルを選んでスタートできる。ルールと記録への入口がある', () => {
+  it('3レベルを選んでスタートできる。ルール（？で表示）と記録への入口がある', () => {
     const navigate = mount(mountCertificationSetupScreen);
     const levels = [...container.querySelectorAll('.cert-level')];
     expect(levels.map((b) => b.dataset.level)).toEqual(['basic', 'standard', 'expert']);
     expect(levels.map((b) => b.querySelector('.cert-level__name').textContent)).toEqual(['ベーシック', 'スタンダード', 'エキスパート']);
     expect(container.textContent).toContain('100秒で何問解ける？');
-    expect(container.textContent).toContain('ヒントは使えません');
-    expect(container.textContent).toContain('1回目は50点、2回目は100点');
+    // ルールの説明は画面に出さず、スタートと同じ行の左端の「？」でポップアップ
+    expect(container.textContent).not.toContain('ヒントは使えません');
+    const startRow = buttonByText(container, 'スタート').parentElement;
+    expect(startRow.firstElementChild.classList.contains('help-q')).toBe(true);
+    startRow.firstElementChild.click();
+    const dialog = document.querySelector('.dialog');
+    expect(dialog.textContent).toContain('ヒントは使えません');
+    expect(dialog.textContent).toContain('1回目は50点、2回目は100点');
+    buttonByText(dialog, '閉じる').click();
+    expect(document.querySelector('.dialog')).toBeNull();
     // 対象学年は書かない（ボタンを小さく）。スタートはエキスパートのすぐ下
     expect(container.textContent).not.toContain('小学生向け');
     expect(container.querySelector('.cert-levels').nextElementSibling.contains(buttonByText(container, 'スタート'))).toBe(true);

@@ -135,6 +135,15 @@ describe('カテゴリ選択・設定画面', () => {
     expect(pressed).toEqual(['すべて', '問題数を選ぶ']);
     expect([...container.querySelectorAll('.segmented__item')].map((b) => b.textContent)).toEqual(['基本', '標準', '応用', 'すべて', '問題数を選ぶ', '1分チャレンジ']);
     expect(container.textContent).not.toContain('対象：');
+    // 難易度ごとの問題の種類は画面に出さず、「難易度」の右の「？」でポップアップ
+    expect(container.textContent).not.toContain('基本：辺と辺');
+    const q = container.querySelector('.field__label .help-q');
+    expect(q.parentElement.textContent).toContain('難易度');
+    q.click();
+    const dialog = document.querySelector('.dialog');
+    expect([...dialog.querySelectorAll('li')].map((li) => li.textContent)).toEqual(['基本：辺と辺・面と面の平行・垂直など', '標準：辺と面の関係・ねじれの位置', '応用：2つの条件を組み合わせた問題']);
+    buttonByText(dialog, '閉じる').click();
+    expect(document.querySelector('.dialog')).toBeNull();
     const range = container.querySelector('input[type="range"]');
     expect([range.min, range.max, range.value]).toEqual(['1', '20', '5']);
     expect(container.querySelector('.slider__value').textContent).toBe('5問');

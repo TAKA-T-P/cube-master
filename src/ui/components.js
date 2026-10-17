@@ -147,3 +147,38 @@ export function confirmDialog({ title, message, okLabel = 'はい', cancelLabel 
   okButton.focus();
   return { el, result, close };
 }
+
+/**
+ * 説明を見るだけのポップアップ（「閉じる」・Esc・外側を押すと閉じる）
+ * @param {{ title: string, items: string[] }} options items は箇条書きにする説明
+ */
+export function infoDialog({ title, items }) {
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+  };
+  const close = () => {
+    document.removeEventListener('keydown', onKey);
+    el.remove();
+  };
+  const closeButton = h('button', { class: 'btn btn--primary', type: 'button', onClick: () => close() }, '閉じる');
+  const el = h(
+    'div',
+    { class: 'dialog-backdrop', onClick: (e) => e.target === el && close() },
+    h(
+      'div',
+      { class: 'dialog', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'dialog-title' },
+      h('h2', { id: 'dialog-title', class: 'dialog__title' }, title),
+      h('ul', { class: 'dialog__list' }, items.map((item) => h('li', {}, item))),
+      h('div', { class: 'dialog__actions' }, closeButton),
+    ),
+  );
+  document.addEventListener('keydown', onKey);
+  document.body.append(el);
+  closeButton.focus();
+  return { el, close };
+}
+
+/** 小さな「？」ボタン（押すと説明のポップアップを出す） */
+export function helpButton(ariaLabel, onClick) {
+  return h('button', { class: 'help-q', type: 'button', 'aria-label': ariaLabel, title: ariaLabel, onClick }, '？');
+}

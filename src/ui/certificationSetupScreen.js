@@ -2,9 +2,20 @@
  * 段位認定：レベル選択画面（ベーシック・スタンダード・エキスパート）
  */
 import { h } from '../utils/dom.js';
-import { button } from './components.js';
+import { button, infoDialog, helpButton } from './components.js';
 import { CERTIFICATION_RULES, LEVELS, getRankLabel } from '../core/certificationRules.js';
 import { startCertification, getCertificationRecords, takeCertificationNotice, getCertificationLevel } from './certificationStore.js';
+
+/** 段位認定のルール（スタートの左の「？」で見る説明） */
+export const certRules = (rules) => [
+  `制限時間は${rules.durationMs / 1000}秒。いろいろなカテゴリの問題が出ます。`,
+  `正解すると ★1 ${rules.points[1]}点・★2 ${rules.points[2]}点・★3 ${rules.points[3]}点。3問連続正解から連続ボーナス！`,
+  `答えが複数ある問題に一発で正解すると、残り時間が${rules.multipleAnswerTimeBonusMs / 1000}秒ふえます。`,
+  `まちがえると減点。1回目は${rules.mistakePenalty.perMistake}点、2回目は${rules.mistakePenalty.perMistake * 2}点…と、まちがえるほど重くなります（${rules.mistakePenalty.perMistake * rules.mistakePenalty.maxMultiplier}点まで）。`,
+  `「パス」で問題を入れかえられます。n回目のパスで残り時間が${rules.passPenalty.perPassMs / 1000}×n秒へります（1回目${rules.passPenalty.perPassMs / 1000}秒、2回目${(rules.passPenalty.perPassMs * 2) / 1000}秒…）。減点はありませんが、連続正解は0に戻ります。`,
+  '答え合わせ・3Dの演出のあいだは、時間は止まります。ヒントは使えません。',
+  'とちゅうでやめたり、ほかのタブに切りかえたりすると中断になり、記録に残りません。',
+];
 
 export function mountCertificationSetupScreen(container, { navigate }) {
   const rules = CERTIFICATION_RULES;
@@ -65,23 +76,8 @@ export function mountCertificationSetupScreen(container, { navigate }) {
       notice ? h('p', { class: 'cert-notice', role: 'alert' }, notice) : null,
       h('p', { class: 'cert-lead' }, `${rules.durationMs / 1000}秒で何問解ける？立方体マスターを目指せ！`),
       h('div', { class: 'cert-levels', role: 'group', 'aria-label': 'レベル' }, cards),
-      // スタートは、レベルのボタンのすぐ下
-      h('div', { class: 'cert-start' }, start),
-      h(
-        'ul',
-        { class: 'cert-rules' },
-        h('li', {}, `制限時間は${rules.durationMs / 1000}秒。いろいろなカテゴリの問題が出ます。`),
-        h('li', {}, `正解すると ★1 ${rules.points[1]}点・★2 ${rules.points[2]}点・★3 ${rules.points[3]}点。3問連続正解から連続ボーナス！`),
-        h('li', {}, `答えが複数ある問題に一発で正解すると、残り時間が${rules.multipleAnswerTimeBonusMs / 1000}秒ふえます。`),
-        h(
-          'li',
-          {},
-          `まちがえると減点。1回目は${rules.mistakePenalty.perMistake}点、2回目は${rules.mistakePenalty.perMistake * 2}点…と、まちがえるほど重くなります（${rules.mistakePenalty.perMistake * rules.mistakePenalty.maxMultiplier}点まで）。`,
-        ),
-        h('li', {}, `「パス」で問題を入れかえられます。n回目のパスで残り時間が${rules.passPenalty.perPassMs / 1000}×n秒へります（1回目${rules.passPenalty.perPassMs / 1000}秒、2回目${(rules.passPenalty.perPassMs * 2) / 1000}秒…）。減点はありませんが、連続正解は0に戻ります。`),
-        h('li', {}, '答え合わせ・3Dの演出のあいだは、時間は止まります。ヒントは使えません。'),
-        h('li', {}, 'とちゅうでやめたり、ほかのタブに切りかえたりすると中断になり、記録に残りません。'),
-      ),
+      // スタートは、レベルのボタンのすぐ下。ルールの説明は、左端の「？」で見る
+      h('div', { class: 'cert-start' }, helpButton('段位認定のルール', () => infoDialog({ title: '段位認定のルール', items: certRules(rules) })), start),
     ),
   );
   return { unmount() {} };

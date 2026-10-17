@@ -5,7 +5,7 @@
  * 「1分チャレンジ」：1分間で何問正解できるか（不正解は残り時間 −10 秒）。スライダーの代わりに、選んだ難易度の最高記録を出す
  */
 import { h } from '../utils/dom.js';
-import { segmented, slider, button } from './components.js';
+import { segmented, slider, button, infoDialog, helpButton } from './components.js';
 import { getCategory, DIFFICULTIES, QUESTION_LIMIT_RANGE, DEFAULT_SETTINGS } from '../questions/questionRegistry.js';
 import { CHALLENGE_RULES } from '../core/timedChallengeSession.js';
 import { startTraining, startChallenge, getSettings, takeChallengeNotice } from './trainingStore.js';
@@ -35,6 +35,12 @@ export function mountTrainingSetupScreen(container, { navigate, params }) {
   };
 
   const difficulty = segmented('難易度', DIFFICULTIES, initial.difficulty, () => updateRecord());
+  // 難易度ごとの問題の種類は、「難易度」の右の「？」で見る
+  if (category.levelNotes?.length) {
+    difficulty.el
+      .querySelector('.field__label')
+      .append(helpButton('難易度ごとの問題の種類', () => infoDialog({ title: `${category.name}：難易度ごとの問題`, items: category.levelNotes })));
+  }
   const { min, max } = QUESTION_LIMIT_RANGE;
   const initialLimit = Number.isInteger(initial.questionLimit) ? Math.min(max, Math.max(min, initial.questionLimit)) : DEFAULT_SETTINGS.questionLimit;
   const limit = slider('問題数', { min, max, unit: '問' }, initialLimit, () => {});
@@ -88,7 +94,6 @@ export function mountTrainingSetupScreen(container, { navigate, params }) {
         { class: 'setup-card' },
         h('p', { class: 'setup-card__desc' }, category.description),
         difficulty.el,
-        h('ul', { class: 'setup-note' }, (category.levelNotes ?? []).map((note) => h('li', {}, note))),
         mode.el,
         countPanel,
         challengePanel,
