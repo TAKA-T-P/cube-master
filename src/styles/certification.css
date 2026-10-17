@@ -3,7 +3,9 @@
 /* ----- レベル選択 ----- */
 .cert-lead {
   margin: 0 var(--gutter) 12px;
-  font-size: 18px;
+  /* スマホの縦画面でも1行に収める（約23.5文字分の幅に合わせて小さくする） */
+  font-size: min(16px, calc((100vw - 2 * var(--gutter)) / 23.5));
+  white-space: nowrap;
   font-weight: 800;
   color: var(--color-primary-strong);
 }
