@@ -33,6 +33,9 @@ const half = new Q(1, 2);
 const realVolume = (poly, s) => calculatePolyhedronVolume(poly).mul(new Q(s * s * s, 8));
 
 /** 立方体の体積・取り除く立体などの体積が整数になる1辺の長さ（cm）を選ぶ */
+/** 問題で使う立方体の1辺の長さ（cm）。計算しやすい1けたの値だけ */
+const SIDES = Object.freeze([3, 6, 9]);
+
 function chooseSide(candidates, ok, rng) {
   const list = candidates.filter(ok);
   if (list.length === 0) return null;
@@ -247,7 +250,7 @@ export const INSCRIBED_TEMPLATES = [
       const pts = [...p.base, p.apex];
       const poly = convexHull(pts.map((x) => x.position));
       const name = classifyPolyhedron(poly).name;
-      const s = chooseSide([3, 6, 9, 12], (n) => realVolume(poly, n).isInteger(), rng);
+      const s = chooseSide(SIDES, (n) => realVolume(poly, n).isInteger(), rng);
       const u = new Q(s, 2);
       const volume = realVolume(poly, s);
       const baseArea = p.kind === 'quad' ? Q.of(s * s) : new Q(s * s, 2);
@@ -314,7 +317,7 @@ export const INSCRIBED_TEMPLATES = [
     build(base, rng) {
       const c = tetraCandidates().find((x) => x.key === base.key);
       const poly = convexHull(c.points.map((p) => p.position));
-      const s = chooseSide([3, 6, 9, 12], (n) => realVolume(poly, n).isInteger() && new Q(n * n * n, 6).isInteger(), rng);
+      const s = chooseSide(SIDES, (n) => realVolume(poly, n).isInteger() && new Q(n * n * n, 6).isInteger(), rng);
       const volume = realVolume(poly, s);
       const cube = Q.of(s * s * s);
       const ids = c.points.map((p) => p.id);
@@ -356,12 +359,13 @@ export const INSCRIBED_TEMPLATES = [
     id: 'I06',
     difficulty: 3,
     title: '角すいを取り除いた残りの体積',
-    bases: () => removals().map((r) => ({ key: r.key, refs: [pointKey(r.apex)], group: r.kind })),
+    // 1けたの1辺で、取り除く立体の体積が整数になるものだけ
+    bases: () => removals().filter((r) => chooseSide(SIDES, (n) => realVolume(convexHull(r.removed), n).isInteger())).map((r) => ({ key: r.key, refs: [pointKey(r.apex)], group: r.kind })),
     build(base, rng) {
       const r = removals().find((x) => x.key === base.key);
       const removedPoly = convexHull(r.removed);
       const remainingPolys = r.remaining.map((pts) => convexHull(pts));
-      const s = chooseSide([3, 6, 9, 12], (n) => realVolume(removedPoly, n).isInteger(), rng);
+      const s = chooseSide(SIDES, (n) => realVolume(removedPoly, n).isInteger(), rng);
       const removed = realVolume(removedPoly, s);
       const remaining = remainingPolys.reduce((sum, p) => sum.add(realVolume(p, s)), Q.of(0));
       const cube = Q.of(s * s * s);

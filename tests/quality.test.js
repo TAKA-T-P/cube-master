@@ -46,6 +46,8 @@ describe('全テンプレートの総点検', () => {
           // 解説の〔choice:ID〕は、実際にある選択肢を指す
           for (const [, ref] of q.explanation.text.matchAll(/〔choice:([^〕]+)〕/g)) expect(ids, `${where}: ${ref}`).toContain(ref);
           expect(q.hint?.text?.length ?? 0, where).toBeGreaterThan(5);
+          // 立方体の1辺の長さは、計算しやすい1けたの値だけ
+          for (const [, n] of q.question.matchAll(/1辺(\d+)cm/g)) expect(Number(n), where).toBeLessThanOrEqual(9);
         }
       }
     });

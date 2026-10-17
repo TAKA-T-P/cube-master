@@ -257,6 +257,9 @@ const choiceOf = (c) => ({ id: c.id, label: c.label });
 /**
  * 1辺の長さ（cm）。面積・体積が整数の係数になる長さから選ぶ（rng がなければ、いちばん小さい長さ）
  */
+/** 問題で使う立方体の1辺の長さ（cm）。計算しやすい1けたの値だけ */
+export const SIDES = Object.freeze([2, 4, 6, 8]);
+
 function pickSide(sides, test, rng = null) {
   const ok = [];
   for (const s of sides) {
@@ -494,12 +497,12 @@ export const CUTTING_TEMPLATES = [
     title: '切り口の面積',
     bases: () =>
       allCuts()
-        .filter((c) => AREA_SHAPES.includes(c.shape.name) && pickSide([2, 4, 6, 8], (u) => areaOk(c, u)))
+        .filter((c) => AREA_SHAPES.includes(c.shape.name) && pickSide(SIDES, (u) => areaOk(c, u)))
         .map((c) => baseOf(c, c.shape.name)),
     build(base, rng) {
       const record = findCut(base.key);
       const given = givenPoints(record);
-      const { s, res } = pickSide([2, 4, 6, 8], (u) => areaOk(record, u), rng);
+      const { s, res } = pickSide(SIDES, (u) => areaOk(record, u), rng);
       const { area, text } = res;
       const face = new Surd(s * s);
       const choices = surdChoices(
@@ -525,13 +528,13 @@ export const CUTTING_TEMPLATES = [
     bases: () =>
       allCuts()
         .filter((c) => c.shape.sides <= 4)
-        .map((c) => ({ c, ok: pickSide([2, 4, 6, 8, 12], (u) => volumeOk(c, u)) }))
+        .map((c) => ({ c, ok: pickSide(SIDES, (u) => volumeOk(c, u)) }))
         .filter((x) => x.ok)
         .map(({ c, ok }) => baseOf(c, ok.res.kind)),
     build(base, rng) {
       const record = findCut(base.key);
       const given = givenPoints(record);
-      const { s, res } = pickSide([2, 4, 6, 8, 12], (u) => volumeOk(record, u), rng);
+      const { s, res } = pickSide(SIDES, (u) => volumeOk(record, u), rng);
       const V = new Surd(res.volume);
       const big = new Surd(res.big);
       const cube = new Surd(s * s * s);
