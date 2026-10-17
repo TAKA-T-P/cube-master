@@ -142,6 +142,7 @@ describe('100秒チャレンジ', () => {
     expect(container.querySelector('.cert-countdown')).toBeNull();
     expect(session().timer.state).toBe('running');
     expect(buttonByText(container, 'ヒントを見る').hidden).toBe(true);
+    expect(container.querySelector('.quiz-header').textContent).toContain('段位認定・ベーシック'); // プレイ形式がわかる
     // START! のあと 0.1 秒たったところ（制限時間 100 秒）
     expect(container.querySelector('[data-testid="cert-timer"]').textContent).toBe('99.9秒');
     await vi.advanceTimersByTimeAsync(2500);

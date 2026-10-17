@@ -5,9 +5,10 @@
  * タップすると、すぐに閉じる。記号は文字ではなく図形で描く（端末によって位置がずれない）。
  */
 import { h } from '../utils/dom.js';
+import { TRAINING_REVEAL } from '../core/revealSettings.js';
 
 /** 表示する時間（ミリ秒）。0 なら表示せずにすぐ onDone を呼ぶ（テスト用） */
-export const answerSplash = { duration: 1000 };
+export const answerSplash = { duration: TRAINING_REVEAL.splashMs };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svg = (tag, attrs) => {

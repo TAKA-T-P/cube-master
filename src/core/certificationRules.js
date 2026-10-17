@@ -9,6 +9,8 @@
  * 表示名はレベルごとに、ベーシックは段位名のみ・スタンダードは「＋」・エキスパートは「★」を直後に付ける（例：五段＋）。
  */
 
+import { TIMED_REVEAL } from './revealSettings.js';
+
 export const RANK_NAMES = Object.freeze([
   '10級', '9級', '8級', '7級', '6級',
   '5級', '4級', '3級', '2級', '1級',
@@ -61,13 +63,11 @@ export const CERTIFICATION_RULES = Object.freeze({
   multipleAnswerTimeBonusMs: 3000,
   /** 連続正解ボーナス（連続正解数が min 以上のとき、その問題に加える点。上から順に調べる） */
   streakBonus: Object.freeze([Object.freeze({ min: 5, bonus: 40 }), Object.freeze({ min: 3, bonus: 20 })]),
-  /** スタートのカウントダウン（3・2・1・START!） */
-  countdownMs: 3000,
-  /** 回答後の「○△×」の表示時間・3D 演出の再生速度・次の問題へ進むまでの待ち時間（どれもタイマーは止まっている） */
-  splashMs: 500,
-  revealSpeed: 2.5,
-  revealMaxMs: 3200,
-  advanceDelayMs: 600,
+  /**
+   * カウントダウン・回答後の「○△×」・3D 演出の速さ・次の問題へ進むまでの待ち時間（どれもタイマーは止まっている）。
+   * 1分チャレンジと同じ値（core/revealSettings の TIMED_REVEAL）
+   */
+  ...TIMED_REVEAL,
   /** 同じカテゴリを続けて出してよい数（2 = 3問以上は続けない） */
   maxSameCategoryRun: 2,
   /** 出題するカテゴリ（新しいカテゴリを段位認定に入れるときは、ここに加える） */

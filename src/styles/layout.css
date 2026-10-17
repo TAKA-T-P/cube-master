@@ -86,8 +86,67 @@
 }
 
 .home-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
   color: var(--color-text-sub);
   font-size: 13px;
+}
+
+/* ===== あそびかた：タブ ===== */
+.help-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 var(--gutter) 10px;
+}
+
+.help-tab {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.help-tab[aria-selected='true'] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.help-panel {
+  display: grid;
+  gap: 10px;
+  margin: 0 var(--gutter);
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.help-panel h2 {
+  font-size: 18px;
+}
+
+.help-panel h3 {
+  margin: 4px 0 0;
+  font-size: 15px;
+}
+
+.sound-settings {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.sound-settings .field {
+  width: 100%;
 }
 
 /* ===== ヘルプ画面 ===== */

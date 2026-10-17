@@ -94,6 +94,55 @@ describe('1分チャレンジの進行', () => {
   });
 });
 
+describe('1分チャレンジのタイマーの境界', () => {
+  function sessionAt(remainingMs) {
+    const now = fakeClock();
+    const s = new TimedChallengeSession({ category: 'dice', templates: getTemplates('dice'), difficulty: 1, rng: createRng(4), now });
+    s.nextQuestion();
+    s.startAnswering();
+    now.advance(R.durationMs - remainingMs);
+    return { s, now };
+  }
+
+  it('残り9秒・残り10秒ちょうどで誤答すると 0 秒になり、次の問題は出ない', () => {
+    for (const left of [9000, 10000]) {
+      const { s } = sessionAt(left);
+      const q = s.state.currentQuestion;
+      expect(s.submit(wrongOf(q)).isCorrect).toBe(false);
+      expect(s.timer.getRemainingMs()).toBe(0);
+      expect(s.state.lastScore.penaltyMs).toBe(left); // 実際に減ったのは残っていた時間だけ
+      expect(s.hasNextQuestion()).toBe(false);
+      expect(s.nextQuestion()).toBeNull();
+      expect(s.getSummary()).toMatchObject({ answeredCount: 1, correctCount: 0 });
+    }
+  });
+
+  it('時間切れと同時の回答は1回だけ処理する（時間切れのあとは受け付けない）', () => {
+    const { s, now } = sessionAt(50);
+    const q = s.state.currentQuestion;
+    now.advance(50); // ちょうど 0 秒
+    expect(s.submit(q.correctAnswers)).toBeNull();
+    expect(s.checkTimeUp()).toBe(true);
+    expect(s.submit(q.correctAnswers)).toBeNull();
+    expect(s.getSummary().answeredCount).toBe(0);
+  });
+
+  it('答え合わせの間・次の問題を表示するまでは減らず、再開は1回だけ（2回呼んでも時間はずれない）', () => {
+    const { s, now } = sessionAt(30000);
+    s.submit(s.state.currentQuestion.correctAnswers);
+    now.advance(8000); // 演出
+    expect(s.timer.getRemainingMs()).toBe(30000);
+    s.nextQuestion();
+    now.advance(2000); // 次の問題を作って表示するまで
+    expect(s.timer.getRemainingMs()).toBe(30000);
+    expect(s.startAnswering()).toBe(true);
+    now.advance(1000);
+    s.startAnswering(); // スキップなどで2回目が来ても
+    now.advance(1000);
+    expect(s.timer.getRemainingMs()).toBe(28000);
+  });
+});
+
 describe('1分チャレンジの最高記録（学習記録）', () => {
   const summary = (difficulty, correctCount, extra = {}) => ({ category: 'dice', difficulty, correctCount, answeredCount: correctCount + 1, aborted: false, ...extra });
 
@@ -213,6 +262,26 @@ describe('1分チャレンジの画面', () => {
     expect(nav).toHaveBeenCalledWith('question', { review: 'challenge' });
     buttonByText(container, 'もう一度挑戦').click();
     expect(nav).toHaveBeenLastCalledWith('challenge-play');
+  });
+
+  it('時間切れの瞬間に、選択肢・回答ボタンを押せなくする', async () => {
+    store.startChallenge({ category: 'dice', difficulty: 1 }, { rng: createRng(5), now: () => Date.now() });
+    mount(mountChallengeQuestionScreen);
+    await vi.advanceTimersByTimeAsync(COUNTDOWN);
+    const q = current();
+    container.querySelector(`[data-choice="${q.correctAnswers[0]}"]`).click();
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(container.querySelector('.cert-timeup')).not.toBeNull();
+    expect([...container.querySelectorAll('.choice')].every((b) => b.disabled)).toBe(true);
+    expect(container.querySelector('.quiz-actions .btn--primary').disabled).toBe(true);
+    container.querySelector('.quiz-actions .btn--primary').click();
+    expect(store.getChallengeResult().summary.answeredCount).toBe(0);
+  });
+
+  it('上の帯に「1分チャレンジ・難易度」を出し、段位認定と区別できる', async () => {
+    store.startChallenge({ category: 'dice', difficulty: 2 }, { rng: createRng(5), now: () => Date.now() });
+    mount(mountChallengeQuestionScreen);
+    expect(container.querySelector('.quiz-header').textContent).toContain('1分チャレンジ・標準');
   });
 
   it('タブを切りかえると中断し、記録に残さない。設定画面にお知らせを出す', async () => {

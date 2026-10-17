@@ -114,7 +114,9 @@ export function mountTimedPlayScreen(container, options) {
 
   const host = h('div', { class: 'cert-play' });
   container.append(host);
-  const screen = mountQuestionScreen(host, { navigate, mode });
+  // 問題画面を作る途中で時間切れになっても timeUp が使えるように、先に宣言しておく
+  let screen = null;
+  screen = mountQuestionScreen(host, { navigate, mode });
 
   // ---------- カウントダウン（3・2・1・START!）。この間は問題が見えないように画面全体をおおう ----------
   const countText = h('span', { class: 'cert-countdown__text' }, '3');
@@ -158,6 +160,7 @@ export function mountTimedPlayScreen(container, options) {
     if (ended) return;
     ended = true;
     clearInterval(tickTimer);
+    screen?.lock(); // 時間切れの瞬間に回答・選択・パスを止める
     updateTimer();
     // 最後まで終えた挑戦は、すぐに記録する（TIME UP! の表示中に画面を離れても記録は残る）
     options.finish();
@@ -200,7 +203,7 @@ export function mountTimedPlayScreen(container, options) {
       clearInterval(tickTimer);
       for (const t of timers) clearTimeout(t);
       document.removeEventListener('visibilitychange', onVisibility);
-      screen.unmount();
+      screen?.unmount();
     },
   };
 }

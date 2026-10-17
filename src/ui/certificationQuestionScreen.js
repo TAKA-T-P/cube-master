@@ -33,7 +33,7 @@ export function mountCertificationQuestionScreen(container, { navigate, params }
   return mountTimedPlayScreen(container, {
     navigate,
     session,
-    label: levelLabel(session.level),
+    label: `段位認定・${levelLabel(session.level)}`,
     timing: rules,
     scoreView,
     allowPass: true,

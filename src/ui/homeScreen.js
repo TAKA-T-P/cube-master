@@ -4,6 +4,7 @@
  * メニューは MENU_ITEMS で定義する。後続 Phase では enabled を true にして route を設定するだけで有効化できる。
  */
 import { h } from '../utils/dom.js';
+import { soundToggleButton } from './soundControls.js';
 
 export const MENU_ITEMS = [
   { id: 'training', label: 'トレーニング', route: 'categories', enabled: true, primary: true },
@@ -45,7 +46,7 @@ export function mountHomeScreen(container, { navigate, version }) {
         h('p', { class: 'home-subtitle' }, '立方体を極める！空間認識トレーニング'),
       ),
       menu,
-      h('footer', { class: 'home-footer' }, `Ver.${version}`),
+      h('footer', { class: 'home-footer' }, soundToggleButton(), h('span', {}, `Ver.${version}`)),
     ),
   );
 

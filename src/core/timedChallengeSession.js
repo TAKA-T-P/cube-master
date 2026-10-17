@@ -10,17 +10,13 @@
 import { QuestionPicker } from './questionEngine.js';
 import { validateAnswer, canSubmitAnswer, normalizeAnswers } from './answerValidator.js';
 import { createCertificationTimer } from './certificationTimer.js';
-import { CERTIFICATION_RULES } from './certificationRules.js';
+import { TIMED_REVEAL } from './revealSettings.js';
 
 export const CHALLENGE_RULES = Object.freeze({
   durationMs: 60000,
   mistakePenaltyMs: 10000,
-  // カウントダウン・演出の速さは段位認定と同じ
-  countdownMs: CERTIFICATION_RULES.countdownMs,
-  splashMs: CERTIFICATION_RULES.splashMs,
-  revealSpeed: CERTIFICATION_RULES.revealSpeed,
-  revealMaxMs: CERTIFICATION_RULES.revealMaxMs,
-  advanceDelayMs: CERTIFICATION_RULES.advanceDelayMs,
+  // カウントダウン・演出の速さは段位認定と同じ（core/revealSettings）
+  ...TIMED_REVEAL,
 });
 
 export class TimedChallengeSession {

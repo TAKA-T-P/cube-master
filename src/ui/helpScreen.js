@@ -1,10 +1,19 @@
 /**
  * ヘルプ（あそびかた）画面
- * 使っている端末に合った操作説明を先に表示する。
+ *
+ * 説明が多いので、7つのタブに分けて、短いまとまりで切りかえて読めるようにする。
+ *   1. CUBE MASTERとは？ 2. トレーニング 3. 1分チャレンジ 4. 段位認定 5. 3Dの操作 6. ヒント・復習・学習記録 7. 記録と設定
+ * 3Dの操作は、使っている端末に合った説明を先に表示する。
  */
 import { h, isTouchPrimary, showToast } from '../utils/dom.js';
 import { confirmDialog } from './components.js';
 import { clearLearningData, isLearningStorageAvailable } from './learningStore.js';
+import { soundSettingsPanel } from './soundControls.js';
+import { CERTIFICATION_RULES } from '../core/certificationRules.js';
+import { CHALLENGE_RULES } from '../core/timedChallengeSession.js';
+
+const R = CERTIFICATION_RULES;
+const sec = (ms) => ms / 1000;
 
 const HOW_TO = {
   pc: {
@@ -27,75 +36,54 @@ const HOW_TO = {
   },
 };
 
-function section(key, current) {
-  const { title, items } = HOW_TO[key];
-  return h(
-    'section',
-    { class: `help-section ${current ? 'help-section--current' : ''}` },
-    h('h2', {}, title, current ? h('span', { class: 'badge badge--info' }, 'お使いの端末') : null),
-    h(
-      'dl',
-      { class: 'help-list' },
-      items.map(([term, desc]) => [h('dt', {}, term), h('dd', {}, desc)]),
-    ),
-  );
-}
+const list = (items) => h('dl', { class: 'help-list' }, items.map(([term, desc]) => [h('dt', {}, term), h('dd', {}, desc)]));
 
-const CERTIFICATION_STEPS = [
-  ['段位認定', 'トップの「段位認定」→ レベル（ベーシック・スタンダード・エキスパート）を選んで「スタート」。3・2・1 のあと、100秒でいろいろなカテゴリの問題に挑戦します。'],
-  ['得点', '正解すると ★1 100点・★2 160点・★3 240点。3問以上の連続正解でボーナスが加わり、答えが複数ある問題に一発で正解すると残り時間が3秒ふえます。まちがえると減点で、1回目50点・2回目100点…と重くなります（300点まで。得点は0点より下がりません）。'],
-  ['パス', '「回答する」の左の「パス」で問題を入れかえられます。n回目のパスで残り時間が2×n秒へります（1回目2秒、2回目4秒…）。確認のメッセージが出ている間も時間は減ります。パスは回答の数・正答率には入らず、減点もしませんが、連続正解ボーナスは0に戻ります。'],
-  ['時間', '答え合わせや3Dの演出のあいだは、時間は止まります。ヒントは使えません。ほかのタブに切りかえたり、とちゅうでやめたりすると中断になり、記録に残りません。'],
-  ['段位', '10級から1級、初段から十段、そして最高の「皆伝」まで21段階。ベーシックは「五段」、スタンダードは「五段＋」、エキスパートは「五段★」のように、レベルごとに別々に記録されます。'],
+const ABOUT = [
+  ['CUBE MASTER', '立方体の「頂点」「辺」「面」や、展開図・サイコロ・積み木など、立方体のいろいろな問題に挑戦するアプリです。3Dの立方体を動かして、答えを目で確かめられます。'],
+  ['3つの遊び方', '「トレーニング」はじっくり練習、「1分チャレンジ」は1つのカテゴリで60秒の挑戦、「段位認定」は全部のカテゴリから出る100秒の挑戦です。'],
+  ['はじめての人は', 'まずトレーニングの「基本」から始めよう。慣れてきたら1分チャレンジや段位認定に挑戦！'],
 ];
 
-const TRAINING_STEPS = [
-  ['はじめ方', 'トップの「トレーニング」→ カテゴリ（展開図と頂点・辺／位置関係／展開図パズル／サイコロ・回転／立方体の個数・着色／積み木の見え方・投影図）→ 難易度と問題数を選んで「スタート」。'],
-  ['答え方', '問題文を読んで、下の選択肢から答えを選び「回答する」。「すべて選ぼう」の問題は、あてはまるものを全部選びます。回答すると「○」（正解）・「△」（おしい）・「×」（不正解）が効果音とともに大きく出て、そのあと解説が表示されます（タップするとすぐ閉じます）。同じボタンは「次の問題へ」に変わります。'],
-  ['1分チャレンジ', '難易度・問題数の画面で「1分チャレンジ」を選ぶと、1分間で何問正解できるかに挑戦できます。まちがえると残り時間が10秒へります。答え合わせの間は時間が止まります。難易度ごとの最高記録が残ります。'],
-  ['ヒント', '回答する前に「ヒントを見る」を押すと、考え方の手がかりが出ます（答えは出ません）。ヒントを見ても正解・不正解は変わりません。'],
-  ['3Dのヒント', '位置関係では、オレンジ色の辺・面が問題の基準です。立方体を回して、いろいろな向きから確かめよう。'],
-  ['サイコロ・回転', '1個のサイコロを頭の中で回します。答えが見えてしまわないように、回答するまで3Dのサイコロは表示されません。図と回転の手順をよく見て考えよう。回答するとサイコロが現れ、実際に回って答えを確かめられます。'],
-  ['積み木の見え方', '積み木を、赤い矢印の方向から見た形を考えます（矢印の根元が見る人の場所です）。回答すると3Dの積み木に切りかわり、その方向から見た様子を確かめられます。'],
-  ['展開図', '展開図を頭の中で折りたたみます。回答すると3Dの展開図が実際に折れて立方体になり、重なる点や辺、向かい合う面を確かめられます。「展開図に戻す」で何度でも広げたり組み立てたりできます。'],
-  ['積み木の個数', '積み木が全部で何個あるか、見えない積み木もふくめて数えます。積み木は床から隙間なく積んであり、上に積み木がある場所には下にも必ず積み木があります。回答すると3Dの積み木が段ごとに分かれ、各段の個数と合計が表示されます。'],
-  ['小立方体', '大きな立方体を小さく切り分けたときの、色のついた面の数や小立方体の数を考えます。色を塗ったのは切る前の外側の面だけで、切り口には色がつきません。回答すると3Dの立方体が分かれて少しはなれ、条件に合う小立方体が緑で光ります。「元に戻す」「分離して見る」で切りかえられます。'],
-  ['答え合わせ', '正解は緑、まちがえたところは赤で光ります。立方体の下の「もう一度見る」で何度でも見直せます。'],
-  ['結果', '決めた問題数（1〜20問）を解くと結果が出ます。結果画面の「第◯問」を押すと、その問題をもう一度解けます。「間違えた問題を復習」で、不正解・おしいだった問題をまとめて解き直せます（もとの結果は変わりません）。間違えた問題はこの端末に保存され、カテゴリ選択の「学習記録」からあとで復習できます。'],
+const TRAINING = [
+  ['はじめ方', 'トップの「トレーニング」→ カテゴリを選んで「次へ」→ 難易度と「問題数を選ぶ」を決めて「スタート」。'],
+  ['答え方', '問題文を読んで、選択肢を選び「回答する」。「1つ選ぼう」は1つだけ、「当てはまるものをすべて選ぼう」は当てはまるものを全部選びます。'],
+  ['答え合わせ', '「○」（正解）・「△」（おしい）・「×」（不正解）が出たあと、解説が表示されます。正解は緑、まちがえたところは赤で光ります。立方体の下の「もう一度見る」で何度でも見直せます。'],
+  ['ヒント', '回答する前に「ヒントを見る」を押すと、考え方の手がかりが出ます（答えは出ません）。'],
+  ['3Dで確かめる', '回答すると、サイコロが実際に回ったり、展開図が折りたたまれたり、積み木が段ごとに分かれたりして、答えを確かめられます。'],
+  ['結果', '決めた問題数（1〜20問）を解くと結果が出ます。「第◯問」を押すと、その問題をもう一度解けます。'],
 ];
 
-function certificationSection() {
-  return h(
-    'section',
-    { class: 'help-section' },
-    h('h2', {}, '段位認定のあそびかた'),
-    h(
-      'dl',
-      { class: 'help-list' },
-      CERTIFICATION_STEPS.map(([term, desc]) => [h('dt', {}, term), h('dd', {}, desc)]),
-    ),
-  );
-}
+const CHALLENGE = [
+  ['ルール', `${sec(CHALLENGE_RULES.durationMs)}秒で、選んだカテゴリ・難易度の問題に何問正解できるかに挑戦します。`],
+  ['はじめ方', '難易度・問題数の画面で「1分チャレンジ」を選んで「スタート」。3・2・1 のあとに始まります。'],
+  ['ペナルティ', `まちがえる（おしいもふくむ）と、残り時間が${sec(CHALLENGE_RULES.mistakePenaltyMs)}秒へります。`],
+  ['時間が止まるとき', '答え合わせや3Dの演出のあいだは、時間は減りません。'],
+  ['できないこと', 'ヒントとパスは使えません。'],
+  ['記録', 'カテゴリごとに、「基本」「標準」「応用」「すべて」それぞれの最高記録（正解数）が残ります。'],
+];
 
-function trainingSection() {
-  return h(
-    'section',
-    { class: 'help-section' },
-    h('h2', {}, 'トレーニングのあそびかた'),
-    h(
-      'dl',
-      { class: 'help-list' },
-      TRAINING_STEPS.map(([term, desc]) => [h('dt', {}, term), h('dd', {}, desc)]),
-    ),
-  );
-}
+const CERTIFICATION = [
+  ['ルール', `${sec(R.durationMs)}秒で、6つのカテゴリから出る問題に挑戦し、得点で段位が決まります。`],
+  ['レベル', 'ベーシック（★1の問題）・スタンダード（★1と★2）・エキスパート（★2と★3）の3つから選びます。'],
+  ['得点', `正解すると ★1 ${R.points[1]}点・★2 ${R.points[2]}点・★3 ${R.points[3]}点。3問以上続けて正解すると、ボーナスが加わります。`],
+  ['時間ボーナス', `答えが複数ある問題に一発で正解すると、残り時間が${sec(R.multipleAnswerTimeBonusMs)}秒ふえます。`],
+  ['減点', `まちがえると減点です。1回目${R.mistakePenalty.perMistake}点、2回目${R.mistakePenalty.perMistake * 2}点…と、まちがえるほど重くなります（${R.mistakePenalty.perMistake * R.mistakePenalty.maxMultiplier}点まで）。得点は0点より下がりません。`],
+  ['パス', `「回答する」の左の「パス」で問題を入れかえられます。1回目は残り時間が${sec(R.passPenalty.perPassMs)}秒、2回目は${sec(R.passPenalty.perPassMs * 2)}秒…とへります。減点はありませんが、連続正解は0に戻ります。`],
+  ['段位', `10級から1級、初段から十段、そして最高の「皆伝」まで21段階。必要な得点は3つのレベルで同じで、${R.levels.basic.thresholds.at(-1)}点で皆伝です。ベーシックは「五段」、スタンダードは「五段＋」、エキスパートは「五段★」のように記録されます。`],
+  ['中断', 'とちゅうでやめたり、ほかのタブに切りかえたりすると中断になり、記録に残りません。'],
+];
 
-/** 学習記録（ブラウザに保存した記録）の説明と消去 */
+const SUPPORT = [
+  ['ヒント', 'トレーニングでは、回答する前に「ヒントを見る」で考え方の手がかりが見られます。ヒントを見ても正解・不正解は変わりません。'],
+  ['復習', '結果画面の「間違えた問題を復習」で、まちがえた問題を同じ問題のまま解き直せます。もとの結果は変わりません。'],
+  ['学習記録', 'カテゴリ選択の右上の「学習記録」で、カテゴリごとの正答率や、あとで復習できる問題が見られます。'],
+];
+
 function recordSection() {
   async function confirmClear() {
     const dialog = confirmDialog({
       title: '学習記録を消去しますか？',
-      message: 'この端末に保存した CUBE MASTER の学習記録・復習待ちの問題・段位認定の記録を、すべて消します。もとに戻せません。',
+      message: 'この端末に保存した CUBE MASTER の学習記録・復習待ちの問題・1分チャレンジと段位認定の記録・設定を、すべて消します。もとに戻せません。',
       okLabel: '消去する',
       cancelLabel: 'やめる',
     });
@@ -103,24 +91,62 @@ function recordSection() {
     clearLearningData();
     showToast('学習記録を消去しました。');
   }
-  return h(
-    'section',
-    { class: 'help-section' },
-    h('h2', {}, '学習記録'),
+  return [
+    h('h3', {}, '効果音'),
+    soundSettingsPanel(),
+    h('p', { class: 'setup-note' }, '効果音をオフにしても、○△×や色で正解・不正解がわかります。設定はこの端末に保存されます。'),
+    h('h3', {}, '記録の保存'),
     h(
       'p',
       {},
       isLearningStorageAvailable()
-        ? 'トレーニングの結果と間違えた問題は、この端末のブラウザの中だけに保存されます（名前などの個人情報は保存しません）。カテゴリ選択の「学習記録」で確認できます。'
-        : 'この端末では学習記録を保存できません（練習はできます）。',
+        ? '記録は、この端末のブラウザの中だけに保存されます（名前などの個人情報は保存しません）。ブラウザのデータを消すと、記録も消えます。'
+        : 'この端末では記録を保存できません（練習はできます）。',
     ),
     h('button', { class: 'btn btn--ghost btn--danger-text', type: 'button', onClick: () => confirmClear() }, '学習記録を消去'),
-  );
+  ];
 }
 
 export function mountHelpScreen(container, { navigate }) {
   const touch = isTouchPrimary();
   const order = touch ? ['touch', 'pc'] : ['pc', 'touch'];
+  const control = (key, current) =>
+    h('section', { class: `help-section ${current ? 'help-section--current' : ''}` }, h('h3', {}, HOW_TO[key].title, current ? h('span', { class: 'badge badge--info' }, 'お使いの端末') : null), list(HOW_TO[key].items));
+
+  const TABS = [
+    { id: 'about', label: 'CUBE MASTERとは？', body: () => [list(ABOUT)] },
+    { id: 'training', label: 'トレーニング', body: () => [list(TRAINING)] },
+    { id: 'challenge', label: '1分チャレンジ', body: () => [list(CHALLENGE)] },
+    { id: 'certification', label: '段位認定', body: () => [list(CERTIFICATION)] },
+    { id: 'controls', label: '3Dの操作', body: () => order.map((key, i) => control(key, i === 0)) },
+    { id: 'support', label: 'ヒント・復習・学習記録', body: () => [list(SUPPORT)] },
+    { id: 'records', label: '記録と設定', body: () => recordSection() },
+  ];
+
+  const tabButtons = [];
+  const panels = TABS.map((tab, i) =>
+    h('section', { class: 'help-panel', role: 'tabpanel', id: `help-${tab.id}`, 'aria-labelledby': `help-tab-${tab.id}`, hidden: i !== 0, dataset: { tab: tab.id } }, h('h2', {}, tab.label), ...tab.body()),
+  );
+  function select(index) {
+    tabButtons.forEach((b, i) => {
+      b.setAttribute('aria-selected', String(i === index));
+      b.tabIndex = i === index ? 0 : -1;
+    });
+    panels.forEach((p, i) => (p.hidden = i !== index));
+  }
+  TABS.forEach((tab, i) => {
+    const b = h('button', { class: 'help-tab', type: 'button', role: 'tab', id: `help-tab-${tab.id}`, 'aria-controls': `help-${tab.id}`, 'aria-selected': String(i === 0), dataset: { tab: tab.id } }, tab.label);
+    b.addEventListener('click', () => select(i));
+    // 左右の矢印キーでタブを移る
+    b.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const next = (i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length;
+      select(next);
+      tabButtons[next].focus();
+    });
+    tabButtons.push(b);
+  });
+  select(0);
 
   container.append(
     h(
@@ -129,23 +155,16 @@ export function mountHelpScreen(container, { navigate }) {
       h(
         'header',
         { class: 'page-header' },
-        h('button', { class: 'btn btn--ghost', type: 'button', onClick: () => navigate('home') }, '← ホーム'),
+        h('button', { class: 'btn btn--back', type: 'button', onClick: () => navigate('home') }, '← ホーム'),
         h('h1', {}, 'あそびかた'),
       ),
-      h(
-        'p',
-        { class: 'help-lead' },
-        '立方体の「頂点」「辺」「面」を自由に動かして観察しよう。',
-      ),
-      order.map((key, i) => section(key, i === 0)),
-      trainingSection(),
-      certificationSection(),
-      recordSection(),
+      h('div', { class: 'help-tabs', role: 'tablist', 'aria-label': 'あそびかたの項目' }, tabButtons),
+      panels,
       h(
         'div',
         { class: 'help-actions' },
         h('button', { class: 'btn btn--primary', type: 'button', onClick: () => navigate('categories') }, 'トレーニングをはじめる'),
-        h('button', { class: 'btn', type: 'button', onClick: () => navigate('preview') }, '3D立方体をためす'),
+        h('button', { class: 'btn', type: 'button', onClick: () => navigate('certification') }, '段位認定に挑戦'),
       ),
     ),
   );

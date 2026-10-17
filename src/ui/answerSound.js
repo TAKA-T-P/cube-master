@@ -7,9 +7,12 @@
  * - 結果画面へ（決めた問題数を解き終えたとき）：ファンファーレ（ド・ミ・ソ・ド）
  * - 段位認定：カウントダウン（3・2・1 はピッ、START! はピーン）・時間切れ（ピッ・ピッ・ピー）・昇段（キラキラ）
  *
+ * 効果音のオン／オフ・音量は ui/soundSettings（ブラウザに保存）。オフのときは何も鳴らさない。
  * iOS などは、ボタンを押した処理の中で AudioContext を作る・再開しないと音が出ないので、
  * 「回答する」「結果を見る」を押したときに呼ぶ。Web Audio が使えない環境では何もしない。
  */
+import { isSoundEnabled, getSoundVolume } from './soundSettings.js';
+
 const TONES = {
   correct: [
     { freq: 1046.5, at: 0, length: 0.16, volume: 0.22 },
@@ -83,7 +86,10 @@ export const playCountdownSound = (start = false) => playTones(start ? TONES.cou
 export const playTimeUpSound = () => playTones(TONES.timeUp);
 
 function playTones(tones) {
-  const ctx = tones ? getContext() : null;
+  if (!tones || !isSoundEnabled()) return;
+  const volume = getSoundVolume();
+  if (volume <= 0) return;
+  const ctx = getContext();
   if (!ctx) return;
   try {
     if (ctx.state === 'suspended') ctx.resume?.();
@@ -96,7 +102,7 @@ function playTones(tones) {
       const start = now + tone.at;
       const end = start + tone.length;
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(tone.volume, start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, tone.volume * volume), start + 0.015);
       gain.gain.exponentialRampToValueAtTime(0.0001, end);
       osc.connect(gain).connect(ctx.destination);
       osc.start(start);

@@ -165,6 +165,13 @@ export function createSceneManager(container, { fov = 40 } = {}) {
       resizeListeners.clear();
       renderListeners.clear();
       renderer.dispose();
+      // 画面を移るたびに新しい 3D を作るので、WebGL のコンテキストもすぐに返す
+      // （返さないと、何度も画面を移ったときにブラウザのコンテキストの上限に達することがある）
+      try {
+        renderer.forceContextLoss?.();
+      } catch {
+        // コンテキストを返せなくても画面の移動は続ける
+      }
       renderer.domElement.remove();
       labelRenderer.domElement.remove();
     },

@@ -12,8 +12,8 @@ import { startTraining, startChallenge, getSettings, takeChallengeNotice } from 
 import { getChallengeBest } from './learningStore.js';
 
 export const PLAY_MODES = Object.freeze([
-  { value: 'count', label: '問題数を選ぶ' },
-  { value: 'challenge', label: '1分チャレンジ' },
+  { value: 'count', label: '問題数を選ぶ', lead: '時間を気にせず、じっくり練習！' },
+  { value: 'challenge', label: '1分チャレンジ', lead: '60秒で何問正解できるか挑戦！' },
 ]);
 
 export function mountTrainingSetupScreen(container, { navigate, params }) {
@@ -40,15 +40,16 @@ export function mountTrainingSetupScreen(container, { navigate, params }) {
   const limit = slider('問題数', { min, max, unit: '問' }, initialLimit, () => {});
 
   // 問題数を選ぶ ⇄ 1分チャレンジ（同じ行に横並び）
-  const countPanel = h('div', { class: 'setup-mode-panel' }, limit.el, h('p', { class: 'setup-note' }, 'タイマーはありません。じっくり考えよう。'));
+  const countPanel = h('div', { class: 'setup-mode-panel' }, h('p', { class: 'setup-mode-lead' }, PLAY_MODES[0].lead), limit.el, h('p', { class: 'setup-note' }, 'タイマーはありません。ヒントを見たり、解説の3Dを何度も見直したりできます。'));
   const challengePanel = h(
     'div',
     { class: 'setup-mode-panel' },
+    h('p', { class: 'setup-mode-lead' }, PLAY_MODES[1].lead),
     recordEl,
     h(
       'p',
       { class: 'setup-note' },
-      `${CHALLENGE_RULES.durationMs / 60000}分間で何問正解できるかに挑戦！ まちがえると残り時間が${CHALLENGE_RULES.mistakePenaltyMs / 1000}秒へります。答え合わせの間は時間が止まります。`,
+      `まちがえると残り時間が${CHALLENGE_RULES.mistakePenaltyMs / 1000}秒へります。ヒント・パスはありません。答え合わせの間は時間が止まります。`,
     ),
   );
   const showMode = (value) => {

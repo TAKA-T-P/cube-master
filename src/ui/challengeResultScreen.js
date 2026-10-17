@@ -27,7 +27,7 @@ export function mountChallengeResultScreen(container, { navigate }) {
         'section',
         { class: 'result-card cert-result__card' },
         h('p', { class: 'cert-result__timeup' }, 'TIME UP！'),
-        h('p', { class: 'cert-result__score' }, h('span', { class: 'cert-result__score-value', 'data-testid': 'challenge-result-correct' }, String(summary.correctCount)), h('span', {}, '問正解')),
+        h('p', { class: 'cert-result__score' }, h('span', { class: 'cert-result__score-value challenge-result__value', 'data-testid': 'challenge-result-correct' }, String(summary.correctCount)), h('span', {}, '問正解！')),
         outcome?.improved
           ? h('p', { class: 'cert-best', 'data-testid': 'challenge-best-updated' }, '自己ベスト更新！')
           : h('p', { class: 'cert-result__next', 'data-testid': 'challenge-best' }, `最高記録：${outcome?.newBest ?? 0}問正解`),

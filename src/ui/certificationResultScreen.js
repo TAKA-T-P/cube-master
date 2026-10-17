@@ -5,7 +5,7 @@
  */
 import { h } from '../utils/dom.js';
 import { button } from './components.js';
-import { getRankLabel, getNextRank, levelLabel, SPECIAL_RANKS } from '../core/certificationRules.js';
+import { getRankLabel, getNextRank, levelLabel, SPECIAL_RANKS, MAX_RANK } from '../core/certificationRules.js';
 import { getCertificationResult, startCertification } from './certificationStore.js';
 import { startCertificationReview } from './trainingStore.js';
 import { getCategory } from '../questions/questionRegistry.js';
@@ -79,7 +79,8 @@ export function mountCertificationResultScreen(container, { navigate }) {
     rankEl.hidden = false;
     badges.hidden = false;
     rankEl.classList.add('cert-result__rank--show');
-    if (special) rankEl.classList.add('cert-result__rank--special');
+    // 初段・十段・皆伝への昇段と、皆伝の達成は特別な演出
+    if (special || summary.rankLevel === MAX_RANK) rankEl.classList.add('cert-result__rank--special');
     if (rankUp) playRankUpSound();
   }
 

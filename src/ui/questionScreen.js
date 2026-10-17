@@ -72,6 +72,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
 
   // ---------- 画面の骨組み ----------
   const progress = h('span', { class: 'quiz-progress' });
+  // 今のプレイ形式（トレーニング・復習）がわかるように、上の帯に出す
+  const modeBadge = h('span', { class: 'badge badge--mode', 'data-testid': 'play-mode' }, review ? '復習' : 'トレーニング');
   const difficulty = h('span', { class: 'badge badge--info' }, review ? '復習' : difficultyLabel(session.state.difficulty));
   const score = h('span', { class: 'quiz-score' });
   const quitButton = cert
@@ -135,7 +137,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   const quizRoot = h(
     'div',
     { class: 'quiz' },
-    h('header', { class: `quiz-header ${cert ? 'quiz-header--certification' : ''}` }, quitButton, ...(cert ? cert.headerItems : [progress, difficulty, score])),
+    h('header', { class: `quiz-header ${cert ? 'quiz-header--certification' : ''}` }, quitButton, ...(cert ? cert.headerItems : [review ? null : modeBadge, progress, difficulty, score])),
     h(
       'div',
       { class: 'quiz-body' },
@@ -198,7 +200,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
         ? `第${session.questionNumber}問`
         : `第${session.questionNumber}問 / ${state.questionLimit}問`;
     updateScore();
-    typeHint.textContent = q.type === 'multiple' ? 'あてはまるものをすべて選ぼう' : '1つ選ぼう';
+    typeHint.textContent = q.type === 'multiple' ? '当てはまるものをすべて選ぼう' : '1つ選ぼう';
     questionText.textContent = q.question;
 
     // 問題の図（見取図・回転の手順など）
@@ -600,6 +602,15 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   }
 
   return {
+    /** 時間切れ：回答・選択の変更・パスをすぐに止める（TIME UP! の表示の前でも押せないように） */
+    lock() {
+      selection?.lock();
+      for (const el of choicesEl.children) el.disabled = true;
+      submitButton.disabled = true;
+      if (passButton) passButton.disabled = true;
+      clearTimeout(advanceTimer);
+      advanceTimer = null;
+    },
     unmount() {
       disposed = true;
       splash?.cancel();

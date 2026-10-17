@@ -1209,3 +1209,15 @@ ul.setup-note {
   font-weight: 900;
   text-align: center;
 }
+
+.setup-mode-lead {
+  margin: 0;
+  font-weight: 800;
+  color: var(--color-primary-strong);
+}
+
+/* プレイ形式（トレーニング・1分チャレンジ・段位認定）の目印 */
+.badge--mode {
+  background: var(--color-primary);
+  color: #fff;
+}
