@@ -5,8 +5,8 @@
  * （見た目だけで切ったように見せず、数学の計算と同じ形を表示する）。
  *
  * 表示の段階（どれも 0〜1。演出は three/cubeCuttingAnimations）
- *   plane   ：切る平面（半透明の板）が、法線の向きから立方体へ入ってくる
- *   section ：切り口（緑）が現れ、平面の板は消える
+ *   plane   ：切る平面（半透明の板）が、刃物のように上から下へ振り下ろされる。板が通ったところから、切り口（緑）が上から順に現れる
+ *   section ：平面の板が消えて、切り口だけが残る
  *   split   ：ふつうの立方体を隠し、2つの立体に分けて、小さいほう（同じなら一方）を少しはなす
  * 回答前は、切る3点（オレンジの点と P・Q・R の文字）だけを表示する。
  */
@@ -18,8 +18,28 @@ import { VERTICES, CUBE_COLORS } from '../core/cubeConstants.js';
 
 /** 分けたときに、はなす距離 */
 export const SPLIT_GAP = 0.7;
-/** 平面の板が入ってくるときの、はじめの距離 */
-const PLANE_START = 2.4;
+/** 平面の板（正方形）の半分の大きさ */
+const PLANE_HALF = 2.3;
+/** 水平に近い平面を、真上から落とすときの高さ */
+const PLANE_DROP = 3.6;
+
+/**
+ * 凸多角形（小数の座標）のうち、向き d にそった位置（中心 c から）が edge 以下の部分
+ * （刃が d の向きに進むとき、刃がすでに通ったところ）
+ */
+function clipPassed(points, c, d, edge) {
+  const f = (p) => p.clone().sub(c).dot(d) - edge;
+  const out = [];
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const fa = f(a);
+    const fb = f(b);
+    if (fa <= 0) out.push(a);
+    if (fa <= 0 !== fb <= 0) out.push(a.clone().lerp(b, fa / (fa - fb)));
+  }
+  return out;
+}
 
 const COLORS = {
   point: CUBE_COLORS.reference,
@@ -57,14 +77,32 @@ function outlineGeometry(polygons) {
   return g;
 }
 
+function polygonGeometryFloat(polygons) {
+  const pos = [];
+  for (const pts of polygons) for (let i = 1; i + 1 < pts.length; i++) pos.push(...pts[0].toArray(), ...pts[i].toArray(), ...pts[i + 1].toArray());
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+function outlineGeometryFloat(polygons) {
+  const pos = [];
+  for (const pts of polygons) pts.forEach((p, i) => pos.push(...p.toArray(), ...pts[(i + 1) % pts.length].toArray()));
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  return g;
+}
+
 export function createCuttingModel({ cubeRoot = null, labels = typeof document !== 'undefined' } = {}) {
   const root = new THREE.Group();
   root.name = 'cuttingRoot';
   root.visible = false;
 
-  const sphere = new THREE.SphereGeometry(0.08, 20, 14);
+  // 切る3点は目立つように大きめ（立方体の頂点の球の約1.7倍）・少し光らせる
+  const sphere = new THREE.SphereGeometry(0.12, 24, 16);
   const materials = {
-    point: new THREE.MeshStandardMaterial({ color: COLORS.point, roughness: 0.4 }),
+    point: new THREE.MeshStandardMaterial({ color: COLORS.point, emissive: 0x7a2e00, roughness: 0.35 }),
     plane: new THREE.MeshBasicMaterial({ color: COLORS.plane, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }),
     planeEdge: new THREE.LineBasicMaterial({ color: COLORS.plane, transparent: true, opacity: 0 }),
     section: new THREE.MeshStandardMaterial({ color: COLORS.section, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, roughness: 0.6 }),
@@ -90,6 +128,10 @@ export function createCuttingModel({ cubeRoot = null, labels = typeof document !
 
   function clear() {
     if (!built) return;
+    if (built.partial) {
+      built.partial.mesh.dispose();
+      built.partial.edge.dispose();
+    }
     for (const obj of built.disposables) obj.dispose();
     for (const l of built.labels) l.element.remove();
     root.clear();
@@ -116,7 +158,7 @@ export function createCuttingModel({ cubeRoot = null, labels = typeof document !
       if (p.label) {
         const l = makeLabel(p.label, 'cut-point-label');
         if (l) {
-          l.position.copy(m.position).multiplyScalar(1.18);
+          l.position.copy(m.position).multiplyScalar(1.22);
           markers.add(l);
           labelObjs.push(l);
         }
@@ -129,13 +171,32 @@ export function createCuttingModel({ cubeRoot = null, labels = typeof document !
     const planeMesh = new THREE.Mesh(track(new THREE.PlaneGeometry(4.6, 4.6)), materials.plane);
     const planeEdge = new THREE.LineSegments(track(new THREE.EdgesGeometry(new THREE.PlaneGeometry(4.6, 4.6))), materials.planeEdge);
     planeGroup.add(planeMesh, planeEdge);
-    planeGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+    // 刃は平面にそって「下向き」に進む（下向きのベクトルを平面に写したもの）。水平に近い平面は、真上から落とす
+    const down = new THREE.Vector3(0, -1, 0);
+    const slide = down.clone().addScaledVector(normal, -down.dot(normal));
+    const sliding = slide.length() > 0.2;
+    if (sliding) {
+      slide.normalize();
+      // 板の向き：z = 法線、y = 刃の進む向きの反対（上）
+      const yAxis = slide.clone().negate();
+      const xAxis = new THREE.Vector3().crossVectors(yAxis, normal).normalize();
+      planeGroup.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAxis, yAxis, normal));
+    } else {
+      planeGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+    }
     root.add(planeGroup);
 
-    // 立方体の上の切り口（分ける前）
+    // 立方体の上の切り口（分ける前）。板が通ったところまでを表示するので、形は apply で作りなおす
     const sectionPoly = [section.polygon.map((v) => v.position)];
-    const sectionMesh = new THREE.Mesh(track(polygonGeometry(sectionPoly)), materials.section);
-    const sectionEdge = new THREE.LineSegments(track(outlineGeometry(sectionPoly)), materials.sectionEdge);
+    const sectionFloat = section.polygon.map((v) => toV(v.position));
+    // 切り口のうち、刃の進む向きでいちばん手前（上）の位置。刃の先がここより上から始まるようにする
+    const along = sliding ? sectionFloat.map((p) => p.clone().sub(centroid).dot(slide)) : [0];
+    const travel = sliding ? PLANE_HALF - Math.min(...along) + 0.3 : PLANE_DROP;
+    const sectionMesh = new THREE.Mesh(new THREE.BufferGeometry(), materials.section);
+    const sectionEdge = new THREE.LineSegments(new THREE.BufferGeometry(), materials.sectionEdge);
+    const fullGeometry = { mesh: polygonGeometry(sectionPoly), edge: outlineGeometry(sectionPoly) };
+    track(fullGeometry.mesh);
+    track(fullGeometry.edge);
     sectionMesh.renderOrder = 2;
     root.add(sectionMesh, sectionEdge);
 
@@ -176,8 +237,49 @@ export function createCuttingModel({ cubeRoot = null, labels = typeof document !
       labelObjs.push(value);
     }
 
-    built = { plane, section, pieces, normal, centroid, markers, planeGroup, sectionMesh, sectionEdge, pieceObjs, movingIndex, smallIndex, direction, value, disposables, labels: labelObjs };
+    built = {
+      plane,
+      section,
+      pieces,
+      normal,
+      centroid,
+      markers,
+      planeGroup,
+      sectionMesh,
+      sectionEdge,
+      sectionFloat,
+      sliding,
+      slide,
+      travel,
+      fullGeometry,
+      partial: null,
+      pieceObjs,
+      movingIndex,
+      smallIndex,
+      direction,
+      value,
+      disposables,
+      labels: labelObjs,
+    };
     apply();
+  }
+
+  /** 切り口の形を、表示する部分（null なら全体）にする */
+  function setSectionShape(b, part) {
+    if (b.partial) {
+      b.partial.mesh.dispose();
+      b.partial.edge.dispose();
+      b.partial = null;
+    }
+    if (!part) {
+      b.sectionMesh.geometry = b.fullGeometry.mesh;
+      b.sectionEdge.geometry = b.fullGeometry.edge;
+      return;
+    }
+    const poly = [part];
+    b.partial = { mesh: polygonGeometryFloat(poly), edge: outlineGeometryFloat(poly) };
+    b.sectionMesh.geometry = b.partial.mesh;
+    b.sectionEdge.geometry = b.partial.edge;
   }
 
   function setCubeVisible(visible) {
@@ -188,17 +290,23 @@ export function createCuttingModel({ cubeRoot = null, labels = typeof document !
     if (!built) return;
     const { plane, section, split } = progress;
     const b = built;
-    // 平面の板：法線の向きから入ってきて、切り口が現れると消える
-    b.planeGroup.position.copy(b.centroid).addScaledVector(b.normal, (1 - plane) * PLANE_START);
+    // 平面の板：刃のように上から振り下ろされ、切り口ができると消える
+    b.planeGroup.position.copy(b.centroid);
+    if (b.sliding) b.planeGroup.position.addScaledVector(b.slide, -(1 - plane) * b.travel);
+    else b.planeGroup.position.y += (1 - plane) * b.travel;
     b.planeGroup.visible = plane > 0 && section < 1 && split === 0;
-    materials.plane.opacity = 0.3 * plane * (1 - section);
-    materials.planeEdge.opacity = 0.8 * plane * (1 - section);
-    // 切り口（分ける前）
-    const showSection = section > 0 && split === 0;
+    const appear = Math.min(1, plane * 5); // 振り下ろしはじめに、すばやく現れる
+    materials.plane.opacity = 0.34 * appear * (1 - section);
+    materials.planeEdge.opacity = 0.85 * appear * (1 - section);
+    // 切り口（分ける前）：刃の先が通ったところまで表示する（水平に近い平面は、落ちきったときに全体）
+    let visiblePart = null;
+    if (plane < 1) visiblePart = b.sliding ? clipPassed(b.sectionFloat, b.centroid, b.slide, PLANE_HALF - (1 - plane) * b.travel) : [];
+    const showSection = plane > 0 && split === 0 && (plane >= 1 || visiblePart.length >= 3);
     b.sectionMesh.visible = showSection;
     b.sectionEdge.visible = showSection;
-    materials.section.opacity = 0.85 * section;
-    materials.sectionEdge.opacity = section;
+    if (showSection) setSectionShape(b, visiblePart);
+    materials.section.opacity = 0.85;
+    materials.sectionEdge.opacity = 1;
     // 2つの立体
     const splitting = split > 0;
     setCubeVisible(!splitting);
@@ -297,8 +405,14 @@ export function createCuttingModel({ cubeRoot = null, labels = typeof document !
     },
     /** 計算した切り口の頂点（3D の座標。テスト用） */
     getSectionPoints: () => (built ? built.section.polygon.map((v) => vToNumbers(v.position)) : []),
-    /** 描いた切り口のメッシュの頂点（テスト用） */
-    getSectionMeshPositions: () => (built ? [...built.sectionMesh.geometry.getAttribute('position').array] : []),
+    /** 切り口のメッシュの頂点（テスト用。full：切り終えたときの形、そうでなければ今表示している形） */
+    getSectionMeshPositions: ({ full = true } = {}) => {
+      if (!built) return [];
+      const g = full ? built.fullGeometry.mesh : built.sectionMesh.geometry;
+      return [...(g.getAttribute('position')?.array ?? [])];
+    },
+    /** 刃（平面の板）の中心の位置（テスト用） */
+    getPlanePosition: () => (built ? built.planeGroup.position.toArray() : null),
 
     dispose() {
       clear();

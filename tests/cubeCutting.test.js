@@ -278,6 +278,34 @@ describe('切断の 3D モデルと演出', () => {
     expect(cutting.getState()).toMatchObject({ active: true, plane: 0, section: 0, split: 0, planeVisible: false, sectionVisible: false, markerCount: 3 });
   });
 
+  it('刃（平面の板）は上から振り下ろされ、通ったところから切り口が上から順に現れる（切り口の平面の上）', () => {
+    const { cutting } = setup();
+    cutting.set(spec);
+    const plane = planeFromThreePoints(pos.B, pos.D, mid('AE'));
+    const n = new THREE.Vector3(...vToNumbers(plane.normal)).normalize();
+    const d = n.dot(new THREE.Vector3(...pos.B));
+    const heights = [];
+    let lastLow = Infinity;
+    for (const t of [0.15, 0.4, 0.7, 0.9, 1]) {
+      cutting.setPlane(t);
+      heights.push(cutting.getPlanePosition()[1]);
+      const pts = cutting.getSectionMeshPositions({ full: false });
+      // 表示している切り口は、いつも本当の切り口の平面の上
+      for (let i = 0; i < pts.length; i += 3) expect(Math.abs(n.dot(new THREE.Vector3(pts[i], pts[i + 1], pts[i + 2])) - d)).toBeLessThan(1e-6);
+      // 下の部分ほどあとから現れる：表示している部分の一番下は、だんだん下がる
+      const ys = pts.filter((_, i) => i % 3 === 1);
+      if (ys.length) {
+        const low = Math.min(...ys);
+        expect(low).toBeLessThanOrEqual(lastLow + 1e-9);
+        lastLow = low;
+      }
+    }
+    // 刃は上から下へ動き、最後は切り口の位置
+    for (let i = 1; i < heights.length; i++) expect(heights[i]).toBeLessThan(heights[i - 1]);
+    expect(cutting.getSectionMeshPositions({ full: false })).toEqual(cutting.getSectionMeshPositions());
+    cutting.dispose();
+  });
+
   it('演出：平面 → 切り口 → 2つに分かれる（小さいほうをはなす）。リプレイで初めから、スキップで最終状態', async () => {
     const { model, state, highlights, cutting, manager, controls } = setup();
     cutting.set(spec);

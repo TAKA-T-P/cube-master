@@ -362,12 +362,12 @@
 .vertex-label {
   padding: 0 6px;
   border-radius: 6px;
-  background: rgb(255 255 255 / 85%);
+  /* 立方体の線が透けて見えるように、背景はうすく・枠線なし */
+  background: rgb(255 255 255 / 55%);
   color: var(--color-primary-strong);
   font-size: 17px;
   font-weight: 800;
   line-height: 1.4;
-  box-shadow: 0 0 0 1px rgb(31 78 156 / 18%);
   user-select: none;
   pointer-events: none;
 }
