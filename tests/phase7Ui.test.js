@@ -29,12 +29,13 @@ globalThis.__createFakeViewer = () => {
     events: createEventBus(),
     animations: { cancel: vi.fn(), skip: vi.fn(), setSpeed: vi.fn() },
     ...Object.fromEntries(
-      ['setSelectionEnabled', 'setFaceDisplayMode', 'clearHighlights', 'clearSelection', 'highlightElements', 'setCameraPreset', 'resetCamera', 'dispose', 'setFaceDecorations', 'setCubeOrientation', 'setLabelsVisible', 'enableRotation', 'disableRotation', 'enableZoom', 'disableZoom', 'setBlocks', 'setNet', 'playNetFold', 'setSubcubes', 'playSubcubeSeparation', 'setCutting', 'setSurfacePath'].map((k) => [k, vi.fn()]),
+      ['setFigureOnly', 'setSelectionEnabled', 'setFaceDisplayMode', 'clearHighlights', 'clearSelection', 'highlightElements', 'setCameraPreset', 'resetCamera', 'dispose', 'setFaceDecorations', 'setCubeOrientation', 'setLabelsVisible', 'enableRotation', 'disableRotation', 'enableZoom', 'disableZoom', 'setBlocks', 'setNet', 'playNetFold', 'setSubcubes', 'playSubcubeSeparation', 'setCutting', 'setSurfacePath'].map((k) => [k, vi.fn()]),
     ),
     playAnswerReveal: vi.fn(() => Promise.resolve({ status: 'completed' })),
     playQuestionReveal: vi.fn(() => Promise.resolve({ status: 'completed' })),
     getNetFold: vi.fn(() => 1),
     getSubcubeSeparation: vi.fn(() => 1),
+    isFigureOnly: vi.fn(() => viewer.setFigureOnly.mock.calls.at(-1)?.[0] ?? false),
   };
   return viewer;
 };
@@ -108,6 +109,54 @@ describe('問題画面', () => {
       expect(copy).toEqual(q);
       expect(getQuestionErrors(copy)).toEqual([]);
     }
+  });
+});
+
+describe('図の右側の文字と「図のみ表示」', () => {
+  it('段ごとの個数・合計は3D の中ではなく右側の表示へ（合計が上、段は上の段から）。1個ずつの番号だけ 3D に残す', async () => {
+    const { createBlockModel } = await import('../src/three/blockModel.js');
+    const onInfo = vi.fn();
+    const blocks = createBlockModel({ labels: false, onInfo });
+    blocks.setLabels([
+      { text: '1段目 8個', position: [3, 0.5, 1], kind: 'layer' },
+      { text: '2段目 6個', position: [3, 1.5, 1], kind: 'layer' },
+      { text: '合計 14個', position: [1, 3, 1], kind: 'total' },
+      { text: '1個目', position: [0, 1, 0], kind: 'cube' },
+    ]);
+    expect(onInfo).toHaveBeenLastCalledWith([
+      { text: '合計 14個', kind: 'total' },
+      { text: '2段目 6個', kind: 'layer' },
+      { text: '1段目 8個', kind: 'layer' },
+    ]);
+    blocks.resetCounting();
+    expect(onInfo).toHaveBeenLastCalledWith([]);
+    blocks.dispose();
+  });
+
+  it('個数の文字が出る問題では、回答後に「図のみ表示」で文字を隠せる（押すと「文字も表示」）。次の問題では文字を表示に戻す', async () => {
+    store.resetTrainingStore();
+    const container = document.createElement('main');
+    document.body.append(container);
+    store.startTraining({ category: 'paintedCube', difficulty: 1, questionLimit: 3 }, { rng: createRng(4) });
+    mountQuestionScreen(container, { navigate: vi.fn(), params: {} });
+    const btn = () => [...container.querySelectorAll('button')].find((b) => b.textContent === '図のみ表示' || b.textContent === '文字も表示');
+    expect(btn().hidden).toBe(true);
+    const q = store.getSession().state.currentQuestion;
+    for (const id of q.correctAnswers) container.querySelector(`[data-choice="${id}"]`).click();
+    [...container.querySelectorAll('button')].find((b) => b.textContent === '回答する').click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(btn().hidden).toBe(false);
+    btn().click();
+    expect(viewer.setFigureOnly).toHaveBeenLastCalledWith(true);
+    expect(btn().textContent).toBe('文字も表示');
+    btn().click();
+    expect(viewer.setFigureOnly).toHaveBeenLastCalledWith(false);
+    btn().click();
+    [...container.querySelectorAll('button')].find((b) => b.textContent === '次の問題へ').click();
+    expect(viewer.setFigureOnly).toHaveBeenLastCalledWith(false);
+    expect(btn().textContent).toBe('図のみ表示');
+    expect([...container.querySelectorAll('button')].some((b) => b.textContent === 'スキップ')).toBe(false);
+    container.remove();
   });
 });
 

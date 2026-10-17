@@ -12,7 +12,6 @@
  * 座標は core/subdividedCube の整数座標（x 右・y 上・z 手前）を、中心が原点になるように置く。
  */
 import * as THREE from 'three';
-import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { createSubdividedCube, removeSubcubes, subcubeKey, SIDE_NORMALS } from '../core/subdividedCube.js';
 import { getPaintedFaces } from '../core/cubePainting.js';
 
@@ -41,7 +40,7 @@ const BOX_EDGES = (() => {
   return list;
 })();
 
-export function createSubdividedCubeModel({ labels = typeof document !== 'undefined' } = {}) {
+export function createSubdividedCubeModel({ onInfo = () => {} } = {}) {
   const root = new THREE.Group();
   root.name = 'subcubesRoot';
   root.visible = false;
@@ -73,16 +72,6 @@ export function createSubdividedCubeModel({ labels = typeof document !== 'undefi
   let labelText = '';
   let parts = null; // 問題ごとに作る InstancedMesh・LineSegments
   let lastPlates = [];
-
-  // 個数の表示（CSS2D。DOM のないテスト環境では作らない）
-  let label = null;
-  if (labels) {
-    const el = document.createElement('div');
-    el.className = 'subcube-count-label';
-    label = new CSS2DObject(el);
-    label.visible = false;
-    inner.add(label);
-  }
 
   function disposeParts() {
     if (!parts) return;
@@ -148,7 +137,6 @@ export function createSubdividedCubeModel({ labels = typeof document !== 'undefi
     // 分離しても画面からはみ出さない大きさ
     const radius = (Math.sqrt(3) / 2) * (n + SEPARATION_GAP * (n - 1));
     root.scale.setScalar(FIT_RADIUS / radius);
-    if (label) label.position.set(0, (n + SEPARATION_GAP * (n - 1)) / 2 + 0.9, 0);
     update();
   }
 
@@ -223,10 +211,8 @@ export function createSubdividedCubeModel({ labels = typeof document !== 'undefi
     materials.edge.opacity = division;
     parts.edges.normal.visible = division > 0.001;
     parts.outline.visible = separation < 0.001;
-    if (label) {
-      label.visible = Boolean(labelText);
-      label.element.textContent = labelText;
-    }
+    // 個数の表示は、図の右側に出す（three/cubeViewer）
+    onInfo(labelText ? [{ text: labelText, kind: 'total' }] : []);
   }
 
   return {
@@ -247,7 +233,7 @@ export function createSubdividedCubeModel({ labels = typeof document !== 'undefi
         removed = [];
         disposeParts();
         root.visible = false;
-        if (label) label.visible = false;
+        onInfo([]);
         return;
       }
       spec = { divisions: next.divisions, paintedFaces: [...(next.paintedFaces ?? [])], removed: (next.removed ?? []).map((c) => ({ ...c })) };
@@ -308,7 +294,6 @@ export function createSubdividedCubeModel({ labels = typeof document !== 'undefi
     dispose() {
       disposeParts();
       for (const d of [boxGeometry, plateGeometry, ...Object.values(materials)]) d.dispose();
-      label?.element.remove();
       root.removeFromParent();
     },
   };

@@ -71,8 +71,35 @@ export function createCubeViewer(container) {
   const decorations = createFaceDecorations(model);
   const cubeState = createOrientationState(model.root, render);
 
+  // 段ごとの個数・合計・面積・体積・道のりなどの文字は、3D の中ではなく図の右側にまとめて出す（図に重ならないように）
+  const infoPanel = document.createElement('div');
+  infoPanel.className = 'viewport-info';
+  infoPanel.setAttribute('aria-live', 'polite');
+  container.append(infoPanel);
+  const infoSources = new Map();
+  const renderInfo = () => {
+    const items = [...infoSources.values()].flatMap((x) => x.items);
+    infoPanel.replaceChildren(
+      ...items.map((it) => {
+        const el = document.createElement('div');
+        el.className = `viewport-info__item viewport-info__item--${it.kind ?? 'layer'}`;
+        el.textContent = it.text;
+        return el;
+      }),
+    );
+    infoPanel.hidden = items.length === 0;
+  };
+  renderInfo();
+  /** source（モデル）ごとの文字を受け取る。同じ内容なら DOM は作りなおさない */
+  const infoFrom = (source) => (items) => {
+    const key = JSON.stringify(items);
+    if (infoSources.get(source)?.key === key) return;
+    infoSources.set(source, { key, items });
+    renderInfo();
+  };
+
   // 積み木（積み木の問題のときだけ表示し、そのあいだ単一の立方体は隠す）
-  const blocks = createBlockModel();
+  const blocks = createBlockModel({ onInfo: infoFrom('blocks') });
   sceneManager.scene.add(blocks.root);
 
   // 展開図（展開図の問題のときだけ表示し、そのあいだ単一の立方体は隠す）
@@ -80,12 +107,12 @@ export function createCubeViewer(container) {
   sceneManager.scene.add(net.root);
 
   // 小立方体に分けた立方体（小立方体の個数・着色の問題のときだけ表示する）
-  const subcubes = createSubdividedCubeModel();
+  const subcubes = createSubdividedCubeModel({ onInfo: infoFrom('subcubes') });
   sceneManager.scene.add(subcubes.root);
   // 切断・最短経路（ふつうの立方体に重ねて表示する。演出の間は立方体を隠すことがある）
-  const cutting = createCuttingModel({ cubeRoot: model.root });
+  const cutting = createCuttingModel({ cubeRoot: model.root, onInfo: infoFrom('cutting') });
   sceneManager.scene.add(cutting.root);
-  const surface = createSurfacePathModel({ cubeRoot: model.root });
+  const surface = createSurfacePathModel({ cubeRoot: model.root, onInfo: infoFrom('surface') });
   sceneManager.scene.add(surface.root);
   const updateCubeVisibility = () => {
     model.root.visible = !blocks.root.visible && !net.root.visible && !subcubes.root.visible;
@@ -265,6 +292,15 @@ export function createCubeViewer(container) {
       );
     },
 
+    // ----- 図の右側の文字 -----
+    /** 「図のみ表示」：個数・面積などの文字を隠して、図だけを見る（false で文字も表示） */
+    setFigureOnly(on) {
+      container.classList.toggle('viewport--figure-only', Boolean(on));
+    },
+    isFigureOnly: () => container.classList.contains('viewport--figure-only'),
+    /** 図の右側に表示している文字（テスト・確認用） */
+    getInfoTexts: () => [...infoSources.values()].flatMap((x) => x.items.map((it) => it.text)),
+
     // ----- 切断・最短経路（Phase 7） -----
     /**
      * 切断の問題の3点を表示する（null で消す）
@@ -340,6 +376,8 @@ export function createCubeViewer(container) {
       subcubes.dispose();
       cutting.dispose();
       surface.dispose();
+      infoPanel.remove();
+      container.classList.remove('viewport--figure-only');
       model.dispose();
       sceneManager.dispose();
       events.clear();

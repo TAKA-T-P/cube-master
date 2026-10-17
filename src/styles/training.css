@@ -1232,12 +1232,12 @@ ul.setup-note {
 .cut-point-label {
   padding: 0 6px;
   border-radius: 6px;
-  background: rgb(255 255 255 / 88%);
+  /* 頂点の文字と同じく、背景はうすく・枠線なし */
+  background: rgb(255 255 255 / 55%);
   color: #c2410c;
   font-size: 16px;
   font-weight: 900;
   line-height: 1.4;
-  box-shadow: 0 0 0 1px rgb(240 106 0 / 35%);
   pointer-events: none;
 }
 
@@ -1281,4 +1281,46 @@ ul.setup-note {
 
 .choice--figure .figure--path-net .figure-svg {
   max-height: 96px;
+}
+
+/* ----- 図の右側の文字（段ごとの個数・合計・面積・体積・道のり）。図に重ならないように右上に縦に並べる ----- */
+.viewport-info {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  max-width: 45%;
+  pointer-events: none;
+}
+
+.viewport-info[hidden] {
+  display: none;
+}
+
+.viewport-info__item {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgb(31 78 156 / 88%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.viewport-info__item--total {
+  padding: 2px 10px;
+  background: rgb(23 163 74 / 94%);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+/* 「図のみ表示」：文字（右側の表示・1個ずつの番号）を隠す */
+.viewport--figure-only .viewport-info,
+.viewport--figure-only .block-count-label {
+  display: none !important;
 }

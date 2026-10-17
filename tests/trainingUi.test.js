@@ -264,16 +264,11 @@ describe('問題画面', () => {
     expect(container.querySelector('.quiz-score').textContent).toBe('正解 0');
   });
 
-  it('「もう一度見る」でリプレイし、再生中だけスキップできる', () => {
+  it('「もう一度見る」でリプレイする。「スキップ」ボタンはない。文字が出ない問題では「図のみ表示」を出さない', () => {
     start({ difficulty: 1, questionLimit: 5 });
     answer(container);
-    const skip = buttonByText(container, 'スキップ');
-    viewer.events.emit('animation:state', { playing: true, paused: false });
-    expect(skip.disabled).toBe(false);
-    skip.click();
-    expect(viewer.animations.skip).toHaveBeenCalled();
-    viewer.events.emit('animation:state', { playing: false, paused: false });
-    expect(skip.disabled).toBe(true);
+    expect(buttonByText(container, 'スキップ')).toBeUndefined();
+    expect(buttonByText(container, '図のみ表示').hidden).toBe(true);
     buttonByText(container, 'もう一度見る').click();
     expect(viewer.playAnswerReveal).toHaveBeenCalledTimes(2);
   });
@@ -815,9 +810,9 @@ describe('回答直後の「○」「△」「×」', () => {
     expect(container.querySelector('.feedback__title').textContent).toBe('正解！');
     expect(viewer.playAnswerReveal).toHaveBeenCalledTimes(1);
     expect(buttonByText(container, '次の問題へ').disabled).toBe(false);
-    // もう一度見る・スキップは「視点リセット」と同じ、立方体の下のボタン列にある
+    // もう一度見るは「視点リセット」と同じ、立方体の下のボタン列にある
     const tools = container.querySelector('.quiz-view__tools');
-    for (const label of ['もう一度見る', 'スキップ', '視点リセット']) expect(tools.contains(buttonByText(container, label))).toBe(true);
+    for (const label of ['もう一度見る', '視点リセット']) expect(tools.contains(buttonByText(container, label))).toBe(true);
     expect(buttonByText(container, 'もう一度見る').hidden).toBe(false);
     expect(container.querySelector('.feedback').contains(buttonByText(container, 'もう一度見る'))).toBe(false);
   });

@@ -94,7 +94,7 @@ function outlineGeometryFloat(polygons) {
   return g;
 }
 
-export function createCuttingModel({ cubeRoot = null, labels = typeof document !== 'undefined' } = {}) {
+export function createCuttingModel({ cubeRoot = null, labels = typeof document !== 'undefined', onInfo = () => {} } = {}) {
   const root = new THREE.Group();
   root.name = 'cuttingRoot';
   root.visible = false;
@@ -128,6 +128,7 @@ export function createCuttingModel({ cubeRoot = null, labels = typeof document !
 
   function clear() {
     if (!built) return;
+    onInfo([]);
     if (built.partial) {
       built.partial.mesh.dispose();
       built.partial.edge.dispose();
@@ -229,13 +230,6 @@ export function createCuttingModel({ cubeRoot = null, labels = typeof document !
     });
     const direction = normal.clone().multiplyScalar(pieces[movingIndex].side);
 
-    // 面積・体積の表示
-    const value = makeLabel('', 'cut-value-label');
-    if (value) {
-      value.visible = false;
-      root.add(value);
-      labelObjs.push(value);
-    }
 
     built = {
       plane,
@@ -257,7 +251,6 @@ export function createCuttingModel({ cubeRoot = null, labels = typeof document !
       movingIndex,
       smallIndex,
       direction,
-      value,
       disposables,
       labels: labelObjs,
     };
@@ -320,15 +313,8 @@ export function createCuttingModel({ cubeRoot = null, labels = typeof document !
     // 面積・体積の表示
     const show = Boolean(valueText) && (valueAt === 'section' ? section >= 1 : split >= 1);
     b.valueShown = show;
-    if (b.value) {
-      b.value.element.textContent = valueText;
-      b.value.visible = show;
-      if (valueAt === 'section') b.value.position.copy(b.centroid).addScaledVector(b.normal, 0.05);
-      else {
-        const p = b.pieceObjs[b.smallIndex];
-        b.value.position.copy(p.center).add(p.group.position);
-      }
-    }
+    // 面積・体積は、図に重ならないように右側の表示へ（three/cubeViewer）
+    onInfo(show ? [{ text: valueText, kind: 'total' }] : []);
   }
 
   return {

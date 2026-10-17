@@ -31,7 +31,7 @@ function lifted(p) {
   return new THREE.Vector3(...p).addScaledVector(n, LIFT);
 }
 
-export function createSurfacePathModel({ cubeRoot = null, labels = typeof document !== 'undefined' } = {}) {
+export function createSurfacePathModel({ cubeRoot = null, labels = typeof document !== 'undefined', onInfo = () => {} } = {}) {
   const root = new THREE.Group();
   root.name = 'surfacePathRoot';
   root.visible = false;
@@ -88,6 +88,7 @@ export function createSurfacePathModel({ cubeRoot = null, labels = typeof docume
 
   function clear() {
     if (!built) return;
+    onInfo([]);
     for (const d of built.disposables) d.dispose();
     for (const l of built.labels) l.element.remove();
     root.clear();
@@ -197,12 +198,9 @@ export function createSurfacePathModel({ cubeRoot = null, labels = typeof docume
       const center = box.getCenter(new THREE.Vector3());
       const radius = box.getSize(new THREE.Vector3()).length() / 2;
       const scale = Math.min(1, FIT_RADIUS / radius);
-      // 広げた直線の上の長さの表示
-      const pFinal = new THREE.Vector3(...vToNumbers(unfolding.to3D(qvec(first.position), 0)));
-      const qFinal = new THREE.Vector3(...vToNumbers(unfolding.to3D(qvec(last.position), faces.length - 1)));
+      // 広げきったときの長さの表示（図の右側に出す）
       const n0 = new THREE.Vector3(...FACE_MAP.get(faces[0]).normal);
-      const lengthLabel = solution.label ? addLabel(solution.label, 'cut-value-label', unfoldRoot, pFinal.clone().lerp(qFinal, 0.5).addScaledVector(n0, 0.35)) : null;
-      if (lengthLabel) lengthLabel.visible = false;
+      const lengthLabel = solution.label ?? '';
       const axes = faces.map((_, k) => (k === 0 ? null : new THREE.Vector3(...vToNumbers(unfolding.hinges[k].axis)).normalize()));
       unfold = { groups, axes, center, scale, lengthLabel, normal: n0 };
     }
@@ -246,7 +244,8 @@ export function createSurfacePathModel({ cubeRoot = null, labels = typeof docume
       const s = 1 + (b.unfold.scale - 1) * t;
       b.unfoldRoot.scale.setScalar(s);
       b.unfoldRoot.position.copy(b.unfold.center).multiplyScalar(-s * t);
-      if (b.unfold.lengthLabel) b.unfold.lengthLabel.visible = t >= 0.999;
+      b.lengthShown = Boolean(b.unfold.lengthLabel) && t >= 0.999;
+      onInfo(b.lengthShown ? [{ text: b.unfold.lengthLabel, kind: 'total' }] : []);
     }
   }
 
@@ -301,7 +300,7 @@ export function createSurfacePathModel({ cubeRoot = null, labels = typeof docume
         dotVisible: built.dot.visible,
         unfoldVisible: built.unfoldRoot.visible,
         cubeVisible: cubeRoot ? cubeRoot.visible : null,
-        lengthLabel: built.unfold?.lengthLabel?.visible ? built.unfold.lengthLabel.element.textContent : '',
+        lengthLabel: built.lengthShown ? built.unfold.lengthLabel : '',
       };
     },
     /** 広げた面の上の道の点（世界座標。テスト用：広げきると一直線になる） */

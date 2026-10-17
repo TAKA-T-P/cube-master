@@ -33,6 +33,15 @@ const RESULT_TITLES = {
   [ANSWER_STATUS.INCORRECT]: '不正解',
 };
 
+/** 回答後の 3D に、個数・面積・体積・道のりなどの文字が出る問題か（「図のみ表示」ボタンを出す） */
+function hasInfoText(q) {
+  const steps = q.explanation?.reveal?.steps ?? [];
+  return (
+    steps.some((s) => ['countLayers', 'countLayer', 'addBlocks'].includes(s.type) || (s.type === 'highlightSubcubes' && s.label) || ((s.type === 'cutSection' || s.type === 'cutSplit') && s.label)) ||
+    Boolean(q.scene?.surfacePath?.solution?.label)
+  );
+}
+
 /** 文字と並べて小さく表示する図（色見本・サイコロの目）。それ以外の図の選択肢は大きなボタンにする */
 const INLINE_VISUALS = ['swatch', 'pip'];
 
@@ -119,12 +128,13 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   const explanationText = h('p', { class: 'feedback__explanation' });
   // 回答後の 3D の操作（「視点リセット」などと同じ、立方体の下のボタン列に出す）
   const replayButton = button('もう一度見る', () => playReveal(), 'btn--small');
-  const skipButton = button('スキップ', () => viewer?.animations.skip(), 'btn--small btn--ghost');
+  // 「図のみ表示」：個数・面積などの文字を隠して、図だけを見る（もう一度押すと文字も表示）
+  const figureOnlyButton = button('図のみ表示', () => toggleFigureOnly(), 'btn--small');
   // 展開図の問題：組み立てた立方体と展開図を行き来する
   const netToggleButton = button('展開図に戻す', () => toggleNetFold(), 'btn--small');
   // 小立方体の問題：小立方体をはなす ⇄ もとに戻す
   const separateButton = button('元に戻す', () => toggleSeparation(), 'btn--small');
-  const revealTools = [replayButton, skipButton, netToggleButton, separateButton];
+  const revealTools = [replayButton, figureOnlyButton, netToggleButton, separateButton];
   for (const b of revealTools) b.hidden = true;
   const feedback = h(
     'section',
@@ -137,7 +147,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   // 立方体の表示領域（画面に固定。答えが見えてしまう問題では回答するまで表示しない）
   // 回答前に 3D の代わりに表示する静的な図（積み木の見取図など）。回答すると同じ場所が 3D に切り替わる
   const previewEl = h('div', { class: 'quiz-preview', hidden: true });
-  const viewTools = h('div', { class: 'quiz-view__tools' }, replayButton, skipButton, netToggleButton, separateButton, resetViewButton, faceModeButton);
+  const viewTools = h('div', { class: 'quiz-view__tools' }, replayButton, figureOnlyButton, netToggleButton, separateButton, resetViewButton, faceModeButton);
   const quizView = h('section', { class: 'quiz-view' }, viewport, previewEl, legend, viewTools);
   const quizRoot = h(
     'div',
@@ -166,7 +176,6 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     viewer.setFaceDisplayMode(faceMode);
     cleanups.push(
       viewer.events.on('animation:state', ({ playing }) => {
-        skipButton.disabled = !playing;
         replayButton.disabled = playing;
       }),
     );
@@ -179,7 +188,6 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     resetViewButton.disabled = true;
     faceModeButton.disabled = true;
   }
-  skipButton.disabled = true;
 
   function toggleFaceMode() {
     faceMode = faceMode === FACE_DISPLAY_MODES.TRANSLUCENT ? FACE_DISPLAY_MODES.OPAQUE : FACE_DISPLAY_MODES.TRANSLUCENT;
@@ -276,8 +284,9 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
       passButton.hidden = false;
       passButton.disabled = false;
     }
-    // もう一度見る・スキップ・展開図に戻す・元に戻すは、回答したあとだけ
+    // もう一度見る・図のみ表示・展開図に戻す・元に戻すは、回答したあとだけ
     for (const b of revealTools) b.hidden = true;
+    setFigureOnly(false);
     // ヒント：同じ問題では何度見ても同じ内容。ヒントのない問題ではボタンを出さない
     hintText.hidden = true;
     hintText.textContent = '';
@@ -380,7 +389,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     feedback.classList.toggle('feedback--certification', Boolean(cert));
     if (cert) resultDetail.textContent = [resultDetailText(result), cert.scoreText?.()].filter(Boolean).join(' ');
     replayButton.hidden = !viewer || Boolean(cert);
-    skipButton.hidden = !viewer;
+    figureOnlyButton.hidden = !viewer || Boolean(cert) || !hasInfoText(question);
+    setFigureOnly(false);
     netToggleButton.hidden = question.scene.model !== 'net' || !viewer || Boolean(cert);
     netToggleButton.textContent = '展開図に戻す';
     separateButton.hidden = question.scene.model !== 'subcubes' || !viewer || Boolean(cert);
@@ -512,6 +522,16 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     hintText.hidden = false;
     hintButton.textContent = 'ヒントを隠す';
     hintButton.setAttribute('aria-expanded', 'true');
+  }
+
+  /** 図のみ表示 ⇄ 文字も表示 */
+  function setFigureOnly(on) {
+    viewer?.setFigureOnly?.(on);
+    figureOnlyButton.textContent = on ? '文字も表示' : '図のみ表示';
+    figureOnlyButton.setAttribute('aria-pressed', String(on));
+  }
+  function toggleFigureOnly() {
+    setFigureOnly(!viewer?.isFigureOnly?.());
   }
 
   /** 小立方体をはなす ⇄ もとに戻す */

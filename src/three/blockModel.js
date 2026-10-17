@@ -23,7 +23,11 @@ export const LAYER_GAP = 0.7;
 /** 積み木全体（矢印を含む）を、単一の立方体と同じくらいの大きさに縮める半径 */
 const FIT_RADIUS = 1.9;
 
-export function createBlockModel({ labels = typeof document !== 'undefined' } = {}) {
+/**
+ * @param {{ labels?: boolean, onInfo?: (items: { text: string, kind: string }[]) => void }} [options]
+ *   onInfo：段ごとの個数・合計などの文字（図の右側の表示に出す。three/cubeViewer）
+ */
+export function createBlockModel({ labels = typeof document !== 'undefined', onInfo = () => {} } = {}) {
   const root = new THREE.Group();
   root.name = 'blocksRoot';
   root.visible = false;
@@ -60,6 +64,7 @@ export function createBlockModel({ labels = typeof document !== 'undefined' } = 
       obj.removeFromParent();
     }
     labelList = [];
+    onInfo([]);
   }
 
   function clear() {
@@ -186,8 +191,13 @@ export function createBlockModel({ labels = typeof document !== 'undefined' } = 
     setLabels(list) {
       clearLabels();
       labelList = list.map((l) => ({ ...l, position: [...l.position] }));
+      // 段ごとの個数・合計などは、図に重ならないように右側の表示へ（合計を上、段は上の段から）
+      const info = labelList.filter((l) => (l.kind ?? 'layer') !== 'cube');
+      info.sort((a, b) => Number(b.kind === 'total') - Number(a.kind === 'total') || b.position[1] - a.position[1]);
+      onInfo(info.map((l) => ({ text: l.text, kind: l.kind ?? 'layer' })));
       if (!labels) return;
-      for (const l of labelList) {
+      // 1個ずつ数える番号（「1個目」）だけは、その積み木の上に出す
+      for (const l of labelList.filter((x) => x.kind === 'cube')) {
         const el = document.createElement('div');
         el.className = `block-count-label block-count-label--${l.kind ?? 'layer'}`;
         el.textContent = l.text;
