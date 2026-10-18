@@ -249,11 +249,16 @@ export function pieceVolumeByFormula(record, u) {
   return { volume, big: big.volume.mul(u3), kind: info.kind, text, small };
 }
 
-/** 数の選択肢（正解 + まちがえやすい数。整数の係数・正の数・重複なし・4つ） */
+/**
+ * 数の選択肢（正解 + まちがえやすい数。整数の係数・正の数・重複なし・4つ）
+ * 答えが √ をふくまない数なら、まちがいの選択肢にも √ を入れない（三平方の定理・√ を使わない問題で、選択肢に √ が出ないように）
+ */
 export function surdChoices(answer, candidates, unit) {
   const list = [answer];
-  const ok = (x) => x && x.sign() > 0 && x.hasIntegerCoef() && !list.some((y) => y.eq(x));
+  const plain = answer.isRational();
+  const ok = (x) => x && x.sign() > 0 && x.hasIntegerCoef() && (!plain || x.isRational()) && !list.some((y) => y.eq(x));
   for (const c of candidates) if (list.length < 4 && ok(c)) list.push(c);
+  if (plain) for (const [n, d] of [[3, 2], [3, 4], [3, 1]]) if (list.length < 4 && ok(answer.scale(new Q(n, d)))) list.push(answer.scale(new Q(n, d)));
   for (let k = 2; list.length < 4 && k < 20; k++) {
     for (const c of [answer.scale(k), new Surd(answer.c.add(k), answer.r)]) if (list.length < 4 && ok(c)) list.push(c);
   }

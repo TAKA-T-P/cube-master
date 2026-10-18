@@ -31,7 +31,7 @@ export const DIFFICULTIES = Object.freeze([
 /** 問題数（スライダーで 1〜20 問） */
 export const QUESTION_LIMIT_RANGE = Object.freeze({ min: 1, max: 20 });
 
-export const DEFAULT_SETTINGS = Object.freeze({ difficulty: 'all', questionLimit: 5 });
+export const DEFAULT_SETTINGS = Object.freeze({ difficulty: 1, questionLimit: 5 });
 
 /** 難易度の表示名（'基本' など） */
 export function difficultyLabel(value) {

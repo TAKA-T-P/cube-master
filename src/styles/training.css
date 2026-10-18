@@ -997,11 +997,18 @@ ul.setup-note {
 /* ----- ヒント ----- */
 .quiz-hint-row {
   display: flex;
-  justify-content: flex-start;
+  align-items: stretch;
+  gap: 8px;
 }
 
-.quiz-hint-row:has(> [hidden]:only-child) {
-  display: none;
+/* 「ヒントを見る」の右に「回答する」（ヒントがないときは「回答する」が横いっぱい） */
+.quiz-hint-row > .btn--hint {
+  flex: 0 0 auto;
+}
+
+.quiz-hint-row > .quiz-actions {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .btn--hint {
@@ -1425,4 +1432,24 @@ ul.setup-note {
   margin-right: 6px;
   color: var(--color-primary);
   font-weight: 900;
+}
+
+/* 解説の中の分数（横線の上が分子、下が分母） */
+.frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 2px;
+  font-size: 0.85em;
+  line-height: 1.1;
+  vertical-align: middle;
+}
+
+.frac__num {
+  padding: 0 2px;
+  border-bottom: 1px solid currentcolor;
+}
+
+.frac__den {
+  padding: 0 2px;
 }

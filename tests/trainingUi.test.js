@@ -129,11 +129,11 @@ describe('カテゴリ選択・設定画面', () => {
     expect(container.querySelector('.category-detail').hidden).toBe(false);
   });
 
-  it('難易度・問題数を選んで開始する（初期値は すべて・5問。問題数はスライダーで1〜20問）', () => {
+  it('難易度・問題数を選んで開始する（初期値は 基本・5問。問題数はスライダーで1〜20問）', () => {
     const navigate = vi.fn();
     mountTrainingSetupScreen(container, { navigate, params: { category: 'position' } });
     const pressed = [...container.querySelectorAll('[aria-pressed="true"]')].map((b) => b.textContent);
-    expect(pressed).toEqual(['すべて', '問題数を選ぶ']);
+    expect(pressed).toEqual(['基本', '問題数を選ぶ']);
     expect([...container.querySelectorAll('.segmented__item')].map((b) => b.textContent)).toEqual(['基本', '標準', '応用', 'すべて', '問題数を選ぶ', '1分チャレンジ']);
     expect(container.textContent).not.toContain('対象：');
     // 難易度ごとの問題の種類は画面に出さず、「難易度」の右の「？」でポップアップ

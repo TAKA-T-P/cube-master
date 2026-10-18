@@ -168,21 +168,24 @@ describe('タイトル画面の設定', () => {
     expect(JSON.parse(backend.getItem('cubeMaster:settings'))).toMatchObject({ allowPythagoreanQuestions: true, soundVolume: 0.3 });
   });
 
-  it('あそびかたの下に2択と説明。選ぶと説明が変わって保存される。注意書きもある', () => {
+  it('あそびかたの下に2択だけを置く（説明文は「？」の中）。選ぶと保存される', () => {
     mountHomeScreen(container, { navigate: vi.fn(), version: 'test' });
     const section = container.querySelector('[data-testid="pythagorean-setting"]');
     expect(container.querySelector('.home-menu').nextElementSibling).toBe(section);
-    expect([...section.querySelectorAll('.home-menu ~ * button, .home-setting__option')].map((b) => b.textContent)).toEqual(['出題しない（おすすめ）', '出題する']);
     const [off, on] = section.querySelectorAll('.home-setting__option');
-    const desc = section.querySelector('[data-testid="pythagorean-desc"]');
+    expect([off, on].map((b) => b.textContent)).toEqual(['出題しない（おすすめ）', '出題する']);
+    // ボタンの下に説明文は出さない
+    expect(section.querySelectorAll('p')).toHaveLength(0);
     expect(off.getAttribute('aria-checked')).toBe('true');
-    expect(desc.textContent).toBe('三平方の定理や√を使わない問題を出題します。立体の名前や体積など、知らない内容はヘルプで確認できます。');
     on.click();
     expect(on.getAttribute('aria-checked')).toBe('true');
     expect(off.getAttribute('aria-checked')).toBe('false');
-    expect(desc.textContent).toBe('三平方の定理や√を使う問題も出題します。');
     expect(settings.isPythagoreanAllowed()).toBe(true);
-    expect(section.textContent).toContain(SETTING_NOTE);
+    // 「？」で、2つの選択肢の説明と注意書きを読める
+    section.querySelector('.home-setting__head button').click();
+    const dialog = document.body.textContent;
+    expect(dialog).toContain('三平方の定理や√を使う問題も出題します。');
+    expect(dialog).toContain(SETTING_NOTE);
     expect(SETTING_NOTE).toBe('※この設定は通常トレーニングにのみ反映されます。1分チャレンジ・段位認定では、どちらの設定でも出題されません。');
   });
 });
@@ -326,5 +329,48 @@ describe('学習ヘルプ', () => {
     mountQuestionScreen(container, { navigate: vi.fn(), params: {}, mode });
     expect(helpTopicsForQuestion(session.state.currentQuestion).length).toBeGreaterThan(0);
     expect(container.querySelectorAll('.btn--learning-help')).toHaveLength(0);
+  });
+});
+
+describe('選択肢の √', () => {
+  it('√ を使わない問題では、まちがいの選択肢にも √ を出さない（K05・G06・S05 など数を答える問題）', () => {
+    for (const t of ALL_TEMPLATES) {
+      if (t.advanced === 'always') continue;
+      for (const q of generate(t, { allowAdvanced: false, n: 20, seed: 8 })) {
+        if (requiresAdvancedMath(q)) continue;
+        for (const c of q.choices) expect(c.label ?? '', `${t.id} ${q.question}`).not.toContain('√');
+        expect(new Set(q.choices.map((c) => c.id)).size).toBe(q.choices.length);
+      }
+    }
+  });
+});
+
+describe('「回答する」の位置', () => {
+  it('「ヒントを見る」の右どなりに「回答する」がある（ヒントのない時間制のモードでも同じ行）', () => {
+    store.startTraining({ category: 'position', difficulty: 1, questionLimit: 2 }, { rng: createRng(3) });
+    mountQuestionScreen(container, { navigate: vi.fn(), params: {} });
+    const row = container.querySelector('.quiz-hint-row');
+    expect(row.children[0].textContent).toBe('ヒントを見る');
+    expect(row.querySelector('.quiz-actions .btn--primary').textContent).toBe('回答する');
+    expect(container.querySelector('.quiz-answer .quiz-actions')).toBeNull();
+  });
+});
+
+describe('解説の分数', () => {
+  it('1/2・9/2・√2/2・2√10/3 を縦型の分数（上が分子・下が分母）で表示し、文字としては「1/2」のまま', async () => {
+    const { renderMathText } = await import('../src/ui/mathText.js');
+    const el = document.createElement('p');
+    el.append(renderMathText('高さは1/2、面積は9/2cm²、1辺の√2/2倍、長さは2√10/3cmです。'));
+    const fracs = [...el.querySelectorAll('.frac')];
+    expect(fracs.map((f) => [f.querySelector('.frac__num').textContent, f.querySelector('.frac__den').textContent])).toEqual([
+      ['1', '2'],
+      ['9', '2'],
+      ['√2', '2'],
+      ['2√10', '3'],
+    ]);
+    expect(el.textContent).toBe('高さは1/2、面積は9/2cm²、1辺の√2/2倍、長さは2√10/3cmです。');
+    const plain = document.createElement('p');
+    plain.append(renderMathText('分数のない文'));
+    expect(plain.querySelector('.frac')).toBeNull();
   });
 });

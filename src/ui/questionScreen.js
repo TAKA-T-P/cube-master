@@ -18,6 +18,7 @@ import { h } from '../utils/dom.js';
 import { button, confirmDialog, contentDialog } from './components.js';
 import { helpTopicsForQuestion } from '../core/learningHelp.js';
 import { renderHelpTopic } from './learningHelpVisuals.js';
+import { renderMathText } from './mathText.js';
 import { createCubeViewer, FACE_DISPLAY_MODES } from '../three/cubeViewer.js';
 import { AnswerSelection } from '../core/answerSelection.js';
 import { ANSWER_STATUS } from '../core/answerValidator.js';
@@ -171,8 +172,9 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
       h(
         'div',
         { class: 'quiz-scroll' },
-        h('section', { class: 'quiz-question' }, typeHint, questionText, figures, h('div', { class: 'quiz-hint-row' }, hintButton), hintText, learningHelpRow),
-        h('section', { class: 'quiz-answer' }, choicesEl, actionRow, feedback),
+        // 「回答する」は「ヒントを見る」の右どなり（ヒントのない1分チャレンジ・段位認定でも同じ位置）
+        h('section', { class: 'quiz-question' }, typeHint, questionText, figures, h('div', { class: 'quiz-hint-row' }, hintButton, actionRow), hintText, learningHelpRow),
+        h('section', { class: 'quiz-answer' }, choicesEl, feedback),
       ),
     ),
   );
@@ -402,7 +404,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     resultTitle.textContent = RESULT_TITLES[result.status];
     resultTitle.className = `feedback__title feedback__title--${result.status}`;
     resultDetail.textContent = resultDetailText(result);
-    explanationText.textContent = resolveChoiceRefs(question.explanation.text);
+    // 1/2 などの分数は縦型の分数で表示する
+    explanationText.replaceChildren(renderMathText(resolveChoiceRefs(question.explanation.text)));
     // 段位認定：くわしい解説は出さず（結果画面から復習できる）、得点・ペナルティを短く出す
     feedback.classList.toggle('feedback--certification', Boolean(cert));
     if (cert) resultDetail.textContent = [resultDetailText(result), cert.scoreText?.()].filter(Boolean).join(' ');
