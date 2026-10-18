@@ -60,8 +60,21 @@ export const MENU_ITEMS = [
   { id: 'help', label: 'あそびかた', route: 'help', enabled: true },
 ];
 
+/** 隠し操作：バージョン表示を続けて押す回数（問題テンプレート図鑑を開く。開発者の確認用） */
+export const CATALOG_TAPS = 5;
+const CATALOG_TAP_WINDOW_MS = 3000;
+
 export function mountHomeScreen(container, { navigate, version }) {
   const cube = createHomeCube();
+  let taps = [];
+  const tapVersion = () => {
+    const now = Date.now();
+    taps = [...taps.filter((t) => now - t < CATALOG_TAP_WINDOW_MS), now];
+    if (taps.length >= CATALOG_TAPS) {
+      taps = [];
+      navigate('catalog');
+    }
+  };
   const menu = h(
     'nav',
     { class: 'home-menu', 'aria-label': 'メニュー' },
@@ -96,7 +109,7 @@ export function mountHomeScreen(container, { navigate, version }) {
       ),
       menu,
       questionSetting(),
-      h('footer', { class: 'home-footer' }, h('span', {}, `Ver.${version}`)),
+      h('footer', { class: 'home-footer' }, h('span', { 'data-testid': 'version', onClick: tapVersion }, `Ver.${version}`)),
       h('p', { class: 'home-copyright', 'data-testid': 'copyright' }, '©2026 T.TAKEMOTO / KEC Glows'),
     ),
   );

@@ -13,6 +13,7 @@
 /* 3D を使う画面は、画面全体ではなく 3D の下（PC では横）のメニューだけがスクロールする */
 .screen--preview,
 .screen--question,
+.screen--catalog-view,
 .screen--categories {
   height: 100vh;
   height: 100dvh;

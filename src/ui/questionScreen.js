@@ -63,6 +63,8 @@ const LONG_LABEL = 9;
 export function mountQuestionScreen(container, { navigate, params, mode = null }) {
   // 段位認定のモード（ui/certificationQuestionScreen が渡す）
   const cert = mode?.kind === 'certification' ? mode : null;
+  // 問題テンプレート図鑑（開発者の確認用。ui/templateCatalogScreen が渡す）。記録には残さない
+  const catalog = mode?.kind === 'catalog' ? mode : null;
   // 復習（結果画面の「第◯問」・間違えた問題・保存した問題を解き直す）。もとのトレーニングの結果は変えない
   const isReview = !cert && params?.review !== undefined;
   const review = isReview ? getReview() : null;
@@ -70,12 +72,12 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     navigate(params?.review === 'cert' ? 'certification-result' : params?.review === 'challenge' ? 'challenge-result' : 'result');
     return { unmount() {} };
   }
-  const session = cert?.session ?? review?.session ?? getSession();
+  const session = cert?.session ?? catalog?.session ?? review?.session ?? getSession();
   if (!session) {
     navigate('categories');
     return { unmount() {} };
   }
-  if (!cert && session.isComplete() && !session.state.currentQuestion) {
+  if (!cert && !catalog && session.isComplete() && !session.state.currentQuestion) {
     navigate('result');
     return { unmount() {} };
   }
@@ -99,6 +101,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   const score = h('span', { class: 'quiz-score' });
   const quitButton = cert
     ? button('やめる', () => cert.onQuit(), 'btn--ghost')
+    : catalog
+    ? button('図鑑に戻る', () => catalog.onBack(), 'btn--ghost')
     : review
     ? review.kind === 'card'
       ? button('結果に戻る', () => backToResult(), 'btn--ghost')
@@ -132,7 +136,15 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   submitButton.dataset.clickSound = 'off';
   // 段位認定：「回答する」の左に「パス」（問題を入れかえる。残り時間が減る）
   const passButton = cert?.allowPass ? button('パス', () => confirmPass(), 'btn--large btn--pass') : null;
-  const actionRow = h('div', { class: `quiz-actions ${passButton ? 'quiz-actions--with-pass' : ''}` }, passButton, submitButton);
+  // 図鑑：正解を選んで回答し、正解・解説・3D の演出をすぐに見る
+  const autoAnswerButton = catalog ? button('正解で回答', () => answerCorrectly(), 'btn--large btn--catalog-answer') : null;
+  const actionRow = h(
+    'div',
+    { class: `quiz-actions ${passButton ? 'quiz-actions--with-pass' : ''} ${autoAnswerButton ? 'quiz-actions--with-auto' : ''}` },
+    passButton,
+    autoAnswerButton,
+    submitButton,
+  );
 
   const resultTitle = h('p', { class: 'feedback__title', role: 'status' });
   const resultDetail = h('p', { class: 'feedback__detail' });
@@ -163,7 +175,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   const quizRoot = h(
     'div',
     { class: 'quiz' },
-    h('header', { class: `quiz-header ${cert ? 'quiz-header--certification' : ''}` }, quitButton, ...(cert ? cert.headerItems : [review ? null : modeBadge, progress, difficulty, score])),
+    h('header', { class: `quiz-header ${cert ? 'quiz-header--certification' : ''}` }, quitButton, ...(cert ? cert.headerItems : catalog ? catalog.headerItems : [review ? null : modeBadge, progress, difficulty, score])),
     h(
       'div',
       { class: 'quiz-body' },
@@ -298,6 +310,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
       passButton.hidden = false;
       passButton.disabled = false;
     }
+    if (autoAnswerButton) autoAnswerButton.hidden = false;
     // もう一度見る・図のみ表示・展開図に戻す・元に戻すは、回答したあとだけ
     for (const b of revealTools) b.hidden = true;
     setFigureOnly(false);
@@ -340,11 +353,20 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   }
 
   // ---------- 回答 ----------
+  /** 図鑑：正解の選択肢だけを選んで回答する */
+  function answerCorrectly() {
+    if (session.state.answerLocked || selection.isLocked()) return;
+    selection.clear();
+    for (const id of question.correctAnswers) selection.toggle(id);
+    submit();
+  }
+
   function submit() {
     if (!selection.canSubmit()) return;
     const selected = selection.getSelected();
     selection.lock(); // 回答の変更を禁止
     if (passButton) passButton.disabled = true; // 回答したあとはパスできない（行の形はそのまま）
+    if (autoAnswerButton) autoAnswerButton.hidden = true;
     const result = session.submit(selected);
     if (!result) {
       // 段位認定：時間切れ（確定した時刻に時間が残っていなかった）。この回答は数えない
@@ -421,7 +443,9 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     // 回答後にだけ見せる印（立方体にならない展開図の重なるマスなど）を表示する
     choicesEl.classList.add('choices--answered');
     delete submitButton.dataset.clickSound;
-    submitButton.textContent = cert
+    submitButton.textContent = catalog
+      ? '別の問題'
+      : cert
       ? session.hasNextQuestion()
         ? '次の問題へ'
         : '結果へ'
@@ -574,6 +598,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   function updateScore() {
     const s = session.state;
     if (cert) return cert.onScore?.();
+    if (catalog) return;
     score.textContent = review ? '' : `正解 ${s.correctCount}`;
   }
 
@@ -591,6 +616,10 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
       return;
     }
     viewer?.animations.cancel(); // 前問の演出を終わらせる
+    if (catalog) {
+      catalog.onAnother();
+      return;
+    }
     if (review) {
       if (review.kind === 'card') backToResult();
       else if (session.hasNextQuestion()) showQuestion(session.nextQuestion());

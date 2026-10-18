@@ -1453,3 +1453,135 @@ ul.setup-note {
 .frac__den {
   padding: 0 2px;
 }
+
+/* ----- 問題テンプレート図鑑（開発者用） ----- */
+.catalog-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 0 var(--gutter) 12px;
+}
+
+.catalog-select,
+.catalog-search {
+  min-height: 34px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 14px;
+}
+
+.catalog-search {
+  flex: 1 1 160px;
+}
+
+.catalog-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.catalog-section {
+  margin: 0 var(--gutter) 16px;
+}
+
+.catalog-section__title {
+  margin-bottom: 6px;
+  font-size: 15px;
+  color: var(--color-primary-strong);
+}
+
+.catalog-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.catalog-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13px;
+}
+
+/* どのカテゴリの表も同じ列幅（ID・難易度・内容・回答・√・基準・前提知識・時間制） */
+.catalog-table th:nth-child(1) { width: 48px; }
+.catalog-table th:nth-child(2) { width: 56px; }
+.catalog-table th:nth-child(4) { width: 64px; }
+.catalog-table th:nth-child(5) { width: 48px; }
+.catalog-table th:nth-child(6) { width: 76px; }
+.catalog-table th:nth-child(8) { width: 72px; }
+
+.catalog-table th,
+.catalog-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.catalog-table th {
+  background: var(--color-surface-2);
+  color: var(--color-text-sub);
+  font-weight: 700;
+}
+
+.catalog-table td.catalog-title,
+.catalog-table td:nth-child(7) {
+  white-space: normal;
+}
+
+.catalog-row {
+  cursor: pointer;
+}
+
+.catalog-row:hover,
+.catalog-row:focus-visible {
+  background: var(--color-primary-soft);
+  outline: none;
+}
+
+.catalog-id {
+  font-weight: 800;
+  color: var(--color-primary-strong);
+}
+
+.catalog-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.catalog-seed {
+  min-width: 34px;
+  padding: 0 6px;
+  font-size: 15px;
+}
+
+/* 図鑑：「正解で回答」と「回答する」を横に並べる */
+.quiz-actions--with-auto {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+}
+
+.quiz-actions--with-auto:has(> .btn--catalog-answer[hidden]) {
+  grid-template-columns: 1fr;
+}
+
+.quiz-actions--with-auto > .btn {
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.btn--catalog-answer {
+  padding: 0 10px;
+  white-space: nowrap;
+  border-color: #b9a2e8;
+  background: #f3edff;
+  color: #5b3aa8;
+}

@@ -23,6 +23,7 @@ import { mountChallengeResultScreen } from './ui/challengeResultScreen.js';
 import { mountCertificationQuestionScreen } from './ui/certificationQuestionScreen.js';
 import { mountCertificationResultScreen } from './ui/certificationResultScreen.js';
 import { mountCertificationRecordsScreen } from './ui/certificationRecordsScreen.js';
+import { mountTemplateCatalogScreen, mountTemplateViewScreen } from './ui/templateCatalogScreen.js';
 import { installButtonSound } from './ui/answerSound.js';
 import { h, showToast } from './utils/dom.js';
 
@@ -42,6 +43,9 @@ const ROUTES = {
   'certification-play': mountCertificationQuestionScreen,
   'certification-result': mountCertificationResultScreen,
   'certification-records': mountCertificationRecordsScreen,
+  // 問題テンプレート図鑑（開発者の確認用。タイトル画面のバージョン表示を5回押すと開く）
+  catalog: mountTemplateCatalogScreen,
+  'catalog-view': mountTemplateViewScreen,
 };
 
 const app = document.getElementById('app');
