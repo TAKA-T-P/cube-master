@@ -116,12 +116,12 @@
 .home-menu {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
   width: min(100%, 420px);
 }
 
 .btn--menu {
-  min-height: 52px;
+  min-height: 46px;
   padding: 4px 8px;
   font-size: clamp(15px, 4.2vw, 18px);
   justify-content: center;
@@ -707,3 +707,8 @@
   color: var(--color-primary-strong);
 }
 
+
+/* トライアル：ドリルモード・段位認定の上に、横いっぱいの1行 */
+.btn--menu-wide {
+  grid-column: 1 / -1;
+}

@@ -201,6 +201,8 @@ export function createNetModel() {
       const radius = Math.hypot(2 * width, 2 * height) / 2;
       flat = { scale: Math.min(1, FLAT_RADIUS / radius), position: new THREE.Vector3() };
       flat.position.copy(center).multiplyScalar(-flat.scale);
+      // noFit：大きさ・位置を変えない（いくつかの展開図を並べて折るとき。トライアルの「展開図に分けろ！」）
+      if (spec.noFit) flat = { scale: 1, position: new THREE.Vector3() };
       progress = 0;
       apply();
     },

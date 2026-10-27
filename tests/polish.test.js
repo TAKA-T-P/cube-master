@@ -147,22 +147,26 @@ describe('画面', () => {
     document.body.replaceChildren();
   });
 
-  it('あそびかた：8つのタブで切りかえて読める（矢印キーでも移れる）。効果音の設定と記録の消去がある', async () => {
+  it('あそびかた：9つのタブで切りかえて読める（矢印キーでも移れる）。効果音の設定と記録の消去がある', async () => {
     const { mountHelpScreen } = await import('../src/ui/helpScreen.js');
     mountHelpScreen(container, { navigate: vi.fn() });
     const tabs = [...container.querySelectorAll('[role="tab"]')];
-    expect(tabs.map((t) => t.textContent)).toEqual(['CUBE MASTERとは？', 'トレーニング', '1分チャレンジ', '段位認定', '3Dの操作', 'ヒント・復習・学習記録', '学習ヘルプ', '記録と設定']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['CUBE MASTERとは？', 'トライアル', 'ドリルモード', '1分チャレンジ', '段位認定', '3Dの操作', 'ヒント・復習・学習記録', '学習ヘルプ', '記録と設定']);
     const visible = () => [...container.querySelectorAll('[role="tabpanel"]')].filter((p) => !p.hidden).map((p) => p.dataset.tab);
     expect(visible()).toEqual(['about']);
-    tabs[2].click();
+    tabs[1].click();
+    expect(visible()).toEqual(['trial']);
+    const trial = container.querySelector('#help-trial').textContent;
+    for (const text of ['90秒', '積み木の数はいくつ？', '3方向から見ると？', 'サイコロを転がすと？', '展開図に分けろ！', 'LEVEL＋1', '＋2', '最高到達LEVEL', '左右にずれていても正解', '中断']) expect(trial).toContain(text);
+    tabs[3].click();
     expect(visible()).toEqual(['challenge']);
     const challenge = container.querySelector('#help-challenge').textContent;
     for (const text of ['60秒', '10秒', 'ヒントとパスは使えません', '最高記録']) expect(challenge).toContain(text);
-    tabs[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    tabs[3].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
     expect(visible()).toEqual(['certification']);
     const cert = container.querySelector('#help-certification').textContent;
     for (const text of ['100秒', '240点', '3秒ふえます', '2500点で皆伝', '五段★']) expect(cert).toContain(text);
-    tabs[7].click();
+    tabs[8].click();
     expect(container.querySelector('[data-testid="sound-toggle"]')).not.toBeNull();
     expect([...container.querySelectorAll('button')].some((b) => b.textContent === '学習記録を消去')).toBe(true);
   });
@@ -202,7 +206,7 @@ describe('画面', () => {
     const { mountHomeScreen } = await import('../src/ui/homeScreen.js');
     mountHomeScreen(container, { navigate: vi.fn(), version: '0.7.0' });
     const toggle = container.querySelector('[data-testid="sound-toggle"]');
-    expect([...container.querySelectorAll('.home-menu button')].map((b) => b.textContent)).toEqual(['トレーニング', '段位認定', '3D立方体をためす', 'あそびかた']);
+    expect([...container.querySelectorAll('.home-menu button')].map((b) => b.textContent)).toEqual(['トライアル', 'ドリルモード', '段位認定', '3D立方体をためす', 'あそびかた']);
     expect(container.querySelector('[data-testid="copyright"]').textContent).toBe('©2026 T.TAKEMOTO / KEC Glows');
     expect(toggle.closest('.home-corner')).not.toBeNull();
     expect(toggle.querySelector('svg')).not.toBeNull();

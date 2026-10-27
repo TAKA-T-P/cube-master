@@ -44,7 +44,7 @@ export function mountReviewResultScreen(container, { navigate }) {
           h('dt', {}, '復習の正答率'),
           h('dd', { 'data-testid': 'review-rate' }, `${percent}%`),
         ),
-        h('p', { class: 'setup-note' }, '復習の結果は、もとのトレーニングの結果には入りません。正しく解けた問題は、復習待ちから外れます。'),
+        h('p', { class: 'setup-note' }, '復習の結果は、もとのドリルモードの結果には入りません。正しく解けた問題は、復習待ちから外れます。'),
       ),
       h(
         'div',

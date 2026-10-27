@@ -186,7 +186,7 @@ describe('タイトル画面の設定', () => {
     const dialog = document.body.textContent;
     expect(dialog).toContain('三平方の定理や√を使う問題も出題します。');
     expect(dialog).toContain(SETTING_NOTE);
-    expect(SETTING_NOTE).toBe('※この設定は通常トレーニングにのみ反映されます。1分チャレンジ・段位認定では、どちらの設定でも出題されません。');
+    expect(SETTING_NOTE).toBe('※この設定はドリルモードにのみ反映されます。1分チャレンジ・段位認定では、どちらの設定でも出題されません。');
   });
 });
 

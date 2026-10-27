@@ -57,7 +57,7 @@ export function mountCategoryScreen(container, { navigate }) {
         'header',
         { class: 'page-header' },
         h('button', { class: 'btn btn--ghost', type: 'button', onClick: () => navigate('home') }, '← ホーム'),
-        h('h1', {}, 'トレーニング'),
+        h('h1', {}, 'ドリルモード'),
         h('button', { class: 'btn btn--small btn--back page-header__end', type: 'button', onClick: () => navigate('history') }, '学習記録'),
       ),
       // カテゴリのボタン（この部分だけ上下にスクロールする）

@@ -133,6 +133,19 @@ export function isCountDetermined(cubes, viewDirection = BLOCK_VIEW_DIRECTION) {
   return isBlockStructureReadable(cubes, viewDirection);
 }
 
+/**
+ * isCountDetermined の大きさの制限をゆるめたもの（トライアルの大きな積み木用）
+ * 上の面が見取図の同じ位置に描かれるのは、ずれが見る向き (4, 5, 6) の整数倍のときだけなので、
+ * 横 5 以上・奥行き 7 以上・高さ 5 以上が同時にそろわなければ起こらない（BLOCK_VIEW_DIRECTION のときだけ使う）
+ */
+export function isCountDeterminedLarge(cubes) {
+  if (cubes.length === 0 || hasDuplicateCubes(cubes) || !isGrounded(cubes)) return false;
+  const { width, height, depth } = getBlockBounds(cubes);
+  const [vx, vy, vz] = BLOCK_VIEW_DIRECTION;
+  if (width - 1 >= vx && height >= vy && depth - 1 >= vz) return false;
+  return isBlockStructureReadable(cubes);
+}
+
 /** 完成形にするために加える小立方体（完成形にあって今の形にないもの。今の形が完成形にふくまれないときは null） */
 export function blocksToAdd(current, target) {
   const targetKeys = new Set(target.map(cubeKey));

@@ -24,12 +24,18 @@ export const POSITION_LABELS = Object.freeze(['ア', 'イ', 'ウ', 'エ', 'オ',
 /**
  * 選択肢をシャッフルする（fixed: true の選択肢は元の順で末尾に置く）
  * labelByPosition: true の選択肢（図の選択肢）には、並べ替えたあとの位置でア・イ・ウ…を付け直す
+ * 選択肢が「ア」「イ」…の記号だけ（図の中のマスや道の記号）のときは、シャッフルせずア・イ・ウ…の順に並べる
  */
 export function shuffleChoices(choices, rng = Math.random) {
   const movable = choices.filter((c) => !c.fixed);
   const fixed = choices.filter((c) => c.fixed);
-  return relabelByPosition([...shuffle(movable, rng), ...fixed]);
+  const ordered = movable.length > 0 && movable.every((c) => !c.labelByPosition && SYMBOL_ORDER.includes(c.label) && c.label.length === 1);
+  const arranged = ordered ? [...movable].sort((a, b) => SYMBOL_ORDER.indexOf(a.label) - SYMBOL_ORDER.indexOf(b.label)) : shuffle(movable, rng);
+  return relabelByPosition([...arranged, ...fixed]);
 }
+
+/** 記号の選択肢を並べる順 */
+const SYMBOL_ORDER = 'アイウエオカキクケコサシスセソタチツテト';
 
 export const relabelByPosition = (choices) => choices.map((c, i) => (c.labelByPosition ? { ...c, label: POSITION_LABELS[i] } : c));
 

@@ -170,3 +170,31 @@ describe('questionRegistry', () => {
     expect(getTemplates('cutting')).toEqual([]);
   });
 });
+
+describe('記号（ア・イ・ウ…）の選択肢の並び', () => {
+  it('選択肢が記号だけなら、シャッフルせずア・イ・ウ…の順に並べる（fixed の選択肢は末尾のまま）', () => {
+    const choices = ['ウ', 'ア', 'エ', 'イ'].map((label) => ({ id: label, label }));
+    for (let seed = 1; seed <= 10; seed++) {
+      expect(shuffleChoices(choices, createRng(seed)).map((c) => c.label)).toEqual(['ア', 'イ', 'ウ', 'エ']);
+    }
+    const withFixed = [...choices, { id: 'none', label: 'どれでもない', fixed: true }];
+    expect(shuffleChoices(withFixed, createRng(3)).map((c) => c.label)).toEqual(['ア', 'イ', 'ウ', 'エ', 'どれでもない']);
+  });
+
+  it('記号でない選択肢は、これまでどおりシャッフルする', () => {
+    const choices = ['辺AB', '辺BC', '辺CD', '辺DA', '辺EF'].map((label) => ({ id: label, label }));
+    const orders = new Set(Array.from({ length: 10 }, (_, i) => shuffleChoices(choices, createRng(i + 1)).map((c) => c.label).join()));
+    expect(orders.size).toBeGreaterThan(1);
+  });
+
+  it('展開図パズル（C02・C03・C04）のマスの記号は、トレーニングでも段位認定でも ア から順に並ぶ', () => {
+    const KANA = 'アイウエオカキク';
+    for (const t of getTemplates('netPuzzle').filter((x) => ['C02', 'C03', 'C04'].includes(x.id))) {
+      const picker = new QuestionPicker({ templates: [t], rng: createRng(5) });
+      for (let i = 0; i < 10; i++) {
+        const labels = picker.next().choices.map((c) => c.label);
+        expect(labels, t.id).toEqual([...labels].sort((a, b) => KANA.indexOf(a) - KANA.indexOf(b)));
+      }
+    }
+  });
+});

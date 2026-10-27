@@ -1,8 +1,8 @@
 /**
  * ヘルプ（あそびかた）画面
  *
- * 説明が多いので、8つのタブに分けて、短いまとまりで切りかえて読めるようにする。
- *   1. CUBE MASTERとは？ 2. トレーニング 3. 1分チャレンジ 4. 段位認定 5. 3Dの操作 6. ヒント・復習・学習記録 7. 記録と設定
+ * 説明が多いので、9つのタブに分けて、短いまとまりで切りかえて読めるようにする。
+ *   1. CUBE MASTERとは？ 2. トライアル 3. ドリルモード 4. 1分チャレンジ 5. 段位認定 6. 3Dの操作 7. ヒント・復習・学習記録 8. 学習ヘルプ 9. 記録と設定
  * 3Dの操作は、使っている端末に合った説明を先に表示する。
  */
 import { h, isTouchPrimary, showToast } from '../utils/dom.js';
@@ -13,6 +13,7 @@ import { HELP_TOPICS } from '../core/learningHelp.js';
 import { renderHelpTopic } from './learningHelpVisuals.js';
 import { CERTIFICATION_RULES } from '../core/certificationRules.js';
 import { CHALLENGE_RULES } from '../core/timedChallengeSession.js';
+import { TRIAL_RULES, TRIAL_MODES } from '../core/trial/trialRules.js';
 
 const R = CERTIFICATION_RULES;
 
@@ -41,16 +42,29 @@ const HOW_TO = {
   },
 };
 
-const list = (items) => h('dl', { class: 'help-list' }, items.map(([term, desc]) => [h('dt', {}, term), h('dd', {}, desc)]));
+// 説明が配列なら、箇条書きにする
+const list = (items) =>
+  h('dl', { class: 'help-list' }, items.map(([term, desc]) => [h('dt', {}, term), h('dd', {}, Array.isArray(desc) ? h('ul', { class: 'help-list__items' }, desc.map((d) => h('li', {}, d))) : desc)]));
 
 const ABOUT = [
   ['CUBE MASTER', '立方体の「頂点」「辺」「面」や、展開図・切断・サイコロ・積み木・表面の最短経路・中に隠れた立体・長さと角度など、立方体のいろいろな問題に挑戦するアプリです。3Dの立方体を動かして、答えを目で確かめられます。'],
-  ['3つの遊び方', '「トレーニング」はじっくり練習、「1分チャレンジ」は1つのカテゴリで60秒の挑戦、「段位認定」はいろいろなカテゴリから出る100秒の挑戦です。'],
-  ['はじめての人は', 'まずトレーニングの「基本」から始めよう。慣れてきたら1分チャレンジや段位認定に挑戦！'],
+  ['4つの遊び方', '「トライアル」は数字やマス塗りで答えて90秒でLEVELを上げる挑戦、「ドリルモード」はじっくり練習、「1分チャレンジ」は1つのカテゴリで60秒の挑戦、「段位認定」はいろいろなカテゴリから出る100秒の挑戦です。'],
+  ['はじめての人は', 'まずドリルモードの「基本」から始めよう。慣れてきたらトライアル・1分チャレンジ・段位認定に挑戦！'],
+];
+
+const TRIAL = [
+  ['ルール', `4種類から1つをえらび、${sec(TRIAL_RULES.durationMs)}秒でどこまでLEVELを上げられるかに挑戦します。1回の挑戦では、えらんだ種類の問題だけが出ます。`],
+  ['はじめ方', 'トップの「トライアル」→ 種類をえらんで「挑戦する」→ ルールを読んで「スタート」。3・2・1 のあとに始まります。'],
+  ['4つの種類', TRIAL_MODES.map((m) => `「${m.name}」${m.description}`)],
+  ['答え方', '選択肢ではなく、テンキーで数を入力する・マスを塗る（なぞってもOK）・サイコロの目をえらぶ・色でぬり分ける、のように答えて「決定」を押します。'],
+  ['LEVEL', 'LEVEL 1 からスタート。正解でLEVEL＋1（「展開図に分けろ！」だけ＋2）、まちがえるとLEVEL−1（LEVEL 1 より下がりません）。LEVEL 6・11・16 から問題がむずかしくなります（★〜★★★★）。'],
+  ['答え合わせ', '正解でも不正解でも、正しい答えを3Dで確かめられます。答え合わせのあいだは、時間は減りません。'],
+  ['ゆるされること', '「3方向から見ると？」は、形が合っていれば左右にずれていても正解です。「展開図に分けろ！」は、お手本とちがう分け方でも、どの色も展開図になっていれば正解です。'],
+  ['記録', 'その回でいちばん高かったLEVEL（最高到達LEVEL）が記録になり、4種類それぞれの自己ベストが残ります。とちゅうでやめたり、ほかのタブに切りかえたりすると中断になり、記録に残りません。'],
 ];
 
 const TRAINING = [
-  ['はじめ方', 'トップの「トレーニング」→ カテゴリを選んで「次へ」→ 難易度と「問題数を選ぶ」を決めて「スタート」。'],
+  ['はじめ方', 'トップの「ドリルモード」→ カテゴリを選んで「次へ」→ 難易度と「問題数を選ぶ」を決めて「スタート」。'],
   ['答え方', '問題文を読んで、選択肢を選び「回答する」。「1つ選ぼう」は1つだけ、「当てはまるものをすべて選ぼう」は当てはまるものを全部選びます。'],
   ['答え合わせ', '「○」（正解）・「△」（おしい）・「×」（不正解）が出たあと、解説が表示されます。正解は緑、まちがえたところは赤で光ります。立方体の下の「もう一度見る」で何度でも見直せます。'],
   ['ヒント', '回答する前に「ヒントを見る」を押すと、考え方の手がかりが出ます（答えは出ません）。'],
@@ -79,7 +93,7 @@ const CERTIFICATION = [
 ];
 
 const SUPPORT = [
-  ['ヒント', 'トレーニングでは、回答する前に「ヒントを見る」で考え方の手がかりが見られます。ヒントを見ても正解・不正解は変わりません。'],
+  ['ヒント', 'ドリルモードでは、回答する前に「ヒントを見る」で考え方の手がかりが見られます。ヒントを見ても正解・不正解は変わりません。'],
   ['復習', '結果画面の「間違えた問題を復習」で、まちがえた問題を同じ問題のまま解き直せます。もとの結果は変わりません。'],
   ['学習記録', 'カテゴリ選択の右上の「学習記録」で、カテゴリごとの正答率や、あとで復習できる問題が見られます。'],
 ];
@@ -88,7 +102,7 @@ function recordSection() {
   async function confirmClear() {
     const dialog = confirmDialog({
       title: '学習記録を消去しますか？',
-      message: 'この端末に保存した CUBE MASTER の学習記録・復習待ちの問題・1分チャレンジと段位認定の記録・設定を、すべて消します。もとに戻せません。',
+      message: 'この端末に保存した CUBE MASTER の学習記録・復習待ちの問題・1分チャレンジと段位認定とトライアルの記録・設定を、すべて消します。もとに戻せません。',
       okLabel: '消去する',
       cancelLabel: 'やめる',
     });
@@ -126,7 +140,8 @@ export function mountHelpScreen(container, { navigate }) {
 
   const TABS = [
     { id: 'about', label: 'CUBE MASTERとは？', body: () => [list(ABOUT)] },
-    { id: 'training', label: 'トレーニング', body: () => [list(TRAINING)] },
+    { id: 'trial', label: 'トライアル', body: () => [list(TRIAL)] },
+    { id: 'training', label: 'ドリルモード', body: () => [list(TRAINING)] },
     { id: 'challenge', label: '1分チャレンジ', body: () => [list(CHALLENGE)] },
     { id: 'certification', label: '段位認定', body: () => [list(CERTIFICATION)] },
     { id: 'controls', label: '3Dの操作', body: () => order.map((key, i) => control(key, i === 0)) },
@@ -135,7 +150,7 @@ export function mountHelpScreen(container, { navigate }) {
       id: 'learning',
       label: '学習ヘルプ',
       body: () => [
-        h('p', { class: 'setup-note' }, '問題を解くときに使う知識を、図で確かめられます。通常トレーニングでは、問題の下の「？」からも開けます。'),
+        h('p', { class: 'setup-note' }, '問題を解くときに使う知識を、図で確かめられます。ドリルモードでは、問題の下の「？」からも開けます。'),
         ...HELP_TOPICS.map((t) => h('section', { class: 'help-section', dataset: { topic: t.id } }, h('h3', {}, t.title), renderHelpTopic(t.id))),
       ],
     },

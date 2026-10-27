@@ -96,7 +96,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   // ---------- 画面の骨組み ----------
   const progress = h('span', { class: 'quiz-progress' });
   // 今のプレイ形式（トレーニング・復習）がわかるように、上の帯に出す
-  const modeBadge = h('span', { class: 'badge badge--mode', 'data-testid': 'play-mode' }, review ? '復習' : 'トレーニング');
+  const modeBadge = h('span', { class: 'badge badge--mode', 'data-testid': 'play-mode' }, review ? '復習' : 'ドリルモード');
   const difficulty = h('span', { class: 'badge badge--info' }, review ? '復習' : difficultyLabel(session.state.difficulty));
   const score = h('span', { class: 'quiz-score' });
   const quitButton = cert
@@ -651,7 +651,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
 
   async function confirmQuit() {
     const dialog = confirmDialog({
-      title: session.isEndless ? 'トレーニングを終了しますか？' : 'トレーニングをやめますか？',
+      title: session.isEndless ? 'ドリルモードを終了しますか？' : 'ドリルモードをやめますか？',
       message: 'ここまでに回答した問題の結果を表示します。',
       okLabel: session.isEndless ? '終了する' : 'やめる',
       cancelLabel: 'つづける',

@@ -1,0 +1,610 @@
+/* ===== トライアル（90秒・LEVEL アップ） ===== */
+
+/* ----- 選択画面 ----- */
+.trial-cards {
+  display: grid;
+  gap: 10px;
+  margin: 0 var(--gutter);
+}
+
+.trial-card {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  grid-template-areas: 'icon body' 'icon go';
+  align-items: center;
+  gap: 4px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.trial-card__icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+}
+
+.trial-card__icon svg,
+.trial-setup__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.trial-card__body {
+  grid-area: body;
+  min-width: 0;
+}
+
+.trial-card__name {
+  font-size: 16px;
+  color: var(--color-primary-strong);
+}
+
+.trial-card__desc {
+  font-size: 13px;
+  color: var(--color-text-sub);
+}
+
+.trial-card__best {
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.trial-card__go {
+  grid-area: go;
+  justify-self: end;
+}
+
+/* ----- ルール説明・スタート ----- */
+.trial-setup__icon {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 8px;
+}
+
+.trial-setup__rules {
+  display: grid;
+  gap: 6px;
+  margin: 0 var(--gutter) 12px;
+  padding: 10px 12px 10px 28px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.trial-setup__rules--level {
+  background: var(--color-primary-soft);
+}
+
+.trial-setup__best {
+  margin: 0 var(--gutter) 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.trial-setup__actions {
+  display: grid;
+  margin: 0 var(--gutter);
+}
+
+/* ----- プレイ画面 ----- */
+.screen--trial-play {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.trial-play {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.trial-play__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.trial-play__mode {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trial-play__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  width: 100%;
+}
+
+.trial-level {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--color-primary-strong);
+}
+
+.trial-stars {
+  color: #f0a500;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.trial-highest {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fff3d6;
+  color: #8a5a00;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.trial-play__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  padding: 8px 10px 16px;
+  overflow-y: auto;
+}
+
+.trial-stage {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  justify-content: center;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.trial-figure {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.trial-figure svg {
+  width: 100%;
+  max-height: 34vh;
+}
+
+.trial-figure__blocks,
+.trial-figure__board {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 420px;
+}
+
+.trial-viewport {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: min(36vh, 320px);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+.trial-stage--split .trial-figure,
+.trial-stage--split .trial-viewport {
+  flex-basis: 50%;
+}
+
+.trial-question {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.trial-feedback {
+  display: grid;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.trial-feedback__title {
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.trial-feedback__title--correct {
+  color: var(--color-success);
+}
+
+.trial-feedback__title--incorrect {
+  color: var(--color-danger);
+}
+
+.trial-feedback__detail {
+  display: grid;
+  font-size: 14px;
+}
+
+.trial-feedback__level {
+  font-weight: 800;
+}
+
+.trial-feedback__next {
+  justify-self: end;
+}
+
+.trial-notice {
+  min-height: 1.2em;
+  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.trial-notice:empty {
+  display: none;
+}
+
+/* ----- テンキー ----- */
+.trial-number {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 360px);
+  margin: 0 auto;
+}
+
+.trial-number__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.trial-number__display {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: 26px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.trial-number__display--empty::before {
+  content: '数を入力';
+  color: var(--color-text-sub);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.trial-number__submit {
+  min-width: 96px;
+  font-size: 18px;
+}
+
+.trial-number__pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.trial-key {
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.trial-key:active:not(:disabled) {
+  background: var(--color-primary-soft);
+}
+
+.trial-key--sub {
+  background: var(--color-surface-2);
+  font-size: 15px;
+}
+
+/* ----- マス目（投影図・展開図） ----- */
+.trial-projection {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.trial-projection__grid {
+  width: min(100%, 340px);
+}
+
+.trial-projection__floor {
+  margin-top: 2px;
+  color: var(--color-text-sub);
+  font-size: 12px;
+  text-align: center;
+}
+
+.trial-grid {
+  display: grid;
+  width: 100%;
+  border: 2px solid var(--color-primary-strong);
+  background: var(--color-surface);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.trial-figure__net {
+  width: 100%;
+}
+
+.trial-figure__net .trial-grid {
+  width: min(100%, calc(var(--cols) * 40px), calc(34vh * var(--cols) / var(--rows)));
+  margin: 0 auto;
+  border: none;
+  background: transparent;
+}
+
+.trial-cell {
+  border: 1px solid #b8c4d2;
+  cursor: pointer;
+}
+
+.trial-figure__net .trial-cell {
+  border: 1.5px solid #1b2a41;
+  background: #fff;
+}
+
+.trial-cell--off {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.trial-projection .trial-cell--on {
+  background: #4f8fe0;
+}
+
+/* 答え合わせ：合っている・足りない・よけいなマス */
+.trial-cell--hit {
+  background: var(--color-success) !important;
+}
+
+.trial-cell--missing {
+  background: #bfe8c9 !important;
+  outline: 2px dashed var(--color-success);
+  outline-offset: -4px;
+}
+
+.trial-cell--extra {
+  background: #f6c9cc !important;
+  outline: 2px solid var(--color-danger);
+  outline-offset: -3px;
+}
+
+.trial-grid--disabled {
+  pointer-events: none;
+}
+
+.trial-grid-tools {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+}
+
+.trial-grid-tools__submit {
+  min-width: 110px;
+}
+
+.trial-grid-tools__mode--erase {
+  background: #fde8e8;
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+/* ----- サイコロ ----- */
+.trial-board {
+  width: 100%;
+}
+
+.trial-dice {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 420px);
+  margin: 0 auto;
+}
+
+.trial-dice__buttons {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.trial-dice__btn {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 2px 4px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font: inherit;
+  cursor: pointer;
+}
+
+.trial-dice__btn[aria-checked='true'] {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.trial-dice__face {
+  width: 100%;
+  max-width: 44px;
+}
+
+.trial-dice__num {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+/* ----- 展開図のパレット ----- */
+.trial-net-tools {
+  display: grid;
+  gap: 8px;
+}
+
+.trial-palette {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr) auto;
+  gap: 6px;
+  width: min(100%, 440px);
+  margin: 0 auto;
+}
+
+.trial-palette__color,
+.trial-palette__eraser {
+  min-height: 44px;
+  border: 2px solid rgb(27 42 65 / 25%);
+  border-radius: var(--radius-md);
+  font: inherit;
+  cursor: pointer;
+}
+
+.trial-palette__color[aria-checked='true'],
+.trial-palette__eraser[aria-checked='true'] {
+  border-color: var(--color-text);
+  box-shadow: 0 0 0 3px rgb(27 42 65 / 25%);
+}
+
+.trial-palette__count {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1b2a41;
+}
+
+.trial-palette__color--full .trial-palette__count {
+  text-decoration: underline;
+}
+
+.trial-palette__eraser {
+  padding: 0 8px;
+  background: var(--color-surface);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* ----- 結果 ----- */
+.trial-result {
+  display: grid;
+  gap: 10px;
+  padding: 24px var(--gutter);
+  text-align: center;
+}
+
+.trial-result__timeup {
+  color: var(--color-danger);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.trial-result__mode {
+  color: var(--color-text-sub);
+}
+
+.trial-result__mode strong {
+  color: var(--color-text);
+  font-size: 18px;
+}
+
+.trial-result__main {
+  display: grid;
+  justify-items: center;
+}
+
+.trial-result__label {
+  font-weight: 800;
+  color: var(--color-text-sub);
+}
+
+.trial-result__level {
+  color: var(--color-primary-strong);
+  font-size: clamp(48px, 15vw, 72px);
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.trial-result__best {
+  font-weight: 800;
+}
+
+.trial-result__best--new {
+  color: #d97a00;
+  font-size: 20px;
+}
+
+.trial-result__stats {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+}
+
+.trial-result__stats div {
+  display: grid;
+}
+
+.trial-result__stats dt {
+  color: var(--color-text-sub);
+  font-size: 13px;
+}
+
+.trial-result__stats dd {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.trial-result__actions {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 360px);
+  margin: 8px auto 0;
+}
+
+.trial-icon {
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .trial-figure svg {
+    max-height: 40vh;
+  }
+
+  .trial-viewport {
+    height: min(42vh, 380px);
+  }
+}

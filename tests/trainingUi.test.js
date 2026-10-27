@@ -373,7 +373,7 @@ describe('結果画面', () => {
     expect(container.querySelector('[data-testid="correct-count"]').textContent).toBe('3');
     expect(container.textContent).toContain('/ 5 問正解');
     expect(container.textContent).toContain('正答率 60%');
-    expect(container.querySelector('h1').textContent).toBe('トレーニング結果');
+    expect(container.querySelector('h1').textContent).toBe('ドリルモードの結果');
     expect(container.textContent).toContain('標準');
     expect(container.querySelectorAll('.result-history__item')).toHaveLength(5);
   });
@@ -683,7 +683,7 @@ describe('回答ボタンが「次の問題へ」に変わる', () => {
     // 選択肢のすぐ下（解説より上）にある
     expect(btn.compareDocumentPosition(container.querySelector('.feedback')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(buttonByText(container, 'パス')).toBeUndefined(); // パスは段位認定だけ
-    expect(container.querySelector('[data-testid="play-mode"]').textContent).toBe('トレーニング'); // プレイ形式がわかる
+    expect(container.querySelector('[data-testid="play-mode"]').textContent).toBe('ドリルモード'); // プレイ形式がわかる
     btn.click();
     expect(btn.textContent).toBe('回答する');
     expect(btn.disabled).toBe(true);

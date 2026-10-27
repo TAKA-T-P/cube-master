@@ -8,6 +8,7 @@ import './styles/base.css';
 import './styles/layout.css';
 import './styles/training.css';
 import './styles/certification.css';
+import './styles/trial.css';
 import { mountHomeScreen } from './ui/homeScreen.js';
 import { mountPreviewScreen } from './ui/previewScreen.js';
 import { mountHelpScreen } from './ui/helpScreen.js';
@@ -24,6 +25,9 @@ import { mountCertificationQuestionScreen } from './ui/certificationQuestionScre
 import { mountCertificationResultScreen } from './ui/certificationResultScreen.js';
 import { mountCertificationRecordsScreen } from './ui/certificationRecordsScreen.js';
 import { mountTemplateCatalogScreen, mountTemplateViewScreen } from './ui/templateCatalogScreen.js';
+import { mountTrialSelectScreen, mountTrialSetupScreen } from './ui/trial/trialSelectScreen.js';
+import { mountTrialPlayScreen } from './ui/trial/trialPlayScreen.js';
+import { mountTrialResultScreen } from './ui/trial/trialResultScreen.js';
 import { installButtonSound } from './ui/answerSound.js';
 import { h, showToast } from './utils/dom.js';
 
@@ -43,6 +47,11 @@ const ROUTES = {
   'certification-play': mountCertificationQuestionScreen,
   'certification-result': mountCertificationResultScreen,
   'certification-records': mountCertificationRecordsScreen,
+  // トライアル（90秒・LEVEL アップ）
+  trial: mountTrialSelectScreen,
+  'trial-setup': mountTrialSetupScreen,
+  'trial-play': mountTrialPlayScreen,
+  'trial-result': mountTrialResultScreen,
   // 問題テンプレート図鑑（開発者の確認用。タイトル画面のバージョン表示を5回押すと開く）
   catalog: mountTemplateCatalogScreen,
   'catalog-view': mountTemplateViewScreen,

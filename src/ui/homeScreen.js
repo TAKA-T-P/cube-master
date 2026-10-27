@@ -9,7 +9,7 @@ import { createHomeCube } from './homeCube.js';
 import { isPythagoreanAllowed, setPythagoreanAllowed } from './soundSettings.js';
 import { infoDialog, helpButton } from './components.js';
 
-export const SETTING_NOTE = '※この設定は通常トレーニングにのみ反映されます。1分チャレンジ・段位認定では、どちらの設定でも出題されません。';
+export const SETTING_NOTE = '※この設定はドリルモードにのみ反映されます。1分チャレンジ・段位認定では、どちらの設定でも出題されません。';
 
 /** 「三平方の定理・√を使う問題」の設定（出題しない＝初期値・おすすめ／出題する）。タイトル画面で変え、次に始めるトレーニングから使う */
 function questionSetting() {
@@ -43,7 +43,7 @@ function questionSetting() {
             '「出題しない」（はじめの設定）にすると、三平方の定理や√を知らなくても解ける問題だけを出題します。',
             '「出題する」にすると、三平方の定理や√を使う問題も出題します。',
             '「出題しない」にしても、小学校で習う内容だけになるわけではありません。立体の名前・角柱や角すいの体積・ねじれの位置などは出題します。わからないときは、問題画面の「？」やあそびかたの「学習ヘルプ」で確かめられます。',
-            '設定は、次に始める通常トレーニングから使われます。',
+            '設定は、次に始めるドリルモードから使われます。',
             SETTING_NOTE,
           ],
         }),
@@ -54,7 +54,8 @@ function questionSetting() {
 }
 
 export const MENU_ITEMS = [
-  { id: 'training', label: 'トレーニング', route: 'categories', enabled: true, primary: true },
+  { id: 'trial', label: 'トライアル', route: 'trial', enabled: true, primary: true, wide: true },
+  { id: 'training', label: 'ドリルモード', route: 'categories', enabled: true, primary: true },
   { id: 'certification', label: '段位認定', route: 'certification', enabled: true, primary: true },
   { id: 'preview', label: '3D立方体をためす', route: 'preview', enabled: true },
   { id: 'help', label: 'あそびかた', route: 'help', enabled: true },
@@ -82,7 +83,7 @@ export function mountHomeScreen(container, { navigate, version }) {
       h(
         'button',
         {
-          class: `btn btn--menu ${item.primary ? 'btn--primary' : ''}`,
+          class: `btn btn--menu ${item.primary ? 'btn--primary' : ''} ${item.wide ? 'btn--menu-wide' : ''}`,
           type: 'button',
           disabled: !item.enabled,
           'aria-disabled': item.enabled ? undefined : 'true',

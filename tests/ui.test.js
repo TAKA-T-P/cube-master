@@ -70,7 +70,7 @@ describe('トップ画面', () => {
     expect(container.textContent).toContain('Ver.0.2.0');
 
     // Phase 5：トレーニング・段位認定・3D立方体をためす・あそびかたの順で、どれも選べる
-    expect([...container.querySelectorAll('[data-menu]')].map((b) => b.dataset.menu)).toEqual(['training', 'certification', 'preview', 'help']);
+    expect([...container.querySelectorAll('[data-menu]')].map((b) => b.dataset.menu)).toEqual(['trial', 'training', 'certification', 'preview', 'help']);
     const training = container.querySelector('[data-menu="training"]');
     const cert = container.querySelector('[data-menu="certification"]');
     expect(training.disabled).toBe(false);

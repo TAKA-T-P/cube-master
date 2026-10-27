@@ -1585,3 +1585,11 @@ ul.setup-note {
   background: #f3edff;
   color: #5b3aa8;
 }
+
+/* あそびかた：説明の中の箇条書き */
+.help-list__items {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-left: 1.1em;
+}
