@@ -239,6 +239,36 @@
   justify-self: end;
 }
 
+/* 正解したときは、問題文・結果の文（正解！・LEVEL・答え）を出さずに、図と 3D を大きく見せる */
+.trial-play--correct .trial-question,
+.trial-play--correct .trial-feedback {
+  display: none;
+}
+
+/* 正解したときは、図と 3D を左右に分けずに上下に並べ、どちらも横幅いっぱいに大きく見せる（サイコロ・展開図） */
+.trial-play--correct .trial-stage--split {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.trial-play--correct .trial-stage--split .trial-figure,
+.trial-play--correct .trial-stage--split .trial-viewport {
+  flex: none;
+  width: 100%;
+}
+
+.trial-play--correct .trial-stage--split .trial-figure svg {
+  max-height: 27vh;
+}
+
+.trial-play--correct .trial-stage--split .trial-figure__net .trial-grid {
+  width: min(100%, calc(var(--cols) * 40px), calc(25vh * var(--cols) / var(--rows)));
+}
+
+.trial-play--correct .trial-stage--split .trial-viewport {
+  height: min(34vh, 320px);
+}
+
 .trial-notice {
   min-height: 1.2em;
   color: var(--color-danger);
@@ -370,6 +400,18 @@
 .trial-cell--off {
   visibility: hidden;
   pointer-events: none;
+}
+
+/* 図形に囲まれた穴：白いマスと見分けやすいように、灰色の斜線にする */
+.trial-cell--hole {
+  visibility: visible;
+  border: none;
+  background: repeating-linear-gradient(135deg, #8e9db1 0 2px, #d3dbe5 2px 6px);
+}
+
+.trial-figure__net .trial-cell--hole {
+  border: none;
+  background: repeating-linear-gradient(135deg, #8e9db1 0 2px, #d3dbe5 2px 6px);
 }
 
 .trial-projection .trial-cell--on {

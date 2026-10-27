@@ -41,6 +41,28 @@ export function createGridPainter({ rows, cols, isActive = () => true, initial =
     }
   }
   const cellEl = (r, c) => cells[r * cols + c];
+  // 図形に囲まれた穴（外につながっていない塗れないマス）は、背景と見分けられるように印をつける
+  const outside = new Set();
+  const queue = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if ((r === 0 || c === 0 || r === rows - 1 || c === cols - 1) && !isActive(r, c)) {
+        outside.add(`${r},${c}`);
+        queue.push([r, c]);
+      }
+    }
+  }
+  while (queue.length) {
+    const [r, c] = queue.pop();
+    for (const [nr, nc] of [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]) {
+      if (nr < 0 || nc < 0 || nr >= rows || nc >= cols || isActive(nr, nc) || outside.has(`${nr},${nc}`)) continue;
+      outside.add(`${nr},${nc}`);
+      queue.push([nr, nc]);
+    }
+  }
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) if (!isActive(r, c) && !outside.has(`${r},${c}`)) cellEl(r, c).classList.add('trial-cell--hole');
+  }
 
   // 押したときは押したマス。なぞっている間（ポインターをつかまえている間）は、指の下にあるマス
   const cellFrom = (e, { pointed = false } = {}) => {

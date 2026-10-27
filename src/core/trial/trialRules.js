@@ -13,6 +13,8 @@ export const TRIAL_RULES = Object.freeze({
   splashMs: 500, // 回答直後の「○×」
   revealSpeed: 2, // 3D の演出の速さ（途中の動きは省かない）
   revealMaxMs: 6000, // 演出がこれより長ければ最終状態にして次の問題へ
+  correctRevealSpeed: 4, // 正解したときの演出の速さ（不正解のときの2倍）
+  correctRevealMaxMs: 3000,
   advanceDelayMs: 900, // 演出のあと、次の問題へ進むまで（正しい答えを読む時間）
   startLevel: 1,
   minLevel: 1,

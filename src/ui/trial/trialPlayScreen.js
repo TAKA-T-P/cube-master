@@ -138,6 +138,7 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
     viewport.hidden = true;
     netViewport.hidden = true;
     stage.classList.remove('trial-stage--split');
+    root.classList.remove('trial-play--correct');
     questionText.textContent = q.text;
     feedback.hidden = true;
     notice.textContent = '';
@@ -199,6 +200,11 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
     );
     feedback.hidden = false;
     notice.textContent = '';
+    // 正解のときは演出を速くし、問題文と結果の文を隠して図と 3D を大きく見せる
+    root.classList.toggle('trial-play--correct', result.isCorrect);
+    const speed = result.isCorrect ? rules.correctRevealSpeed ?? rules.revealSpeed : rules.revealSpeed;
+    const maxMs = result.isCorrect ? rules.correctRevealMaxMs ?? rules.revealMaxMs : rules.revealMaxMs;
+    viewer?.animations.setSpeed?.(speed);
     const show3D = ({ keepFigure = false, net = false } = {}) => {
       figureHost.hidden = !keepFigure;
       viewport.hidden = net;
@@ -207,13 +213,13 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
     };
     let done;
     try {
-      done = v.reveal({ result, viewer, netViewer: getNetViewer(), speed: rules.revealSpeed, show3D });
+      done = v.reveal({ result, viewer, netViewer: getNetViewer(), speed, show3D });
     } catch (err) {
       console.error('[trial] 答え合わせの演出でエラー', err);
       done = Promise.resolve();
     }
     // 演出が終わったら（長すぎるときは revealMaxMs で最終状態にして）、少し待って次の問題へ
-    const limit = new Promise((r) => later(r, rules.revealMaxMs));
+    const limit = new Promise((r) => later(r, maxMs));
     Promise.race([Promise.resolve(done).catch(() => {}), limit]).then(() => {
       if (ended || question !== q) return;
       viewer?.animations.skip();

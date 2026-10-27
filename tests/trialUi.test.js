@@ -177,6 +177,11 @@ describe('プレイ画面', () => {
     expect(container.querySelector('.trial-feedback__title').textContent).toBe('正解！');
     expect(container.querySelector('.trial-feedback__level').textContent).toBe(`LEVEL 1 → ${1 + gain}（+${gain}）`);
     expect(container.querySelector('[data-testid="trial-level"]').textContent).toBe(`LEVEL ${1 + gain}`);
+    // 正解のときは問題文・結果の文を隠し（図と 3D を大きく）、演出は2倍の速さ
+    expect(container.querySelector('.trial-play').classList.contains('trial-play--correct')).toBe(true);
+    expect(viewer.animations.setSpeed).toHaveBeenLastCalledWith(TRIAL_RULES.correctRevealSpeed);
+    expect(TRIAL_RULES.correctRevealSpeed).toBe(TRIAL_RULES.revealSpeed * 2);
+    if (mode === 'netPartition') expect(netViewer.play).toHaveBeenCalledWith({ speed: TRIAL_RULES.correctRevealSpeed });
     if (mode === 'netPartition') expect(netViewer.play).toHaveBeenCalled();
     else expect(viewer.playQuestionReveal).toHaveBeenCalled();
     // 演出の間は時間が減らない
@@ -190,6 +195,8 @@ describe('プレイ画面', () => {
     answer({ correct: false });
     await vi.advanceTimersByTimeAsync(0);
     expect(container.querySelector('.trial-feedback__title').textContent).toBe('不正解');
+    expect(container.querySelector('.trial-play').classList.contains('trial-play--correct')).toBe(false);
+    expect(viewer.animations.setSpeed).toHaveBeenLastCalledWith(TRIAL_RULES.revealSpeed);
     expect(container.querySelector('[data-testid="trial-level"]').textContent).toBe(`LEVEL ${gain}`);
     expect(store.getTrialSession().highestLevel).toBe(1 + gain);
     expect(container.querySelector('.trial-feedback__answer').textContent).not.toBe('');
@@ -356,6 +363,15 @@ describe('入力の部品', () => {
     pointer(cell(0, 0), 'pointermove');
     pointer(cell(0, 0), 'pointerup');
     expect(painter.getValues()).toEqual([[false, false, false], [false, false, false]]);
+  });
+
+  it('マス目：図形に囲まれた穴だけに印をつける（外につながる空きマスはそのまま）', () => {
+    // 3×4。(1,1) は穴、(0,3)・(2,3) は外とつながる空きマス
+    const on = ['111.', '1.11', '111.'];
+    const painter = createGridPainter({ rows: 3, cols: 4, isActive: (r, c) => on[r][c] === '1', resolve: () => true, render: () => {} });
+    container.append(painter.el);
+    expect([...container.querySelectorAll('.trial-cell--hole')].map((el) => `${el.dataset.r},${el.dataset.c}`)).toEqual(['1,1']);
+    expect(container.querySelectorAll('.trial-cell--off')).toHaveLength(3);
   });
 
   it('展開図：同じ色で7マス目はぬれず、お知らせを出す。消しゴムで消せる', async () => {

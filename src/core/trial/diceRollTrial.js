@@ -18,8 +18,8 @@ import { pick } from '../../utils/random.js';
 export const DICE_ROLL_LEVELS = Object.freeze({
   1: { moves: [1, 2], minTurns: 0, maxSpan: 4 },
   2: { moves: [3, 4], minTurns: 0, maxSpan: 5 },
-  3: { moves: [5, 6, 7], minTurns: 1, maxSpan: 5 },
-  4: { moves: [8, 9, 10, 11, 12], minTurns: 2, maxSpan: 6 },
+  3: { moves: [4, 5, 6], minTurns: 1, maxSpan: 5 },
+  4: { moves: [6, 7, 8], minTurns: 2, maxSpan: 5 },
 });
 
 /** 転がす向き → マスの動き（x：右、z：手前） */
