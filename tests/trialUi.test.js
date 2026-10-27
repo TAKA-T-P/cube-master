@@ -83,8 +83,8 @@ function answer({ correct = true } = {}) {
     for (const d of String(correct ? q.answer : q.answer + 1)) key(d);
     key('Enter');
   } else if (q.mode === 'diceRoll') {
+    // 目のボタンを押すと、すぐに回答する
     container.querySelector(`.trial-dice__btn[data-value="${correct ? q.answer : (q.answer % 6) + 1}"]`).click();
-    buttonByText(container, '決定').click();
   } else if (q.mode === 'projectionDraw') {
     const grid = expectedGrid(q, 0);
     if (!correct) {
@@ -133,10 +133,12 @@ describe('タイトル・選択・ルール説明', () => {
     expect(navigate).toHaveBeenCalledWith('trial-setup', { mode: 'netPartition' });
   });
 
-  it('ルール説明と自己ベスト。スタートで挑戦が始まる（まだタイマーは動かない）', () => {
+  it('種類ごとのルール説明と自己ベスト。スタートで挑戦が始まる（まだタイマーは動かない）', () => {
     const navigate = mount(mountTrialSetupScreen, { mode: 'netPartition' });
-    expect(container.textContent).toContain('LEVEL ＋2');
-    expect(container.textContent).toContain('最高到達 LEVEL');
+    // 種類ごとのルールだけ（4種類に共通の LEVEL の説明は出さない）
+    expect(container.textContent).toContain('LEVEL +2');
+    expect(container.textContent).not.toContain('LEVEL 1 からスタート');
+    expect(container.querySelectorAll('.trial-setup__rules')).toHaveLength(1);
     expect(container.querySelector('[data-testid="trial-best"]').textContent).toBe('自己ベスト：まだ記録がありません');
     buttonByText(container, 'スタート').click();
     expect(navigate).toHaveBeenCalledWith('trial-play');
@@ -157,7 +159,9 @@ describe('プレイ画面', () => {
     expect(container.querySelector('.cert-countdown')).not.toBeNull();
     expect(container.querySelector('[data-testid="trial-level"]').textContent).toBe('LEVEL 1');
     expect(container.querySelector('.trial-stars').textContent).toBe('★');
-    expect(container.querySelector('[data-testid="trial-highest"]').textContent).toBe('最高 LEVEL 1');
+    // 上の帯に「最高 LEVEL」は出さない
+    expect(container.querySelector('[data-testid="trial-highest"]')).toBeNull();
+    expect(container.querySelector('.trial-play__header').textContent).not.toContain('最高');
     expect(session.timer.state).toBe('ready');
     await vi.advanceTimersByTimeAsync(COUNTDOWN);
     expect(session.timer.state).toBe('running');
@@ -187,7 +191,7 @@ describe('プレイ画面', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(container.querySelector('.trial-feedback__title').textContent).toBe('不正解');
     expect(container.querySelector('[data-testid="trial-level"]').textContent).toBe(`LEVEL ${gain}`);
-    expect(container.querySelector('[data-testid="trial-highest"]').textContent).toBe(`最高 LEVEL ${1 + gain}`);
+    expect(store.getTrialSession().highestLevel).toBe(1 + gain);
     expect(container.querySelector('.trial-feedback__answer').textContent).not.toBe('');
   });
 
@@ -250,6 +254,31 @@ describe('プレイ画面', () => {
     for (const d of '12') key(d);
     key('Enter');
     expect(store.getTrialResult().summary.answeredCount).toBe(0);
+  });
+});
+
+describe('サイコロの目のボタン', () => {
+  beforeEach(() => vi.useFakeTimers());
+
+  it('1〜6 のボタンを押した時点で回答する（「決定」ボタンはない）。キーボードの数字でも回答できる', async () => {
+    store.startTrial('diceRoll', { rng: createRng(11), now: () => Date.now() });
+    mount(mountTrialPlayScreen);
+    await vi.advanceTimersByTimeAsync(COUNTDOWN);
+    expect(buttonByText(container, '決定')).toBeUndefined();
+    const session = store.getTrialSession();
+    const q = current();
+    container.querySelector(`.trial-dice__btn[data-value="${q.answer}"]`).click();
+    expect(session.state.answeredCount).toBe(1);
+    expect(session.state.lastResult.isCorrect).toBe(true);
+    // 回答したあとは押せない（二重に回答しない）
+    container.querySelector('.trial-dice__btn[data-value="1"]').click();
+    expect(session.state.answeredCount).toBe(1);
+    expect(container.querySelector(`.trial-dice__btn[data-value="${q.answer}"]`).getAttribute('aria-checked')).toBe('true');
+    await vi.advanceTimersByTimeAsync(TRIAL_RULES.revealMaxMs + AFTER_ANSWER);
+    const q2 = current();
+    key(String((q2.answer % 6) + 1));
+    expect(session.state.answeredCount).toBe(2);
+    expect(session.state.lastResult.isCorrect).toBe(false);
   });
 });
 

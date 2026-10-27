@@ -53,7 +53,6 @@ export function mountTrialSetupScreen(container, { navigate, params }) {
   const notice = takeTrialNotice();
   if (notice) showToast(notice);
   const rec = getTrialRecords().modes[mode.id];
-  const sec = TRIAL_RULES.durationMs / 1000;
   container.append(
     h(
       'div',
@@ -61,13 +60,6 @@ export function mountTrialSetupScreen(container, { navigate, params }) {
       h('header', { class: 'page-header' }, h('button', { class: 'btn btn--back', type: 'button', onClick: () => navigate('trial') }, '← トライアル'), h('h1', {}, mode.name)),
       h('div', { class: 'trial-setup__icon', 'aria-hidden': 'true' }, renderTrialIcon(mode.id)),
       h('ul', { class: 'trial-setup__rules' }, mode.rules.map((r) => h('li', {}, r))),
-      h(
-        'ul',
-        { class: 'trial-setup__rules trial-setup__rules--level' },
-        h('li', {}, `LEVEL 1 からスタート。${sec}秒の間に、できるだけ高い LEVEL を目指そう。`),
-        h('li', {}, `正解で LEVEL ＋${mode.gain}、まちがえると LEVEL −1（LEVEL 1 より下がりません）。LEVEL が上がると問題がむずかしくなります（★〜★★★★）。`),
-        h('li', {}, 'その回でいちばん高かった LEVEL（最高到達 LEVEL）が記録になります。答え合わせの間は時間が止まります。'),
-      ),
       h(
         'p',
         { class: 'trial-setup__best', 'data-testid': 'trial-best' },

@@ -46,7 +46,6 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
   const timerEl = h('div', { class: 'cert-timer', role: 'timer', 'aria-label': '残り時間' }, h('span', { class: 'cert-timer__label' }, '残り'), timeEl);
   const levelEl = h('span', { class: 'trial-level', 'data-testid': 'trial-level' });
   const starsEl = h('span', { class: 'trial-stars', 'aria-label': '難易度' });
-  const highestEl = h('span', { class: 'trial-highest', 'data-testid': 'trial-highest' });
   const quitButton = button('やめる', () => confirmQuit(), 'btn--ghost btn--small');
   const finalCount = h('div', { class: 'cert-final-count', 'aria-hidden': 'true', hidden: true });
 
@@ -71,7 +70,7 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
       { class: 'trial-play__header' },
       quitButton,
       h('span', { class: 'badge badge--mode trial-play__mode' }, mode.name),
-      h('div', { class: 'trial-play__status' }, levelEl, starsEl, timerEl, highestEl),
+      h('div', { class: 'trial-play__status' }, levelEl, starsEl, timerEl),
     ),
     h('main', { class: 'trial-play__body' }, stage, questionText, feedback, notice, inputHost),
   );
@@ -107,7 +106,6 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
     const s = session.state;
     levelEl.textContent = `LEVEL ${s.level}`;
     starsEl.textContent = difficultyStars(s.difficulty);
-    highestEl.textContent = `最高 LEVEL ${s.highestLevel}`;
   };
   const updateTimer = () => {
     const ms = session.timer.getRemainingMs();

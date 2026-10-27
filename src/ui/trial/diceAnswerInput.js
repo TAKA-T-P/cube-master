@@ -1,5 +1,5 @@
 /**
- * サイコロの目（1〜6）を選んで「決定」する部品。目はふつうのサイコロと同じドットで描く
+ * サイコロの目（1〜6）のボタン。押したらすぐに回答する（「決定」ボタンはない）。目はふつうのサイコロと同じドットで描く
  */
 import { h } from '../../utils/dom.js';
 import { renderFaceSvg } from '../visualChoices.js';
@@ -8,7 +8,6 @@ import { numberFace } from '../../core/cubeFaceLabels.js';
 export function createDiceAnswerInput({ onSubmit }) {
   let selected = null;
   let disabled = false;
-  const submit = h('button', { class: 'btn btn--primary trial-dice__submit', type: 'button', onClick: () => !disabled && selected !== null && onSubmit(selected) }, '決定');
   const buttons = [1, 2, 3, 4, 5, 6].map((n) =>
     h(
       'button',
@@ -19,24 +18,23 @@ export function createDiceAnswerInput({ onSubmit }) {
   );
   const render = () => {
     for (const b of buttons) b.setAttribute('aria-checked', String(Number(b.dataset.value) === selected));
-    submit.disabled = disabled || selected === null;
   };
+  // 押した目で、すぐに回答する（どれを押したかは、答え合わせの間も印で残す）
   function select(n) {
     if (disabled) return;
     selected = n;
     render();
+    onSubmit(n);
   }
   const onKey = (e) => {
-    if (disabled) return;
-    if (/^[1-6]$/.test(e.key)) select(Number(e.key));
-    else if (e.key === 'Enter' && selected !== null) onSubmit(selected);
-    else return;
+    if (disabled || !/^[1-6]$/.test(e.key)) return;
+    select(Number(e.key));
     e.preventDefault();
   };
   document.addEventListener('keydown', onKey);
   render();
   return {
-    el: h('div', { class: 'trial-dice' }, h('div', { class: 'trial-dice__buttons', role: 'radiogroup', 'aria-label': '上の面の目' }, buttons), submit),
+    el: h('div', { class: 'trial-dice' }, h('div', { class: 'trial-dice__buttons', role: 'radiogroup', 'aria-label': '上の面の目（押すと回答）' }, buttons)),
     getValue: () => selected,
     setDisabled(v) {
       disabled = v;

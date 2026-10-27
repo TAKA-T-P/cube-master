@@ -93,12 +93,14 @@ function projectionView(q, { onSubmit }) {
   setErase(false);
   const clear = button('全消去', () => painter.setAll(false), 'btn--small');
   const floorLabel = q.direction === 'top' ? '手前' : '床';
+  const gridBox = h('div', { class: 'trial-projection__grid' }, painter.el, h('p', { class: 'trial-projection__floor', 'aria-hidden': 'true' }, `▲ ${floorLabel}`));
+  gridBox.style.setProperty('--ratio', String(cols / rows));
   return {
     figure: h('figure', { class: 'trial-figure__blocks' }, renderBlocksSvg({ cubes: q.cubes, arrows: [q.direction] })),
     input: h(
       'div',
       { class: 'trial-projection' },
-      h('div', { class: 'trial-projection__grid' }, painter.el, h('p', { class: 'trial-projection__floor', 'aria-hidden': 'true' }, `▲ ${floorLabel}`)),
+      gridBox,
       h('div', { class: 'trial-grid-tools' }, modeButton, clear, submit),
     ),
     setDisabled(v) {

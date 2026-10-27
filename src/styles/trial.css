@@ -79,10 +79,6 @@
   line-height: 1.6;
 }
 
-.trial-setup__rules--level {
-  background: var(--color-primary-soft);
-}
-
 .trial-setup__best {
   margin: 0 var(--gutter) 12px;
   font-weight: 800;
@@ -145,16 +141,6 @@
   color: #f0a500;
   font-weight: 800;
   letter-spacing: -1px;
-}
-
-.trial-highest {
-  margin-left: auto;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: #fff3d6;
-  color: #8a5a00;
-  font-size: 13px;
-  font-weight: 800;
 }
 
 .trial-play__body {
@@ -606,5 +592,93 @@
 
   .trial-viewport {
     height: min(42vh, 380px);
+  }
+}
+
+/*
+ * 「積み木の数はいくつ？」「3方向から見ると？」：スマホ縦でも入力の部分がスクロールしないように、画面の高さに収める。
+ * 入力（テンキー・マス目）は下に決まった大きさで置き、図（答え合わせでは 3D）が残りの高さに合わせて縮む
+ */
+.trial-play--blockCount .trial-play__body,
+.trial-play--projectionDraw .trial-play__body {
+  overflow: hidden;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.trial-play--blockCount .trial-stage,
+.trial-play--projectionDraw .trial-stage {
+  flex: 1 1 0;
+  min-height: 72px;
+}
+
+.trial-play--blockCount .trial-figure,
+.trial-play--projectionDraw .trial-figure,
+.trial-play--blockCount .trial-figure__blocks,
+.trial-play--projectionDraw .trial-figure__blocks {
+  height: 100%;
+  min-height: 0;
+}
+
+.trial-play--blockCount .trial-figure svg,
+.trial-play--projectionDraw .trial-figure svg {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+}
+
+.trial-play--blockCount .trial-viewport,
+.trial-play--projectionDraw .trial-viewport {
+  height: auto;
+  min-height: 0;
+}
+
+.trial-play--blockCount .trial-question,
+.trial-play--projectionDraw .trial-question {
+  flex: none;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.trial-play--blockCount .trial-feedback,
+.trial-play--projectionDraw .trial-feedback,
+.trial-play--blockCount .trial-input,
+.trial-play--projectionDraw .trial-input {
+  flex: none;
+}
+
+/* マス目は、高さが画面の3分の1ほどに収まる大きさ（--ratio：列の数 ÷ 行の数） */
+.trial-play--projectionDraw .trial-projection__grid {
+  width: min(100%, 340px, calc(34dvh * var(--ratio, 1)));
+}
+
+/* 背の低い画面では、テンキーとマス目のまわりを詰める */
+@media (max-height: 740px) {
+  .trial-play--blockCount .trial-key {
+    min-height: 38px;
+    font-size: 20px;
+  }
+
+  .trial-play--blockCount .trial-number__display {
+    min-height: 40px;
+    font-size: 22px;
+  }
+
+  .trial-play--blockCount .trial-number,
+  .trial-play--blockCount .trial-number__pad {
+    gap: 5px;
+  }
+
+  .trial-play--projectionDraw .trial-projection__grid {
+    width: min(100%, 340px, calc(30dvh * var(--ratio, 1)));
+  }
+
+  .trial-play--blockCount .trial-feedback,
+  .trial-play--projectionDraw .trial-feedback {
+    padding: 4px 8px;
+  }
+
+  .trial-play--blockCount .trial-feedback__title,
+  .trial-play--projectionDraw .trial-feedback__title {
+    font-size: 15px;
   }
 }
