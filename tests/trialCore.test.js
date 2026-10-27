@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { TRIAL_RULES, TRIAL_MODES, difficultyForLevel, levelAfter } from '../src/core/trial/trialRules.js';
 import { TrialSession } from '../src/core/trial/trialSession.js';
+import { TRIAL_TITLES, TRIAL_TITLE_LEVELS, TRIAL_TITLE_EMOJI, trialTitleFor, nextTrialTitle } from '../src/core/trial/trialTitles.js';
 import { createEmptyTrialRecords, normalizeTrialRecords, recordTrialResult } from '../src/core/trial/trialRecords.js';
 import { generateTrialQuestion, checkTrialAnswer } from '../src/core/trial/trialGenerators.js';
 import { BLOCK_COUNT_LEVELS } from '../src/core/trial/blockCountTrial.js';
@@ -486,5 +487,31 @@ describe('④ 展開図に分けろ！', () => {
       expect(new Set(normals)).toEqual(new Set(['1,0,0', '-1,0,0', '0,1,0', '0,-1,0', '0,0,1', '0,0,-1']));
       model.dispose();
     }
+  });
+});
+
+describe('称号', () => {
+  it('4種類それぞれ10段階（LEVEL 2・4…18・20以上）。LEVEL 1 は称号なし', () => {
+    expect(TRIAL_TITLE_LEVELS).toEqual([2, 4, 6, 8, 10, 12, 14, 16, 18, 20]);
+    expect(TRIAL_TITLE_EMOJI).toHaveLength(10);
+    for (const m of TRIAL_MODES) {
+      expect(TRIAL_TITLES[m.id]).toHaveLength(10);
+      expect(new Set(TRIAL_TITLES[m.id]).size).toBe(10);
+    }
+    expect(trialTitleFor('blockCount', 1)).toBeNull();
+    expect(trialTitleFor('blockCount', 2)).toMatchObject({ rank: 1, name: 'かぞえる見習い', emoji: '🔰' });
+    expect(trialTitleFor('blockCount', 3)).toMatchObject({ rank: 1 });
+    expect(trialTitleFor('projectionDraw', 9)).toMatchObject({ rank: 4, name: '形の見きわめ名人' });
+    expect(trialTitleFor('diceRoll', 19)).toMatchObject({ rank: 9, name: 'ダイスエンペラー' });
+    expect(trialTitleFor('netPartition', 20)).toMatchObject({ rank: 10, name: 'キューブ創造神', emoji: '👑' });
+    expect(trialTitleFor('netPartition', 57)).toMatchObject({ rank: 10 });
+    expect(trialTitleFor('nope', 10)).toBeNull();
+  });
+
+  it('次の称号（最高の称号のあとはない）', () => {
+    expect(nextTrialTitle('blockCount', 1)).toMatchObject({ level: 2, name: 'かぞえる見習い' });
+    expect(nextTrialTitle('blockCount', 2)).toMatchObject({ level: 4, name: '積み木たんけん隊' });
+    expect(nextTrialTitle('blockCount', 19)).toMatchObject({ level: 20, name: '万物を数える者' });
+    expect(nextTrialTitle('blockCount', 20)).toBeNull();
   });
 });

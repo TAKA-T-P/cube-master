@@ -6,10 +6,17 @@
 import { h, showToast } from '../../utils/dom.js';
 import { button, helpButton, infoDialog } from '../components.js';
 import { TRIAL_MODES, TRIAL_RULES } from '../../core/trial/trialRules.js';
+import { trialTitleFor } from '../../core/trial/trialTitles.js';
 import { getTrialRecords, startTrial, takeTrialNotice } from './trialStore.js';
 import { renderTrialIcon } from './trialVisuals.js';
 
 const bestText = (rec) => (rec.bestLevel > 0 ? `最高到達 LEVEL ${rec.bestLevel}` : 'まだ記録がありません');
+
+/** 自己ベストの称号（まだなければ出さない） */
+const titleLine = (mode, rec) => {
+  const title = trialTitleFor(mode, rec.bestLevel);
+  return title ? h('p', { class: 'trial-card__title', 'data-testid': 'trial-card-title' }, `${title.emoji} ${title.name}`) : null;
+};
 
 /** 「？」で出すルールの説明（その種類のルールと自己ベスト） */
 const showRules = (mode, rec) =>
@@ -34,6 +41,7 @@ export function mountTrialSelectScreen(container, { navigate }) {
         h('h2', { class: 'trial-card__name' }, m.name),
         h('p', { class: 'trial-card__desc' }, m.description),
         h('p', { class: 'trial-card__best', 'data-testid': 'trial-best' }, bestText(rec)),
+        titleLine(m.id, rec),
       ),
       h(
         'div',

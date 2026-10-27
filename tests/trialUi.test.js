@@ -129,6 +129,8 @@ describe('タイトル・選択・ルール説明', () => {
     expect(cards.map((c) => c.querySelector('.trial-card__name').textContent)).toEqual(['積み木の数はいくつ？', '3方向から見ると？', 'サイコロを転がすと？', '展開図に分けろ！']);
     expect(cards.map((c) => c.querySelector('[data-testid="trial-best"]').textContent)).toEqual(['まだ記録がありません', 'まだ記録がありません', '最高到達 LEVEL 15', 'まだ記録がありません']);
     for (const c of cards) expect(c.querySelector('.trial-card__icon svg')).not.toBeNull();
+    // 自己ベストの称号（記録がなければ出さない）
+    expect(cards.map((c) => c.querySelector('[data-testid="trial-card-title"]')?.textContent ?? null)).toEqual([null, null, '🏅 回転の達人', null]);
     // 「挑戦する」の左に「？」
     expect([...cards[0].querySelector('.trial-card__go').children].map((b) => b.textContent)).toEqual(['？', '挑戦する']);
     buttonByText(cards[3], '挑戦する').click();
@@ -331,6 +333,11 @@ describe('結果画面', () => {
     expect(container.querySelector('[data-testid="trial-correct"]').textContent).toBe('3問');
     expect(container.querySelector('[data-testid="trial-incorrect"]').textContent).toBe('2問');
     expect(container.querySelector('[data-testid="trial-best-updated"]').textContent).toBe('自己ベスト更新！');
+    // 最高到達 LEVEL 4 の称号（絵文字つき）。初めての称号なので「新しい称号をゲット！」。次の称号も出す
+    expect(container.querySelector('[data-testid="trial-title-name"]').textContent).toBe('コロコロ探検家');
+    expect(container.querySelector('.trial-title__emoji').textContent).toBe('⭐');
+    expect(container.querySelector('[data-testid="trial-title-new"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="trial-title-next"]').textContent).toBe('LEVEL 6 で称号「サイコロ使い」');
     buttonByText(container, '別のトライアル').click();
     expect(navigate).toHaveBeenCalledWith('trial');
     buttonByText(container, 'タイトルへ').click();

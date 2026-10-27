@@ -1,9 +1,11 @@
 /**
  * トライアルの結果画面。いちばん大きく出すのは最高到達 LEVEL（正式な記録）。終了時の LEVEL は出さない
+ * 最高到達 LEVEL に応じた称号（core/trial/trialTitles）を、メダルやトロフィーの絵文字といっしょに演出つきで出す。
  */
 import { h } from '../../utils/dom.js';
 import { button } from '../components.js';
 import { getTrialMode } from '../../core/trial/trialRules.js';
+import { trialTitleFor, nextTrialTitle } from '../../core/trial/trialTitles.js';
 import { getTrialResult, startTrial } from './trialStore.js';
 import { playFinishSound } from '../answerSound.js';
 
@@ -16,6 +18,22 @@ export function mountTrialResultScreen(container, { navigate }) {
   const { summary, outcome } = result;
   const mode = getTrialMode(summary.mode);
   playFinishSound();
+  const title = trialTitleFor(mode.id, summary.highestLevel);
+  const next = nextTrialTitle(mode.id, summary.highestLevel);
+  // 自己ベストを更新して、前の称号より上の称号になった
+  const previousTitle = trialTitleFor(mode.id, outcome?.previousBest ?? 0);
+  const newTitle = Boolean(title && outcome?.bestUpdated && (!previousTitle || title.rank > previousTitle.rank));
+  const titleView = title
+    ? h(
+        'div',
+        { class: `trial-title trial-title--rank${title.rank}`, 'data-testid': 'trial-title' },
+        h('span', { class: 'trial-title__emoji', 'aria-hidden': 'true' }, title.emoji),
+        h('span', { class: 'trial-title__label' }, '称号'),
+        h('strong', { class: 'trial-title__name', 'data-testid': 'trial-title-name' }, title.name),
+        newTitle ? h('span', { class: 'trial-title__new', 'data-testid': 'trial-title-new' }, '新しい称号をゲット！') : null,
+      )
+    : null;
+  const nextView = next ? h('p', { class: 'trial-title__next', 'data-testid': 'trial-title-next' }, `LEVEL ${next.level} で称号「${next.name}」`) : null;
   container.append(
     h(
       'div',
@@ -28,6 +46,8 @@ export function mountTrialResultScreen(container, { navigate }) {
         h('span', { class: 'trial-result__label' }, '最高到達'),
         h('span', { class: 'trial-result__level', 'data-testid': 'trial-result-level' }, `LEVEL ${summary.highestLevel}`),
       ),
+      titleView,
+      nextView,
       outcome?.bestUpdated ? h('p', { class: 'trial-result__best trial-result__best--new', 'data-testid': 'trial-best-updated' }, '自己ベスト更新！') : null,
       !outcome?.bestUpdated && outcome?.previousBest > 0 ? h('p', { class: 'trial-result__best' }, `自己ベスト：LEVEL ${outcome.previousBest}`) : null,
       h(
