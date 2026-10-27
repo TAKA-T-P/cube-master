@@ -1,7 +1,7 @@
 /**
- * トライアルのプレイ画面（90秒・LEVEL アップ）
+ * トライアルのプレイ画面（100秒・LEVEL アップ）
  *
- * カウントダウン（3・2・1・START!）・タイマー・TIME UP!・中断の扱いは、段位認定・1分チャレンジ（ui/timedPlayScreen）と同じ。
+ * カウントダウン（3・2・1・START!）・タイマー・ロスタイム（最終問題・時間切れ）・中断の扱いは、段位認定・1分チャレンジ（ui/timedPlayScreen）と同じ。
  * 問題の図と入力は ui/trial/trialModeViews（4種類）。
  *
  * タイマー（core/certificationTimer）が進むのは、問題を表示して回答できる間だけ。
@@ -15,7 +15,7 @@ import { createTrialNetViewer } from '../../three/trial/trialNetViewer.js';
 import { getTrialMode, difficultyStars, TRIAL_RULES } from '../../core/trial/trialRules.js';
 import { getTrialSession, finishTrial, abortTrial } from './trialStore.js';
 import { createModeView } from './trialModeViews.js';
-import { formatSeconds } from '../timedPlayScreen.js';
+import { formatSeconds, TIME_UP_MS } from '../timedPlayScreen.js';
 import { showAnswerSplash } from '../answerSplash.js';
 import { playAnswerSound, playTimeUpSound, playCountdownSound } from '../answerSound.js';
 
@@ -47,13 +47,14 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
   const levelEl = h('span', { class: 'trial-level', 'data-testid': 'trial-level' });
   const starsEl = h('span', { class: 'trial-stars', 'aria-label': '難易度' });
   const quitButton = button('やめる', () => confirmQuit(), 'btn--ghost btn--small');
-  const finalCount = h('div', { class: 'cert-final-count', 'aria-hidden': 'true', hidden: true });
+  const finalCount = h('div', { class: 'cert-final-count cert-final-count--corner', 'aria-hidden': 'true', hidden: true });
 
   // ---------- 問題 ----------
   const figureHost = h('div', { class: 'trial-figure' });
   const viewport = h('div', { class: 'trial-viewport', hidden: true, 'aria-label': '答え合わせの3D' });
   const netViewport = h('div', { class: 'trial-viewport trial-viewport--net', hidden: true, 'aria-label': '展開図を折りたたむ3D' });
-  const stage = h('section', { class: 'trial-stage' }, figureHost, viewport, netViewport);
+  // 残り5秒の数字は、図をなるべく隠さないように図の左上に小さく出す
+  const stage = h('section', { class: 'trial-stage' }, figureHost, viewport, netViewport, finalCount);
   const questionText = h('p', { class: 'trial-question', 'data-testid': 'trial-question' });
   const resultTitle = h('p', { class: 'trial-feedback__title', role: 'status' });
   const resultDetail = h('p', { class: 'trial-feedback__detail' });
@@ -112,10 +113,13 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
     timeEl.textContent = formatSeconds(ms);
     timerEl.classList.toggle('cert-timer--warn', ms <= 10000);
     timerEl.classList.toggle('cert-timer--final', ms <= 5000);
+    // 残り 5 秒からはカウントダウン、0 秒からは「最終問題」（ロスタイム）
     const running = session.timer.state === 'running';
-    const sec = Math.ceil(ms / 1000);
-    finalCount.hidden = !(running && ms > 0 && ms <= 5000);
-    if (!finalCount.hidden && finalCount.textContent !== String(sec)) finalCount.textContent = String(sec);
+    const final = !ended && session.isFinalQuestion;
+    const text = final ? '最終問題' : String(Math.ceil(ms / 1000));
+    finalCount.hidden = !(final || (running && ms > 0 && ms <= 5000));
+    finalCount.classList.toggle('cert-final-count--last', final);
+    if (!finalCount.hidden && finalCount.textContent !== text) finalCount.textContent = text;
   };
 
   // ---------- 出題 ----------
@@ -175,13 +179,17 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
     }
     view.setDisabled(true);
     updateTimer();
+    updateStatus();
     playAnswerSound(result.isCorrect ? 'correct' : 'incorrect');
     splash = showAnswerSplash(
       root,
       result.isCorrect ? 'correct' : 'incorrect',
       () => {
         splash = null;
-        if (!ended) reveal(result);
+        if (ended) return;
+        // 最終問題に答えたら（正解でも不正解でも）終了
+        if (result.final) timeUp();
+        else reveal(result);
       },
       { duration: rules.splashMs },
     );
@@ -243,7 +251,7 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
   // ---------- カウントダウン（3・2・1・START!）。この間は問題が見えないように画面全体をおおう ----------
   const countText = h('span', { class: 'cert-countdown__text' }, '3');
   const countdown = h('div', { class: 'cert-countdown', role: 'status', 'aria-live': 'assertive' }, h('span', { class: 'cert-countdown__level' }, `トライアル：${mode.name}`), countText);
-  container.append(countdown, finalCount);
+  container.append(countdown);
   showQuestion();
   updateStatus();
   const step = rules.countdownMs / 3;
@@ -289,9 +297,15 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
     updateTimer();
     finishTrial();
     finalCount.hidden = true;
+    // 最終問題に答えて終わったら、そのまま結果画面へ
+    if (session.state.endReason === 'final') {
+      navigate('trial-result');
+      return;
+    }
+    // 答えないままロスタイムが過ぎた：中央に大きく「時間切れ」を 1 秒出す
     playTimeUpSound();
-    container.append(h('div', { class: 'cert-timeup', role: 'status' }, 'TIME UP！'));
-    later(() => navigate('trial-result'), 1300);
+    container.append(h('div', { class: 'cert-timeup', role: 'status' }, '時間切れ'));
+    later(() => navigate('trial-result'), TIME_UP_MS);
   }
 
   function abort(text) {

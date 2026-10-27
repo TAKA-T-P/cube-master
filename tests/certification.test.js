@@ -390,7 +390,7 @@ describe('段位認定の出題・進行', () => {
     expect(session.state.score.streak).toBe(1);
   });
 
-  it('パスのペナルティで時間がなくなったら終了（残り時間は 0 より減らない）', () => {
+  it('パスのペナルティで時間がなくなったら、その時点で終了（残り時間は 0 より減らない）', () => {
     const now = fakeClock();
     const session = new CertificationSession({ level: 'basic', templatesByCategory, rng: createRng(6), now });
     session.nextQuestion();
@@ -398,8 +398,38 @@ describe('段位認定の出題・進行', () => {
     now.advance(R.durationMs - 1500);
     expect(session.pass()).toEqual({ penaltyMs: 1500, count: 1 });
     expect(session.isFinished).toBe(true);
+    expect(session.state.endReason).toBe('penalty');
+    expect(session.hasNextQuestion()).toBe(false);
     expect(session.nextQuestion()).toBeNull();
     expect(session.getSummary().remainingMs).toBe(0);
+  });
+
+  it('ロスタイム：残り 0 秒の問題は最終問題（パスできない・多答の +3 秒はない）。答えたら正解でも不正解でも終了。答えないまま15秒たつと時間切れ', () => {
+    for (const correct of [true, false]) {
+      const now = fakeClock();
+      const session = new CertificationSession({ level: 'basic', templatesByCategory, rng: createRng(7), now });
+      const q = session.nextQuestion();
+      session.startAnswering();
+      now.advance(R.durationMs + 1000); // 残り 0 秒から 1 秒
+      expect(session.checkTimeUp()).toBe(false);
+      expect(session.isFinalQuestion).toBe(true);
+      expect(session.pass()).toBeNull();
+      const wrong = q.choices.map((c) => c.id).filter((id) => !q.correctAnswers.includes(id)).slice(0, 1);
+      expect(session.submit(correct ? q.correctAnswers : wrong)).toMatchObject({ isCorrect: correct, final: true });
+      expect(session.isFinished).toBe(true);
+      expect(session.state.endReason).toBe('final');
+      expect(session.getSummary()).toMatchObject({ answeredCount: 1, correctCount: correct ? 1 : 0, timeBonusTotalMs: 0 });
+    }
+    const now = fakeClock();
+    const session = new CertificationSession({ level: 'basic', templatesByCategory, rng: createRng(7), now });
+    const q = session.nextQuestion();
+    session.startAnswering();
+    now.advance(R.durationMs + 14999);
+    expect(session.checkTimeUp()).toBe(false);
+    now.advance(1);
+    expect(session.checkTimeUp()).toBe(true);
+    expect(session.state.endReason).toBeNull();
+    expect(session.submit(q.correctAnswers)).toBeNull();
   });
 
   it('中断した挑戦は aborted になる', () => {

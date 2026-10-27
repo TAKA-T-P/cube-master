@@ -157,7 +157,7 @@ describe('画面', () => {
     tabs[1].click();
     expect(visible()).toEqual(['trial']);
     const trial = container.querySelector('#help-trial').textContent;
-    for (const text of ['90秒', '積み木の数はいくつ？', '3方向から見ると？', 'サイコロを転がすと？', '展開図に分けろ！', 'LEVEL＋1', '＋2', '最高到達LEVEL', '左右にずれていても正解', '中断']) expect(trial).toContain(text);
+    for (const text of ['100秒', '積み木の数はいくつ？', '3方向から見ると？', 'サイコロを転がすと？', '展開図に分けろ！', 'LEVEL＋1', '＋2', '最高到達LEVEL', '左右にずれていても正解', '中断']) expect(trial).toContain(text);
     tabs[3].click();
     expect(visible()).toEqual(['challenge']);
     const challenge = container.querySelector('#help-challenge').textContent;

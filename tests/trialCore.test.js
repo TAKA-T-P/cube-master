@@ -1,4 +1,4 @@
-// トライアル（90秒・LEVEL アップ）：LEVEL・難易度・タイマー・記録・4種類の問題と判定・3D との一致
+// トライアル（100秒・LEVEL アップ）：LEVEL・難易度・タイマー・記録・4種類の問題と判定・3D との一致
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { TRIAL_RULES, TRIAL_MODES, difficultyForLevel, levelAfter } from '../src/core/trial/trialRules.js';
@@ -133,30 +133,30 @@ describe('LEVEL と難易度', () => {
   });
 });
 
-describe('90秒タイマー', () => {
-  it('90秒から。回答できる間だけ減り、回答後の演出・次の問題を作る間は止まる（正解でも不正解でも）', () => {
+describe('100秒タイマー', () => {
+  it('100秒から。回答できる間だけ減り、回答後の演出・次の問題を作る間は止まる（正解でも不正解でも）', () => {
     const now = fakeClock();
     const s = new TrialSession({ mode: 'blockCount', rng: createRng(4), now });
-    expect(s.timer.getRemainingMs()).toBe(90000);
+    expect(s.timer.getRemainingMs()).toBe(100000);
     const q1 = s.nextQuestion();
     now.advance(3000); // 問題を作る・表示する間
-    expect(s.timer.getRemainingMs()).toBe(90000);
+    expect(s.timer.getRemainingMs()).toBe(100000);
     s.startAnswering();
     now.advance(5000);
     expect(s.submit(correctAnswer(q1)).isCorrect).toBe(true);
-    expect(s.timer.getRemainingMs()).toBe(85000);
+    expect(s.timer.getRemainingMs()).toBe(95000);
     now.advance(8000); // 正解の演出
-    expect(s.timer.getRemainingMs()).toBe(85000);
+    expect(s.timer.getRemainingMs()).toBe(95000);
     const q2 = s.nextQuestion();
     now.advance(2000); // 問題の切りかえ
     s.startAnswering();
     now.advance(4000);
     expect(s.submit(wrongAnswer(q2)).isCorrect).toBe(false);
     now.advance(8000); // 不正解の演出も止まる
-    expect(s.timer.getRemainingMs()).toBe(81000);
+    expect(s.timer.getRemainingMs()).toBe(91000);
   });
 
-  it('二重に回答できない。時間切れのあとの回答は受け付けない', () => {
+  it('二重に回答できない。ロスタイムも過ぎたあとの回答は受け付けない', () => {
     const now = fakeClock();
     const s = new TrialSession({ mode: 'diceRoll', rng: createRng(5), now });
     const q = s.nextQuestion();
@@ -166,11 +166,39 @@ describe('90秒タイマー', () => {
     expect(s.state.answeredCount).toBe(1);
     const q2 = s.nextQuestion();
     s.startAnswering();
-    now.advance(90000);
+    now.advance(100000 + 15000);
     expect(s.submit(correctAnswer(q2))).toBeNull();
     expect(s.isFinished).toBe(true);
     expect(s.state.answeredCount).toBe(1);
     expect(s.nextQuestion()).toBeNull();
+  });
+
+  it('ロスタイム：残り 0 秒の問題は最終問題。答えたら正解でも不正解でも終了', () => {
+    for (const correct of [true, false]) {
+      const now = fakeClock();
+      const s = new TrialSession({ mode: 'blockCount', rng: createRng(8), now });
+      const q = s.nextQuestion();
+      s.startAnswering();
+      now.advance(100000 + 3000);
+      expect(s.checkTimeUp()).toBe(false);
+      expect(s.isFinalQuestion).toBe(true);
+      expect(s.submit(correct ? correctAnswer(q) : wrongAnswer(q))).toMatchObject({ isCorrect: correct, final: true });
+      expect(s.isFinished).toBe(true);
+      expect(s.state.endReason).toBe('final');
+      expect(s.getSummary()).toMatchObject({ correctCount: correct ? 1 : 0, incorrectCount: correct ? 0 : 1 });
+    }
+  });
+
+  it('ロスタイム：答えないまま15秒たつと時間切れ', () => {
+    const now = fakeClock();
+    const s = new TrialSession({ mode: 'diceRoll', rng: createRng(9), now });
+    s.nextQuestion();
+    s.startAnswering();
+    now.advance(100000 + 14999);
+    expect(s.checkTimeUp()).toBe(false);
+    now.advance(1);
+    expect(s.checkTimeUp()).toBe(true);
+    expect(s.state.endReason).toBeNull();
   });
 
   it('タイマーは二重に止めても・再開してもずれない', () => {
@@ -186,7 +214,7 @@ describe('90秒タイマー', () => {
     s.timer.resume();
     s.timer.resume();
     now.advance(1000);
-    expect(s.timer.getRemainingMs()).toBe(88000);
+    expect(s.timer.getRemainingMs()).toBe(98000);
   });
 
   it('中断した挑戦は記録しない', () => {

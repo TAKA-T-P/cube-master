@@ -188,6 +188,44 @@
   pointer-events: none;
 }
 
+/* 図の左上に小さく出す（トライアル・1分チャレンジ・段位認定。図をなるべく隠さない） */
+.cert-final-count--corner {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  transform: none;
+  z-index: 5;
+  color: var(--color-danger);
+  font-size: 40px;
+  line-height: 1;
+  text-shadow:
+    0 0 3px #fff,
+    0 0 6px #fff;
+}
+
+/* 問題文の図に出すとき */
+.cert-play .quiz-figures {
+  position: relative;
+}
+
+/* 最終問題（残り 0 秒・ロスタイム）：数字の代わりに「最終問題」 */
+.cert-final-count--last {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--color-danger);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.4;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+/* 位置関係の問題で左上に色の説明（基準・正解・まちがい）があるときは、右上に出す */
+.quiz-legend:not([hidden]) ~ .cert-final-count--corner {
+  right: 6px;
+  left: auto;
+}
+
 /* ----- カウントダウン・TIME UP（画面全体をおおう） ----- */
 .cert-countdown,
 .cert-timeup {

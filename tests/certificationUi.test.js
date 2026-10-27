@@ -197,7 +197,7 @@ describe('100秒チャレンジ', () => {
     expect(session().questionNumber).toBe(n + 1);
   });
 
-  it('時間切れで TIME UP! を出して結果画面へ。回答中の問題は数えず、記録を保存する（トレーニングの記録は変わらない）', async () => {
+  it('残り 0 秒で「最終問題」（ロスタイム）。正解しないまま15秒たつと「時間切れ」を1秒出して結果画面へ。回答中の問題は数えず、記録を保存する（トレーニングの記録は変わらない）', async () => {
     start('standard');
     const navigate = mount(mountCertificationQuestionScreen, { level: 'standard' });
     await vi.advanceTimersByTimeAsync(COUNTDOWN);
@@ -205,11 +205,25 @@ describe('100秒チャレンジ', () => {
     await vi.advanceTimersByTimeAsync(AUTO_ADVANCE);
     await vi.advanceTimersByTimeAsync(session().timer.getRemainingMs() - 4000); // 残り 5 秒より少ない
     expect(container.querySelector('.cert-final-count').hidden).toBe(false);
+    // 図をなるべく隠さないように、図（3D・見取図、なければ問題文の図）の左上に小さく出す
+    const finalCount = container.querySelector('.cert-final-count');
+    expect(finalCount.classList).toContain('cert-final-count--corner');
+    expect(finalCount.closest('.quiz-view, .quiz-figures')).not.toBeNull();
     expect(container.querySelector('.cert-timer').classList).toContain('cert-timer--final');
     await vi.advanceTimersByTimeAsync(5000);
-    expect(container.querySelector('.cert-timeup').textContent).toBe('TIME UP！');
+    expect(container.querySelector('.cert-timeup')).toBeNull();
+    expect(finalCount.textContent).toBe('最終問題');
+    expect(finalCount.hidden).toBe(false);
+    // 最終問題はパスできない
+    expect(buttonByText(container, 'パス').disabled).toBe(true);
+    await vi.advanceTimersByTimeAsync(13900); // 残り 0 秒になってから 14.9 秒
+    expect(container.querySelector('.cert-timeup')).toBeNull();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(container.querySelector('.cert-timeup').textContent).toBe('時間切れ');
     expect(sounds.playTimeUpSound).toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1400);
+    await vi.advanceTimersByTimeAsync(999);
+    expect(navigate).not.toHaveBeenCalledWith('certification-result');
+    await vi.advanceTimersByTimeAsync(1);
     expect(navigate).toHaveBeenCalledWith('certification-result');
     const { summary, outcome } = certStore.getCertificationResult();
     expect(summary).toMatchObject({ answeredCount: 1, correctCount: 1, aborted: false });

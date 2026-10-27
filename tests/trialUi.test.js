@@ -159,6 +159,8 @@ describe('プレイ画面', () => {
     expect(container.querySelector('.cert-countdown')).not.toBeNull();
     expect(container.querySelector('[data-testid="trial-level"]').textContent).toBe('LEVEL 1');
     expect(container.querySelector('.trial-stars').textContent).toBe('★');
+    // 残り5秒の数字は、図の左上に小さく出す
+    expect(container.querySelector('.trial-stage > .cert-final-count--corner')).not.toBeNull();
     // 上の帯に「最高 LEVEL」は出さない
     expect(container.querySelector('[data-testid="trial-highest"]')).toBeNull();
     expect(container.querySelector('.trial-play__header').textContent).not.toContain('最高');
@@ -172,7 +174,7 @@ describe('プレイ画面', () => {
     const gain = mode === 'netPartition' ? 2 : 1;
     expect(session.timer.state).toBe('paused');
     const remaining = session.timer.getRemainingMs();
-    expect(remaining).toBe(88000);
+    expect(remaining).toBe(98000);
     await vi.advanceTimersByTimeAsync(0);
     expect(container.querySelector('.trial-feedback__title').textContent).toBe('正解！');
     expect(container.querySelector('.trial-feedback__level').textContent).toBe(`LEVEL 1 → ${1 + gain}（+${gain}）`);
@@ -217,7 +219,7 @@ describe('プレイ画面', () => {
     expect(store.getTrialSession().timer.state).toBe('running');
   });
 
-  it('90秒で TIME UP。結果画面へ進み、自己ベストを保存する（ほかの記録は変わらない）', async () => {
+  it('100秒で「最終問題」。正解しないまま15秒たつと「時間切れ」を1秒出して結果画面へ進み、自己ベストを保存する（ほかの記録は変わらない）', async () => {
     store.startTrial('blockCount', { rng: createRng(5), now: () => Date.now() });
     const navigate = mount(mountTrialPlayScreen);
     await vi.advanceTimersByTimeAsync(COUNTDOWN);
@@ -226,8 +228,11 @@ describe('プレイ画面', () => {
     answer();
     await vi.advanceTimersByTimeAsync(TRIAL_RULES.revealMaxMs + AFTER_ANSWER);
     await vi.advanceTimersByTimeAsync(TRIAL_RULES.durationMs);
-    expect(container.querySelector('.cert-timeup').textContent).toBe('TIME UP！');
-    await vi.advanceTimersByTimeAsync(1500);
+    expect(container.querySelector('.cert-timeup')).toBeNull();
+    expect(container.querySelector('.trial-stage > .cert-final-count').textContent).toBe('最終問題');
+    await vi.advanceTimersByTimeAsync(TRIAL_RULES.overtimeMs);
+    expect(container.querySelector('.cert-timeup').textContent).toBe('時間切れ');
+    await vi.advanceTimersByTimeAsync(1000);
     expect(navigate).toHaveBeenCalledWith('trial-result');
     const saved = JSON.parse(backend.getItem('cubeMaster:trial'));
     expect(saved.modes.blockCount).toMatchObject({ bestLevel: 3, attempts: 1 });
@@ -252,10 +257,23 @@ describe('プレイ画面', () => {
     expect(store.takeTrialNotice()).toContain('中断');
   });
 
-  it('時間切れのあとは回答できない', async () => {
+  it('ロスタイム：最終問題に答えたら（正解でも不正解でも）「時間切れ」を出さずにすぐ結果画面へ', async () => {
+    for (const correct of [true, false]) {
+      store.startTrial('blockCount', { rng: createRng(7), now: () => Date.now() });
+      const navigate = mount(mountTrialPlayScreen);
+      await vi.advanceTimersByTimeAsync(COUNTDOWN + TRIAL_RULES.durationMs + 200);
+      answer({ correct });
+      await vi.advanceTimersByTimeAsync(TRIAL_RULES.splashMs + 50);
+      expect(container.querySelector('.cert-timeup')).toBeNull();
+      expect(navigate).toHaveBeenCalledWith('trial-result');
+      expect(store.getTrialResult().summary).toMatchObject({ correctCount: correct ? 1 : 0, incorrectCount: correct ? 0 : 1 });
+    }
+  });
+
+  it('ロスタイムも過ぎたあとは回答できない', async () => {
     store.startTrial('blockCount', { rng: createRng(7), now: () => Date.now() });
     mount(mountTrialPlayScreen);
-    await vi.advanceTimersByTimeAsync(COUNTDOWN + TRIAL_RULES.durationMs + 200);
+    await vi.advanceTimersByTimeAsync(COUNTDOWN + TRIAL_RULES.durationMs + TRIAL_RULES.overtimeMs + 200);
     const session = store.getTrialResult();
     expect(session.summary.answeredCount).toBe(0);
     for (const d of '12') key(d);

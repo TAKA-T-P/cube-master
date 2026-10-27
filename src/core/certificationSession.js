@@ -32,7 +32,7 @@ export class CertificationSession {
     this.level = level;
     this.rules = rules;
     this.rng = rng;
-    this.timer = createCertificationTimer({ durationMs: rules.durationMs, now });
+    this.timer = createCertificationTimer({ durationMs: rules.durationMs, overtimeMs: rules.overtimeMs ?? 0, now });
     this._now = now;
     const weights = rules.levels[level].difficultyWeights;
     this.difficulties = Object.keys(weights).map(Number);
@@ -68,6 +68,7 @@ export class CertificationSession {
       history: [],
       passes: [], // パスした問題 { number, templateId, category, difficulty, penaltyMs }
       aborted: false,
+      endReason: null, // 終わり方：'final'（最終問題に答えた）| 'penalty'（ペナルティ・パスで 0 秒）| null（時間切れ・中断）
     };
   }
 
@@ -93,6 +94,11 @@ export class CertificationSession {
 
   get isFinished() {
     return this._state.phase === 'finished';
+  }
+
+  /** 最終問題（残り 0 秒・ロスタイム中）か */
+  get isFinalQuestion() {
+    return this._state.phase === 'playing' && this.timer.isOvertime();
   }
 
   // ---------- 出題 ----------
@@ -172,11 +178,8 @@ export class CertificationSession {
     const s = this._state;
     if (s.phase === 'finished') return null;
     if (s.currentQuestion && !s.answerLocked) return s.currentQuestion;
-    if (s.phase === 'playing' && this.timer.state === 'finished') {
-      this.finish();
-      return null;
-    }
-    if (s.phase === 'playing' && this.timer.getRemainingMs() <= 0) {
+    // 残り 0 秒でも、ロスタイムがあれば次の問題（最終問題）を出す
+    if (s.phase === 'playing' && this.timer.isExpired()) {
       this.finish();
       return null;
     }
@@ -222,10 +225,8 @@ export class CertificationSession {
     const s = this._state;
     const q = s.currentQuestion;
     if (!q || s.answerLocked || s.phase !== 'playing' || this.timer.state !== 'running') return null;
-    if (this.timer.getRemainingMs() <= 0) {
-      this.finish();
-      return null;
-    }
+    // 最終問題（残り 0 秒）はパスできない
+    if (this.timer.getRemainingMs() <= 0) return null;
     const penalty = this.nextPassPenaltyMs();
     const before = this.timer.getRemainingMs();
     this.timer.pause();
@@ -237,7 +238,11 @@ export class CertificationSession {
     // 今の問題は答えずに終える（次の nextQuestion で新しい問題を作る）
     s.currentQuestion = null;
     s.selectedAnswers = [];
-    if (this.timer.getRemainingMs() <= 0) this.finish();
+    // パスで残り 0 秒になったら、その時点で終了
+    if (this.timer.getRemainingMs() <= 0) {
+      s.endReason = 'penalty';
+      this.finish();
+    }
     return { penaltyMs, count: s.passes.length };
   }
 
@@ -260,11 +265,11 @@ export class CertificationSession {
     const q = s.currentQuestion;
     if (!q || s.answerLocked || s.phase !== 'playing' || this.timer.state !== 'running') return null;
     if (!canSubmitAnswer(selected, q.type)) return null;
-    // 確定した時刻で時間を決める（制限時間を過ぎた回答は数えない）
-    if (this.timer.getRemainingMs() <= 0) {
+    if (this.timer.isExpired()) {
       this.finish();
       return null;
     }
+    const final = this.timer.getRemainingMs() <= 0;
     this.timer.pause();
     const answerMs = this.timer.getElapsedActiveMs() - this._questionStartActiveMs;
     const result = validateAnswer(q.correctAnswers, selected);
@@ -272,7 +277,7 @@ export class CertificationSession {
     s.score = applied.state;
     // 答えが複数ある問題（多答問題）に完全正解したら、残り時間を増やす
     let timeBonusMs = 0;
-    if (result.isCorrect && q.type === 'multiple') {
+    if (result.isCorrect && q.type === 'multiple' && !final) {
       timeBonusMs = this.rules.multipleAnswerTimeBonusMs;
       this.timer.addTime(timeBonusMs);
     }
@@ -295,23 +300,29 @@ export class CertificationSession {
       answerMs,
       question: q, // 結果画面から間違えた問題を復習するため
     });
+    if (final) {
+      // 最終問題に答えたら（正解でも不正解でも）終了
+      result.final = true;
+      s.endReason = 'final';
+      this.finish();
+    }
     return result;
   }
 
   /** まだ問題を続けられるか（時間が残っている・終了していない） */
   hasNextQuestion() {
-    return this._state.phase !== 'finished' && this.timer.getRemainingMs() > 0;
+    return this._state.phase !== 'finished' && !this.timer.isExpired();
   }
 
   isComplete() {
     return !this.hasNextQuestion();
   }
 
-  /** 時間切れか（回答中に 0 になったら終了する。回答中の問題は未回答） */
+  /** 時間切れか（ロスタイムも使い切ったら終了する。回答中の問題は未回答） */
   checkTimeUp() {
     const s = this._state;
     if (s.phase !== 'playing') return s.phase === 'finished';
-    if (this.timer.getRemainingMs() > 0) return false;
+    if (!this.timer.isExpired()) return false;
     this.finish();
     return true;
   }

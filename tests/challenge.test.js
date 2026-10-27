@@ -74,23 +74,27 @@ describe('1分チャレンジの進行', () => {
     expect(summary).toMatchObject({ category: 'dice', difficulty: 2, correctCount: 1, answeredCount: 2, penaltyTotalMs: 10000, aborted: false });
   });
 
-  it('時間切れ：回答中の問題は数えず、1分を過ぎた回答は受け付けない。ペナルティで 0 秒になれば終了', () => {
+  it('ロスタイム：残り 0 秒の問題は最終問題。答えたら正解でも不正解でも終了（−10 秒はない）、答えないまま15秒たつと時間切れ（回答中の問題は数えない）', () => {
     const now = fakeClock();
-    const s = new TimedChallengeSession({ category: 'position', templates: getTemplates('position'), difficulty: 1, rng: createRng(2), now });
-    const q = s.nextQuestion();
-    s.startAnswering();
-    now.advance(60001);
-    expect(s.submit(q.correctAnswers)).toBeNull();
-    expect(s.isFinished).toBe(true);
-    expect(s.getSummary().answeredCount).toBe(0);
-    const t = new TimedChallengeSession({ category: 'position', templates: getTemplates('position'), difficulty: 1, rng: createRng(2), now });
-    const q2 = t.nextQuestion();
-    t.startAnswering();
-    now.advance(55000);
-    t.submit(wrongOf(q2));
-    expect(t.timer.getRemainingMs()).toBe(0);
-    expect(t.hasNextQuestion()).toBe(false);
-    expect(t.nextQuestion()).toBeNull();
+    for (const correct of [true, false]) {
+      const s = new TimedChallengeSession({ category: 'position', templates: getTemplates('position'), difficulty: 1, rng: createRng(2), now });
+      const q = s.nextQuestion();
+      s.startAnswering();
+      now.advance(60001);
+      expect(s.isFinalQuestion).toBe(true);
+      expect(s.submit(correct ? q.correctAnswers : wrongOf(q))).toMatchObject({ isCorrect: correct, final: true });
+      expect(s.isFinished).toBe(true);
+      expect(s.state.endReason).toBe('final');
+      expect(s.state.lastScore.penaltyMs).toBe(0);
+      expect(s.getSummary()).toMatchObject({ answeredCount: 1, correctCount: correct ? 1 : 0 });
+    }
+    const u = new TimedChallengeSession({ category: 'position', templates: getTemplates('position'), difficulty: 1, rng: createRng(2), now });
+    const q3 = u.nextQuestion();
+    u.startAnswering();
+    now.advance(60000 + 15000);
+    expect(u.submit(q3.correctAnswers)).toBeNull();
+    expect(u.isFinished).toBe(true);
+    expect(u.getSummary().answeredCount).toBe(0);
   });
 });
 
@@ -104,23 +108,25 @@ describe('1分チャレンジのタイマーの境界', () => {
     return { s, now };
   }
 
-  it('残り9秒・残り10秒ちょうどで誤答すると 0 秒になり、次の問題は出ない', () => {
+  it('残り9秒・残り10秒ちょうどで誤答すると 0 秒になり、その時点で終了（次の問題は出ない）', () => {
     for (const left of [9000, 10000]) {
       const { s } = sessionAt(left);
       const q = s.state.currentQuestion;
-      expect(s.submit(wrongOf(q)).isCorrect).toBe(false);
+      expect(s.submit(wrongOf(q))).toMatchObject({ isCorrect: false, timeOut: true });
       expect(s.timer.getRemainingMs()).toBe(0);
       expect(s.state.lastScore.penaltyMs).toBe(left); // 実際に減ったのは残っていた時間だけ
+      expect(s.isFinished).toBe(true);
+      expect(s.state.endReason).toBe('penalty');
       expect(s.hasNextQuestion()).toBe(false);
       expect(s.nextQuestion()).toBeNull();
       expect(s.getSummary()).toMatchObject({ answeredCount: 1, correctCount: 0 });
     }
   });
 
-  it('時間切れと同時の回答は1回だけ処理する（時間切れのあとは受け付けない）', () => {
+  it('ロスタイムが終わるのと同時の回答は受け付けない（1回だけ時間切れにする）', () => {
     const { s, now } = sessionAt(50);
     const q = s.state.currentQuestion;
-    now.advance(50); // ちょうど 0 秒
+    now.advance(50 + 15000); // ちょうどロスタイムが終わる
     expect(s.submit(q.correctAnswers)).toBeNull();
     expect(s.checkTimeUp()).toBe(true);
     expect(s.submit(q.correctAnswers)).toBeNull();
@@ -247,9 +253,16 @@ describe('1分チャレンジの画面', () => {
     expect(container.querySelector('.cert-timer__bonus').textContent).toBe('−10秒');
     expect(container.querySelector('.feedback__detail').textContent).toContain('残り時間 −10秒');
     await vi.advanceTimersByTimeAsync(R.revealMaxMs + R.advanceDelayMs + 50);
-    await vi.advanceTimersByTimeAsync(60000);
-    expect(container.querySelector('.cert-timeup')).not.toBeNull();
-    await vi.advanceTimersByTimeAsync(1400);
+    await vi.advanceTimersByTimeAsync(43500);
+    // 残り 0 秒：すぐには終わらず、図の左上に「最終問題」（ロスタイム）
+    expect(container.querySelector('.cert-timeup')).toBeNull();
+    expect(container.querySelector('.cert-final-count').textContent).toBe('最終問題');
+    expect(container.querySelector('.cert-final-count').classList).toContain('cert-final-count--last');
+    // 正解しないまま15秒たつと、中央に大きく「時間切れ」を1秒出してから結果画面へ
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(container.querySelector('.cert-timeup').textContent).toBe('時間切れ');
+    expect(navigate).not.toHaveBeenCalledWith('challenge-result');
+    await vi.advanceTimersByTimeAsync(1000);
     expect(navigate).toHaveBeenCalledWith('challenge-result');
     expect(learning.getChallengeBest('dice', 1)).toBe(1);
 
@@ -265,13 +278,39 @@ describe('1分チャレンジの画面', () => {
     expect(nav).toHaveBeenLastCalledWith('challenge-play');
   });
 
+  it('ロスタイム：最終問題は答えたら「○×」のあと「時間切れ」を出さずにすぐ結果画面へ。誤答で 0 秒になったら「時間切れ」を出して終了', async () => {
+    for (const correct of [true, false]) {
+      store.startChallenge({ category: 'dice', difficulty: 1 }, { rng: createRng(5), now: () => Date.now() });
+      const navigate = mount(mountChallengeQuestionScreen);
+      await vi.advanceTimersByTimeAsync(COUNTDOWN);
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(container.querySelector('.cert-final-count').textContent).toBe('最終問題');
+      answer(correct);
+      await vi.advanceTimersByTimeAsync(R.splashMs + 50);
+      expect(container.querySelector('.cert-timeup')).toBeNull();
+      expect(navigate).toHaveBeenCalledWith('challenge-result');
+      expect(store.getChallengeResult().summary).toMatchObject({ answeredCount: 1, correctCount: correct ? 1 : 0 });
+      for (const sc of screens.splice(0)) sc.unmount();
+    }
+    // 残り 5 秒で誤答（−10 秒）→ その時点で終了
+    store.startChallenge({ category: 'dice', difficulty: 1 }, { rng: createRng(5), now: () => Date.now() });
+    const navigate = mount(mountChallengeQuestionScreen);
+    await vi.advanceTimersByTimeAsync(COUNTDOWN);
+    await vi.advanceTimersByTimeAsync(55000);
+    answer(false);
+    await vi.advanceTimersByTimeAsync(R.splashMs + 50);
+    expect(container.querySelector('.cert-timeup').textContent).toBe('時間切れ');
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(navigate).toHaveBeenCalledWith('challenge-result');
+  });
+
   it('時間切れの瞬間に、選択肢・回答ボタンを押せなくする', async () => {
     store.startChallenge({ category: 'dice', difficulty: 1 }, { rng: createRng(5), now: () => Date.now() });
     mount(mountChallengeQuestionScreen);
     await vi.advanceTimersByTimeAsync(COUNTDOWN);
     const q = current();
     container.querySelector(`[data-choice="${q.correctAnswers[0]}"]`).click();
-    await vi.advanceTimersByTimeAsync(60000);
+    await vi.advanceTimersByTimeAsync(60000 + 15000);
     expect(container.querySelector('.cert-timeup')).not.toBeNull();
     expect([...container.querySelectorAll('.choice')].every((b) => b.disabled)).toBe(true);
     expect(container.querySelector('.quiz-actions .btn--primary').disabled).toBe(true);

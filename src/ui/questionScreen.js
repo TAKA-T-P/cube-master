@@ -308,7 +308,8 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     submitButton.dataset.clickSound = 'off';
     if (passButton) {
       passButton.hidden = false;
-      passButton.disabled = false;
+      // 最終問題（残り 0 秒・ロスタイム中）はパスできない
+      passButton.disabled = Boolean(session.isFinalQuestion);
     }
     if (autoAnswerButton) autoAnswerButton.hidden = false;
     // もう一度見る・図のみ表示・展開図に戻す・元に戻すは、回答したあとだけ
@@ -369,11 +370,26 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     if (autoAnswerButton) autoAnswerButton.hidden = true;
     const result = session.submit(selected);
     if (!result) {
-      // 段位認定：時間切れ（確定した時刻に時間が残っていなかった）。この回答は数えない
+      // 時間制のモード：時間切れ（確定した時刻にロスタイムも残っていなかった）。この回答は数えない
       cert?.onFinish();
       return;
     }
     cert?.onAnswered(result);
+    if (cert && session.isFinished) {
+      // 最終問題に答えた・ペナルティで 0 秒になった：「○×」のあと、すぐに終了（正しい答えの演出はしない）
+      playAnswerSound(result.status);
+      splash = showAnswerSplash(
+        quizRoot,
+        result.status,
+        () => {
+          splash = null;
+          if (disposed) return;
+          cert.onFinish();
+        },
+        { duration: cert.splashMs },
+      );
+      return;
+    }
     // 回答したらヒントは閉じる（回答後は使わない）
     hintButton.hidden = true;
     hintText.hidden = true;
@@ -529,7 +545,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
    * 段位認定：パスの確認（確認している間も時間は減り続ける）。「はい」で問題を入れかえる
    */
   async function confirmPass() {
-    if (!cert || session.state.answerLocked || disposed) return;
+    if (!cert || session.state.answerLocked || disposed || session.isFinalQuestion) return;
     const q = question;
     const penaltySec = Math.round(session.nextPassPenaltyMs() / 1000);
     const dialog = confirmDialog({
@@ -543,7 +559,7 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
     if (!(await dialog.result) || disposed || question !== q || session.state.answerLocked) return;
     const passed = session.pass();
     if (!passed) {
-      cert.onFinish();
+      if (session.isFinished) cert.onFinish();
       return;
     }
     cert.onPassed?.(passed);
@@ -682,7 +698,11 @@ export function mountQuestionScreen(container, { navigate, params, mode = null }
   }
 
   return {
-    /** 時間切れ：回答・選択の変更・パスをすぐに止める（TIME UP! の表示の前でも押せないように） */
+    /** 最終問題になった（回答している途中で残り 0 秒になった）：パスできないようにする */
+    markFinal() {
+      if (passButton) passButton.disabled = true;
+    },
+    /** 時間切れ：回答・選択の変更・パスをすぐに止める（「時間切れ」の表示の前でも押せないように） */
     lock() {
       selection?.lock();
       for (const el of choicesEl.children) el.disabled = true;

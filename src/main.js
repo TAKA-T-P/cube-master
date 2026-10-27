@@ -47,7 +47,7 @@ const ROUTES = {
   'certification-play': mountCertificationQuestionScreen,
   'certification-result': mountCertificationResultScreen,
   'certification-records': mountCertificationRecordsScreen,
-  // トライアル（90秒・LEVEL アップ）
+  // トライアル（100秒・LEVEL アップ）
   trial: mountTrialSelectScreen,
   'trial-setup': mountTrialSetupScreen,
   'trial-play': mountTrialPlayScreen,

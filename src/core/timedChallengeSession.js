@@ -14,6 +14,7 @@ import { TIMED_REVEAL } from './revealSettings.js';
 
 export const CHALLENGE_RULES = Object.freeze({
   durationMs: 60000,
+  overtimeMs: 15000, // ロスタイム：残り0秒のときの問題（最終問題）は、答えるかこの時間がたつまで続けられる
   mistakePenaltyMs: 10000,
   /**
    * 1分チャレンジでは出題しないテンプレート（解くのに時間がかかりすぎるもの）。プレイテストで時間を確かめてから、ここに入れる。
@@ -35,7 +36,7 @@ export class TimedChallengeSession {
     const usable = templates.filter((t) => !(rules.excludedTemplates ?? []).includes(t.id));
     // 1分チャレンジでは、タイトル画面の設定にかかわらず、三平方の定理・√ が必要な問題は出さない（core/questionEligibility）
     this.picker = new QuestionPicker({ templates: usable, difficulty, rng, allowAdvanced: false });
-    this.timer = createCertificationTimer({ durationMs: rules.durationMs, now });
+    this.timer = createCertificationTimer({ durationMs: rules.durationMs, overtimeMs: rules.overtimeMs ?? 0, now });
     this._seq = 0;
     this._questionStartActiveMs = 0;
     this._state = {
@@ -48,6 +49,7 @@ export class TimedChallengeSession {
       hintUsed: false,
       history: [],
       aborted: false,
+      endReason: null, // 終わり方：'final'（最終問題に答えた）| 'penalty'（ペナルティ・パスで 0 秒）| null（時間切れ・中断）
     };
   }
 
@@ -69,12 +71,18 @@ export class TimedChallengeSession {
     return this._state.phase === 'finished';
   }
 
+  /** 最終問題（残り 0 秒・ロスタイム中）か */
+  get isFinalQuestion() {
+    return this._state.phase === 'playing' && this.timer.isOvertime();
+  }
+
   /** 次の問題（タイマーは止まったまま。時間切れなら null） */
   nextQuestion() {
     const s = this._state;
     if (s.phase === 'finished') return null;
     if (s.currentQuestion && !s.answerLocked) return s.currentQuestion;
-    if (s.phase === 'playing' && this.timer.getRemainingMs() <= 0) {
+    // 残り 0 秒でも、ロスタイムがあれば次の問題（最終問題）を出す
+    if (s.phase === 'playing' && this.timer.isExpired()) {
       this.finish();
       return null;
     }
@@ -124,15 +132,16 @@ export class TimedChallengeSession {
     const q = s.currentQuestion;
     if (!q || s.answerLocked || s.phase !== 'playing' || this.timer.state !== 'running') return null;
     if (!canSubmitAnswer(selected, q.type)) return null;
-    if (this.timer.getRemainingMs() <= 0) {
+    if (this.timer.isExpired()) {
       this.finish();
       return null;
     }
+    const final = this.timer.getRemainingMs() <= 0;
     this.timer.pause();
     const answerMs = this.timer.getElapsedActiveMs() - this._questionStartActiveMs;
     const result = validateAnswer(q.correctAnswers, selected);
     let penaltyMs = 0;
-    if (!result.isCorrect) {
+    if (!result.isCorrect && !final) {
       const before = this.timer.getRemainingMs();
       this.timer.penalize(this.rules.mistakePenaltyMs);
       penaltyMs = before - this.timer.getRemainingMs();
@@ -151,11 +160,24 @@ export class TimedChallengeSession {
       answerMs,
       question: q,
     });
+    if (!final && penaltyMs > 0 && this.timer.getRemainingMs() <= 0) {
+      // 不正解のペナルティで残り 0 秒になったら、その時点で終了
+      result.timeOut = true;
+      s.endReason = 'penalty';
+      this.finish();
+      return result;
+    }
+    if (final) {
+      // 最終問題に答えたら（正解でも不正解でも）終了
+      result.final = true;
+      s.endReason = 'final';
+      this.finish();
+    }
     return result;
   }
 
   hasNextQuestion() {
-    return this._state.phase !== 'finished' && this.timer.getRemainingMs() > 0;
+    return this._state.phase !== 'finished' && !this.timer.isExpired();
   }
 
   isComplete() {
@@ -165,7 +187,7 @@ export class TimedChallengeSession {
   checkTimeUp() {
     const s = this._state;
     if (s.phase !== 'playing') return s.phase === 'finished';
-    if (this.timer.getRemainingMs() > 0) return false;
+    if (!this.timer.isExpired()) return false;
     this.finish();
     return true;
   }

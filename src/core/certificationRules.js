@@ -50,6 +50,7 @@ const THRESHOLDS = Object.freeze([100, 200, 300, 400, 500, 600, 700, 800, 900, 1
 export const CERTIFICATION_RULES = Object.freeze({
   rulesVersion: 3,
   durationMs: 100000,
+  overtimeMs: 15000, // ロスタイム：残り0秒のときの問題（最終問題）は、答えるかこの時間がたつまで続けられる
   /** 完全正解の得点（問題の難易度ごと）。部分正解・不正解は 0 点 */
   points: Object.freeze({ 1: 100, 2: 160, 3: 240 }),
   /**

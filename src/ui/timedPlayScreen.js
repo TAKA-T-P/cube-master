@@ -2,7 +2,11 @@
  * 制限時間のある挑戦の画面（段位認定・トレーニングの1分チャレンジで共通）
  *
  * 問題の表示・回答・3D の演出は、トレーニングと同じ問題画面（ui/questionScreen）を時間制のモードで使う。
- * この画面はその上に、カウントダウン（3・2・1・START!）・タイマー・得点・TIME UP! を重ねる。
+ * この画面はその上に、カウントダウン（3・2・1・START!）・タイマー・得点・「最終問題」・「時間切れ」を重ねる。
+ *
+ * ロスタイム：残り 0 秒になっても、そのときの問題（最終問題）は続けられる。答えたら（正解でも不正解でも）すぐ結果画面へ、
+ * 答えないままロスタイム（15 秒）が過ぎたら「時間切れ」を 1 秒出してから結果画面へ進む。
+ * ペナルティ・パスで残り 0 秒になったときは、その時点で「時間切れ」を出して終了する。
  *
  * タイマーは core/certificationTimer（単調に増える時計で、回答できる時間だけを数える）。画面の表示は 0.1 秒ごとに更新するだけで、
  * 時間の計算には使わない。タブを切りかえる・画面を離れると中断し、記録には残さない。
@@ -13,6 +17,8 @@ import { mountQuestionScreen } from './questionScreen.js';
 import { playTimeUpSound, playCountdownSound } from './answerSound.js';
 
 const TICK_MS = 100;
+/** 「時間切れ」を出しておく時間 */
+export const TIME_UP_MS = 1000;
 
 /** 残り時間の表示（「72.4秒」） */
 export const formatSeconds = (ms) => `${(Math.max(0, ms) / 1000).toFixed(1)}秒`;
@@ -51,7 +57,7 @@ export function mountTimedPlayScreen(container, options) {
   const timeBonusEl = h('span', { class: 'cert-timer__bonus', 'aria-hidden': 'true' });
   const timerEl = h('div', { class: 'cert-timer', role: 'timer', 'aria-label': '残り時間' }, h('span', { class: 'cert-timer__label' }, '残り'), timeEl, timeBonusEl);
   const labelEl = h('span', { class: 'badge badge--info' }, label);
-  const finalCount = h('div', { class: 'cert-final-count', 'aria-hidden': 'true', hidden: true });
+  const finalCount = h('div', { class: 'cert-final-count cert-final-count--corner', 'aria-hidden': 'true', hidden: true });
 
   /** タイマーの横に、増えた・減った時間を少しの間だけ出す */
   const flashTime = (text, kind) => {
@@ -67,11 +73,15 @@ export function mountTimedPlayScreen(container, options) {
     timeEl.textContent = formatSeconds(ms);
     timerEl.classList.toggle('cert-timer--warn', ms <= 10000);
     timerEl.classList.toggle('cert-timer--final', ms <= 5000);
-    // 残り 5 秒からは大きなカウントダウン（回答できる間だけ）
+    // 残り 5 秒からはカウントダウン、0 秒からは「最終問題」（回答できる間だけ。図の左上に小さく）
     const running = session.timer.state === 'running';
-    const sec = Math.ceil(ms / 1000);
-    finalCount.hidden = !(running && ms > 0 && ms <= 5000);
-    if (!finalCount.hidden && finalCount.textContent !== String(sec)) finalCount.textContent = String(sec);
+    const final = !ended && Boolean(session.isFinalQuestion);
+    const text = final ? '最終問題' : String(Math.ceil(ms / 1000));
+    finalCount.hidden = !(final || (running && ms > 0 && ms <= 5000));
+    finalCount.classList.toggle('cert-final-count--last', final);
+    if (!finalCount.hidden && finalCount.textContent !== text) finalCount.textContent = text;
+    if (!finalCount.hidden) placeFinalCount();
+    if (final) screen?.markFinal?.();
   };
 
   // ---------- 問題画面（時間制のモード） ----------
@@ -112,6 +122,14 @@ export function mountTimedPlayScreen(container, options) {
     onQuit: () => confirmQuit(),
   };
 
+  /** 残り5秒の数字は、図をなるべく隠さないように図（3D・見取図。なければ問題文の図）の左上に出す */
+  function placeFinalCount() {
+    const view = host.querySelector('.quiz-view');
+    const figures = host.querySelector('.quiz-figures');
+    const anchor = view && !view.hidden ? view : figures && !figures.hidden ? figures : container;
+    if (finalCount.parentNode !== anchor) anchor.append(finalCount);
+  }
+
   const host = h('div', { class: 'cert-play' });
   container.append(host);
   // 問題画面を作る途中で時間切れになっても timeUp が使えるように、先に宣言しておく
@@ -121,7 +139,7 @@ export function mountTimedPlayScreen(container, options) {
   // ---------- カウントダウン（3・2・1・START!）。この間は問題が見えないように画面全体をおおう ----------
   const countText = h('span', { class: 'cert-countdown__text' }, '3');
   const countdown = h('div', { class: 'cert-countdown', role: 'status', 'aria-live': 'assertive' }, h('span', { class: 'cert-countdown__level' }, label), countText);
-  container.append(countdown, finalCount);
+  container.append(countdown);
   const step = timing.countdownMs / 3;
   // 表示に合わせて効果音（3・2・1 はピッ、START! はピーン）
   playCountdownSound(false);
@@ -162,13 +180,18 @@ export function mountTimedPlayScreen(container, options) {
     clearInterval(tickTimer);
     screen?.lock(); // 時間切れの瞬間に回答・選択・パスを止める
     updateTimer();
-    // 最後まで終えた挑戦は、すぐに記録する（TIME UP! の表示中に画面を離れても記録は残る）
+    // 最後まで終えた挑戦は、すぐに記録する（「時間切れ」の表示中に画面を離れても記録は残る）
     options.finish();
     finalCount.hidden = true;
+    // 最終問題に答えて終わったら、そのまま結果画面へ
+    if (session.state.endReason === 'final') {
+      navigate(options.resultRoute);
+      return;
+    }
     playTimeUpSound();
-    // 回答できないように画面全体をおおう
-    container.append(h('div', { class: 'cert-timeup', role: 'status' }, 'TIME UP！'));
-    later(() => navigate(options.resultRoute), 1300);
+    // 回答できないように画面全体をおおい、中央に大きく「時間切れ」を 1 秒出す
+    container.append(h('div', { class: 'cert-timeup', role: 'status' }, '時間切れ'));
+    later(() => navigate(options.resultRoute), TIME_UP_MS);
   }
 
   function abort(notice) {

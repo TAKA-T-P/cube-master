@@ -1,11 +1,12 @@
 /**
  * トライアルの進行（Three.js・DOM 非依存）
  *
- * 90 秒タイマーは core/certificationTimer（回答できる時間だけを数える）を使う。
+ * 100 秒タイマーは core/certificationTimer（回答できる時間だけを数える）を使う。
  *   - 問題を作る・表示する間は止まっている。startAnswering() で始める／再開する
  *   - submit() で回答を確定すると止まる（正解でも不正解でも、○×・正しい答えの演出の間は止まったまま）
  *   - 次の問題を表示して startAnswering() を呼ぶと再開する
  * 時間切れのあとに確定した回答は数えない。
+ * ロスタイム：残り 0 秒のときの問題は最終問題。答えたら（正解でも不正解でも）終了。答えないままロスタイムを使い切ったら時間切れ。
  */
 import { createCertificationTimer } from '../certificationTimer.js';
 import { TRIAL_RULES, difficultyForLevel, levelAfter, isTrialMode } from './trialRules.js';
@@ -20,7 +21,7 @@ export class TrialSession {
     this.mode = mode;
     this.rules = rules;
     this.rng = rng;
-    this.timer = createCertificationTimer({ durationMs: rules.durationMs, now });
+    this.timer = createCertificationTimer({ durationMs: rules.durationMs, overtimeMs: rules.overtimeMs ?? 0, now });
     this._seq = 0;
     this._state = {
       phase: 'ready', // ready → playing → finished
@@ -31,6 +32,7 @@ export class TrialSession {
       lastResult: null,
       history: [],
       aborted: false,
+      endReason: null, // 終わり方：'final'（最終問題に答えた）| 'penalty'（ペナルティ・パスで 0 秒）| null（時間切れ・中断）
     };
   }
 
@@ -50,6 +52,11 @@ export class TrialSession {
 
   get isFinished() {
     return this._state.phase === 'finished';
+  }
+
+  /** 最終問題（残り 0 秒・ロスタイム中）か */
+  get isFinalQuestion() {
+    return this._state.phase === 'playing' && this.timer.isOvertime();
   }
 
   /** 次の問題（今の LEVEL の難易度。タイマーは止まったまま。時間切れなら null） */
@@ -94,12 +101,13 @@ export class TrialSession {
     const s = this._state;
     if (s.phase !== 'playing' || !s.currentQuestion || s.answerLocked) return null;
     if (this.timer.state !== 'running') return null;
-    this.timer.pause();
-    if (this.timer.state === 'finished') {
-      // 確定した時刻に時間が残っていなかった
+    if (this.timer.isExpired()) {
+      // 確定した時刻に時間（ロスタイムも）が残っていなかった
       this.finish();
       return null;
     }
+    const final = this.timer.getRemainingMs() <= 0;
+    this.timer.pause();
     s.answerLocked = true;
     const detail = checkTrialAnswer(s.currentQuestion, answer);
     const before = s.level;
@@ -108,6 +116,12 @@ export class TrialSession {
     const result = { isCorrect: detail.isCorrect, levelBefore: before, levelAfter: s.level, highestLevel: s.highestLevel, detail };
     s.lastResult = result;
     s.history.push({ number: s.currentQuestion.number, level: before, difficulty: s.currentQuestion.difficulty, isCorrect: detail.isCorrect });
+    if (final) {
+      // 最終問題に答えたら（正解でも不正解でも）終了
+      result.final = true;
+      s.endReason = 'final';
+      this.finish();
+    }
     return result;
   }
 

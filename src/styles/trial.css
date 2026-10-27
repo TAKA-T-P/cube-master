@@ -1,4 +1,4 @@
-/* ===== トライアル（90秒・LEVEL アップ） ===== */
+/* ===== トライアル（100秒・LEVEL アップ） ===== */
 
 /* ----- 選択画面 ----- */
 .trial-cards {
@@ -154,6 +154,7 @@
 }
 
 .trial-stage {
+  position: relative;
   display: flex;
   flex-shrink: 0;
   gap: 8px;
