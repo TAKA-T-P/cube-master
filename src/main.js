@@ -25,7 +25,7 @@ import { mountCertificationQuestionScreen } from './ui/certificationQuestionScre
 import { mountCertificationResultScreen } from './ui/certificationResultScreen.js';
 import { mountCertificationRecordsScreen } from './ui/certificationRecordsScreen.js';
 import { mountTemplateCatalogScreen, mountTemplateViewScreen } from './ui/templateCatalogScreen.js';
-import { mountTrialSelectScreen, mountTrialSetupScreen } from './ui/trial/trialSelectScreen.js';
+import { mountTrialSelectScreen } from './ui/trial/trialSelectScreen.js';
 import { mountTrialPlayScreen } from './ui/trial/trialPlayScreen.js';
 import { mountTrialResultScreen } from './ui/trial/trialResultScreen.js';
 import { installButtonSound } from './ui/answerSound.js';
@@ -49,7 +49,6 @@ const ROUTES = {
   'certification-records': mountCertificationRecordsScreen,
   // トライアル（100秒・LEVEL アップ）
   trial: mountTrialSelectScreen,
-  'trial-setup': mountTrialSetupScreen,
   'trial-play': mountTrialPlayScreen,
   'trial-result': mountTrialResultScreen,
   // 問題テンプレート図鑑（開発者の確認用。タイトル画面のバージョン表示を5回押すと開く）

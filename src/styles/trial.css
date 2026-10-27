@@ -28,8 +28,7 @@
   height: 72px;
 }
 
-.trial-card__icon svg,
-.trial-setup__icon svg {
+.trial-card__icon svg {
   width: 100%;
   height: 100%;
 }
@@ -59,35 +58,9 @@
 .trial-card__go {
   grid-area: go;
   justify-self: end;
-}
-
-/* ----- ルール説明・スタート ----- */
-.trial-setup__icon {
-  width: 96px;
-  height: 96px;
-  margin: 0 auto 8px;
-}
-
-.trial-setup__rules {
-  display: grid;
-  gap: 6px;
-  margin: 0 var(--gutter) 12px;
-  padding: 10px 12px 10px 28px;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.trial-setup__best {
-  margin: 0 var(--gutter) 12px;
-  font-weight: 800;
-  text-align: center;
-}
-
-.trial-setup__actions {
-  display: grid;
-  margin: 0 var(--gutter);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* ----- プレイ画面 ----- */

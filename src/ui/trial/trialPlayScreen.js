@@ -28,7 +28,7 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
     return { unmount() {} };
   }
   const mode = getTrialMode(session.mode);
-  const setupRoute = () => navigate('trial-setup', { mode: mode.id });
+  const selectRoute = () => navigate('trial');
 
   let ended = false;
   let countdownDone = false;
@@ -322,14 +322,14 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
     const dialog = confirmDialog({ title: 'トライアルをやめますか？', message: 'とちゅうでやめた挑戦は、記録に残りません。', okLabel: 'やめる', cancelLabel: 'つづける' });
     if (!(await dialog.result) || ended) return;
     abort(null);
-    setupRoute();
+    selectRoute();
   }
 
   // タブの切りかえ・画面が見えなくなったら中断（同じ挑戦は再開できない）
   const onVisibility = () => {
     if (document.visibilityState === 'hidden' && !ended) {
       abort('ほかの画面に切りかえたため、トライアルを中断しました。中断した挑戦は記録に残りません。');
-      setupRoute();
+      selectRoute();
     }
   };
   document.addEventListener('visibilitychange', onVisibility);

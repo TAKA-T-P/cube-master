@@ -13,7 +13,7 @@ vi.mock('../src/three/trial/trialNetViewer.js', () => ({ createTrialNetViewer: (
 vi.mock('../src/ui/homeCube.js', () => ({ createHomeCube: () => ({ el: document.createElement('div'), destroy: () => {} }) }));
 
 const store = await import('../src/ui/trial/trialStore.js');
-const { mountTrialSelectScreen, mountTrialSetupScreen } = await import('../src/ui/trial/trialSelectScreen.js');
+const { mountTrialSelectScreen } = await import('../src/ui/trial/trialSelectScreen.js');
 const { mountTrialPlayScreen } = await import('../src/ui/trial/trialPlayScreen.js');
 const { mountTrialResultScreen } = await import('../src/ui/trial/trialResultScreen.js');
 const { mountHomeScreen } = await import('../src/ui/homeScreen.js');
@@ -129,23 +129,31 @@ describe('タイトル・選択・ルール説明', () => {
     expect(cards.map((c) => c.querySelector('.trial-card__name').textContent)).toEqual(['積み木の数はいくつ？', '3方向から見ると？', 'サイコロを転がすと？', '展開図に分けろ！']);
     expect(cards.map((c) => c.querySelector('[data-testid="trial-best"]').textContent)).toEqual(['まだ記録がありません', 'まだ記録がありません', '最高到達 LEVEL 15', 'まだ記録がありません']);
     for (const c of cards) expect(c.querySelector('.trial-card__icon svg')).not.toBeNull();
+    // 「挑戦する」の左に「？」
+    expect([...cards[0].querySelector('.trial-card__go').children].map((b) => b.textContent)).toEqual(['？', '挑戦する']);
     buttonByText(cards[3], '挑戦する').click();
-    expect(navigate).toHaveBeenCalledWith('trial-setup', { mode: 'netPartition' });
+    expect(navigate).toHaveBeenCalledWith('trial-play');
+    expect(store.getTrialSession()).toMatchObject({ mode: 'netPartition' });
   });
 
-  it('種類ごとのルール説明と自己ベスト。スタートで挑戦が始まる（まだタイマーは動かない）', () => {
-    const navigate = mount(mountTrialSetupScreen, { mode: 'netPartition' });
-    // 種類ごとのルールだけ（4種類に共通の LEVEL の説明は出さない）
-    expect(container.textContent).toContain('LEVEL +2');
-    expect(container.textContent).not.toContain('LEVEL 1 からスタート');
-    expect(container.querySelectorAll('.trial-setup__rules')).toHaveLength(1);
-    expect(container.querySelector('[data-testid="trial-best"]').textContent).toBe('自己ベスト：まだ記録がありません');
-    buttonByText(container, 'スタート').click();
+  it('「？」で種類ごとのルール説明と自己ベストをポップアップで出す（4種類に共通の LEVEL の説明は出さない）。「挑戦する」ですぐ始まる（まだタイマーは動かない）', () => {
+    backend.setItem('cubeMaster:trial', JSON.stringify({ version: 1, modes: { netPartition: { bestLevel: 7, attempts: 3 } } }));
+    store.configureTrialStorage(backend);
+    const navigate = mount(mountTrialSelectScreen);
+    const card = container.querySelector('.trial-card[data-mode="netPartition"]');
+    card.querySelector('.help-q').click();
+    const dialog = document.querySelector('.dialog');
+    expect(dialog.querySelector('.dialog__title').textContent).toBe('展開図に分けろ！');
+    expect(dialog.textContent).toContain('LEVEL +2');
+    expect(dialog.textContent).not.toContain('LEVEL 1 からスタート');
+    expect(dialog.textContent).toContain('自己ベスト：LEVEL 7（3回挑戦）');
+    expect(navigate).not.toHaveBeenCalled();
+    buttonByText(dialog, '閉じる').click();
+    expect(document.querySelector('.dialog')).toBeNull();
+    buttonByText(card, '挑戦する').click();
     expect(navigate).toHaveBeenCalledWith('trial-play');
     expect(store.getTrialSession()).toMatchObject({ mode: 'netPartition' });
     expect(store.getTrialSession().timer.state).toBe('ready');
-    // ない種類は選択画面へ
-    expect(mount(mountTrialSetupScreen, { mode: 'nope' })).toHaveBeenCalledWith('trial');
   });
 });
 
@@ -251,7 +259,7 @@ describe('プレイ画面', () => {
     Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
     Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
-    expect(navigate).toHaveBeenCalledWith('trial-setup', { mode: 'diceRoll' });
+    expect(navigate).toHaveBeenCalledWith('trial');
     expect(store.getTrialSession()).toBeNull();
     expect(backend.getItem('cubeMaster:trial')).toBeNull();
     expect(store.takeTrialNotice()).toContain('中断');
