@@ -5,7 +5,7 @@
 import { h } from '../../utils/dom.js';
 import { button } from '../components.js';
 import { getTrialMode } from '../../core/trial/trialRules.js';
-import { trialTitleFor, nextTrialTitle } from '../../core/trial/trialTitles.js';
+import { trialTitleFor } from '../../core/trial/trialTitles.js';
 import { getTrialResult, startTrial } from './trialStore.js';
 import { playFinishSound } from '../answerSound.js';
 
@@ -19,7 +19,6 @@ export function mountTrialResultScreen(container, { navigate }) {
   const mode = getTrialMode(summary.mode);
   playFinishSound();
   const title = trialTitleFor(mode.id, summary.highestLevel);
-  const next = nextTrialTitle(mode.id, summary.highestLevel);
   // 自己ベストを更新して、前の称号より上の称号になった
   const previousTitle = trialTitleFor(mode.id, outcome?.previousBest ?? 0);
   const newTitle = Boolean(title && outcome?.bestUpdated && (!previousTitle || title.rank > previousTitle.rank));
@@ -33,13 +32,11 @@ export function mountTrialResultScreen(container, { navigate }) {
         newTitle ? h('span', { class: 'trial-title__new', 'data-testid': 'trial-title-new' }, '新しい称号をゲット！') : null,
       )
     : null;
-  const nextView = next ? h('p', { class: 'trial-title__next', 'data-testid': 'trial-title-next' }, `LEVEL ${next.level} で称号「${next.name}」`) : null;
   container.append(
     h(
       'div',
       { class: 'page page--narrow trial-result' },
-      h('p', { class: 'trial-result__timeup' }, 'TIME UP!'),
-      h('p', { class: 'trial-result__mode' }, 'トライアル', h('br'), h('strong', {}, mode.name)),
+      h('p', { class: 'trial-result__mode' }, 'トライアル', h('strong', {}, mode.name)),
       h(
         'div',
         { class: 'trial-result__main' },
@@ -47,7 +44,6 @@ export function mountTrialResultScreen(container, { navigate }) {
         h('span', { class: 'trial-result__level', 'data-testid': 'trial-result-level' }, `LEVEL ${summary.highestLevel}`),
       ),
       titleView,
-      nextView,
       outcome?.bestUpdated ? h('p', { class: 'trial-result__best trial-result__best--new', 'data-testid': 'trial-best-updated' }, '自己ベスト更新！') : null,
       !outcome?.bestUpdated && outcome?.previousBest > 0 ? h('p', { class: 'trial-result__best' }, `自己ベスト：LEVEL ${outcome.previousBest}`) : null,
       h(

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// トライアルの画面：タイトルのメニュー・選択・ルール説明・プレイ（カウントダウン・LEVEL・タイマー・○×・答え合わせ・次の問題・TIME UP）・結果・中断・入力の部品
+// トライアルの画面：タイトルのメニュー・選択・ルール説明・プレイ（カウントダウン・LEVEL・タイマー・○×・答え合わせ・次の問題・最終問題と時間切れ）・結果・中断・入力の部品
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createEventBus } from '../src/core/eventBus.js';
 import { createRng } from '../src/utils/random.js';
@@ -338,15 +338,20 @@ describe('結果画面', () => {
     store.finishTrial();
     const navigate = mount(mountTrialResultScreen);
     expect(container.querySelector('[data-testid="trial-result-level"]').textContent).toBe('LEVEL 4');
+    // 「TIME UP!」は出さず、「トライアル」と種類の名前を1行に並べる
+    expect(container.textContent).not.toContain('TIME UP');
+    const modeLine = container.querySelector('.trial-result__mode');
+    expect(modeLine.textContent).toBe('トライアルサイコロを転がすと？');
+    expect(modeLine.querySelector('br')).toBeNull();
     expect(container.textContent).not.toContain('LEVEL 2');
     expect(container.querySelector('[data-testid="trial-correct"]').textContent).toBe('3問');
     expect(container.querySelector('[data-testid="trial-incorrect"]').textContent).toBe('2問');
     expect(container.querySelector('[data-testid="trial-best-updated"]').textContent).toBe('自己ベスト更新！');
-    // 最高到達 LEVEL 4 の称号（絵文字つき）。初めての称号なので「新しい称号をゲット！」。次の称号も出す
+    // 最高到達 LEVEL 4 の称号（絵文字つき）。初めての称号なので「新しい称号をゲット！」。次の称号は出さない
     expect(container.querySelector('[data-testid="trial-title-name"]').textContent).toBe('コロコロ探検家');
     expect(container.querySelector('.trial-title__emoji').textContent).toBe('⭐');
     expect(container.querySelector('[data-testid="trial-title-new"]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="trial-title-next"]').textContent).toBe('LEVEL 6 で称号「サイコロ使い」');
+    expect(container.textContent).not.toContain('で称号');
     buttonByText(container, '別のトライアル').click();
     expect(navigate).toHaveBeenCalledWith('trial');
     buttonByText(container, 'タイトルへ').click();
