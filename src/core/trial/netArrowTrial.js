@@ -65,8 +65,8 @@ export const isVisibleFace = (outward) => dot(outward, DEFAULT_VIEW_DIRECTION) >
  */
 export const NET_ARROW_LEVELS = Object.freeze({
   1: Object.freeze({ relation: 'adjacent', bothVisible: true, minNetDistance: 1, maxNetDistance: 1, diagonal: 'none' }),
-  2: Object.freeze({ relation: 'adjacent', bothVisible: true, minNetDistance: 2, maxNetDistance: 9, diagonal: 'some' }),
-  3: Object.freeze({ relation: 'far', redVisible: true, minNetDistance: 2, maxNetDistance: 9, diagonal: 'some' }),
+  2: Object.freeze({ relation: 'adjacent', bothVisible: true, minNetDistance: 2, maxNetDistance: 9, diagonal: 'none' }),
+  3: Object.freeze({ relation: 'far', redVisible: true, minNetDistance: 2, maxNetDistance: 9, diagonal: 'none' }),
   4: Object.freeze({ relation: 'far', blueHidden: true, hardPair: true, minNetDistance: 3, maxNetDistance: 9, diagonal: 'both' }),
 });
 

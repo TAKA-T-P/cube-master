@@ -124,8 +124,8 @@ describe('問題の作り方', () => {
         } else {
           expect(dot(rn, bn) === -1 || !isVisibleFace(bn)).toBe(true); // 向かい合う面か、うら側の面
         }
-        if (difficulty === 1) expect([q.red.dir, q.blue.dir].some(isDiagonal)).toBe(false);
-        if (difficulty === 2 || difficulty === 3) expect([q.red.dir, q.blue.dir].some(isDiagonal)).toBe(true);
+        // ななめの矢印は ★★★★ だけ
+        if (difficulty <= 3) expect([q.red.dir, q.blue.dir].some(isDiagonal)).toBe(false);
         if (difficulty === 3) expect(isVisibleFace(rn)).toBe(true);
         if (difficulty === 4) {
           expect(isVisibleFace(bn)).toBe(false);

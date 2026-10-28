@@ -123,12 +123,52 @@
 .trial-play--netArrow.trial-play--correct .trial-stage--split .trial-viewport {
   flex: 1 1 0;
   width: auto;
-  height: min(30vh, 260px);
+  height: min(24vh, 220px);
 }
 
 .trial-play--netArrow .trial-stage--split .trial-sketch,
 .trial-play--netArrow.trial-play--correct .trial-stage--split .trial-figure svg {
-  max-height: min(30vh, 260px);
+  max-height: min(24vh, 220px);
+}
+
+/*
+ * スマホ縦でもスクロールしないように：問題文を見取図の左に並べ、見取図を小さくする（展開図の大きさは変えない）。
+ * 答え合わせ（見取図と 3D を並べる）のときは、図を横いっぱいにして問題文をその下に回す
+ */
+.trial-play--netArrow .trial-play__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 44%);
+  align-content: start;
+  align-items: center;
+  column-gap: 10px;
+}
+
+.trial-play--netArrow .trial-play__body > * {
+  grid-column: 1 / -1;
+}
+
+.trial-play--netArrow .trial-play__body > .trial-stage {
+  grid-row: 1;
+  grid-column: 2;
+}
+
+.trial-play--netArrow .trial-play__body > .trial-question {
+  grid-row: 1;
+  grid-column: 1;
+  font-size: 14px;
+}
+
+.trial-play--netArrow .trial-sketch {
+  max-height: 22vh;
+}
+
+.trial-play--netArrow .trial-play__body > .trial-stage--split {
+  grid-column: 1 / -1;
+}
+
+.trial-play--netArrow .trial-stage--split ~ .trial-question {
+  grid-row: 2;
+  grid-column: 1 / -1;
 }
 
 /* 「展開図に分けろ！」のお知らせは、「全消去」「決定」の下の中央に */
