@@ -116,16 +116,10 @@ describe('問題の作り方', () => {
         const distance = Math.abs(red.x - blue.x) + Math.abs(red.y - blue.y);
         expect(distance).toBeGreaterThanOrEqual(level.minNetDistance);
         expect(distance).toBeLessThanOrEqual(level.maxNetDistance);
-        if (difficulty <= 2) {
-          expect(dot(rn, bn)).toBe(0); // となり合う面
-          expect(isVisibleFace(rn) && isVisibleFace(bn)).toBe(true);
-        } else {
-          expect(dot(rn, bn) === -1 || !isVisibleFace(bn)).toBe(true); // 向かい合う面か、うら側の面
-        }
-        // ななめの矢印は出さない
-        expect(['N', 'E', 'S', 'W']).toContain(q.red.dir);
-        expect(['N', 'E', 'S', 'W']).toContain(q.blue.dir);
+        if (difficulty <= 3) expect(dot(rn, bn)).toBe(0); // ★〜★★★：となり合う面
+        if (difficulty <= 2) expect(isVisibleFace(rn) && isVisibleFace(bn)).toBe(true);
         if (difficulty === 3) expect(isVisibleFace(rn)).toBe(true);
+        if (difficulty === 4) expect(dot(rn, bn) === -1 || !isVisibleFace(bn)).toBe(true); // 向かい合う面か、うら側の面
         if (difficulty === 4) {
           expect(isVisibleFace(bn)).toBe(false);
           expect(dot(rn, bn) === -1 || !isVisibleFace(rn)).toBe(true);

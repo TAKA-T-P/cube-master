@@ -58,8 +58,9 @@ export const isVisibleFace = (outward) => dot(outward, DEFAULT_VIEW_DIRECTION) >
  */
 export const NET_ARROW_LEVELS = Object.freeze({
   1: Object.freeze({ relation: 'adjacent', bothVisible: true, minNetDistance: 1, maxNetDistance: 1 }),
-  2: Object.freeze({ relation: 'adjacent', bothVisible: true, minNetDistance: 2, maxNetDistance: 9 }),
-  3: Object.freeze({ relation: 'far', redVisible: true, minNetDistance: 2, maxNetDistance: 9 }),
+  2: Object.freeze({ relation: 'adjacent', bothVisible: true, minNetDistance: 1, maxNetDistance: 2 }),
+  // ★★★：となり合う面（青はうら側の面のこともある）。向かい合う面は ★★★★ だけ
+  3: Object.freeze({ relation: 'adjacent', redVisible: true, minNetDistance: 2, maxNetDistance: 3 }),
   4: Object.freeze({ relation: 'far', blueHidden: true, hardPair: true, minNetDistance: 3, maxNetDistance: 9 }),
 });
 
