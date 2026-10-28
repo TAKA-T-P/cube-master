@@ -1,4 +1,4 @@
-// トライアル⑤「展開図に矢印を引け！」：8方向・面と向きの変換・難易度ごとの出題・答えがただ1つに決まる・判定・3D の折りたたみと見取図の一致
+// トライアル⑤「展開図に矢印を引け！」：上下左右の4方向・面と向きの変換・難易度ごとの出題・答えがただ1つに決まる・判定・3D の折りたたみと見取図の一致
 import { describe, it, expect } from 'vitest';
 import {
   ARROW_DIRECTIONS,
@@ -7,7 +7,6 @@ import {
   arrowTo3D,
   arrowFrom3D,
   snapArrowDirection,
-  isDiagonal,
   isVisibleFace,
   generateNetArrowQuestion,
   checkNetArrowAnswer,
@@ -41,19 +40,18 @@ function possibleAnswers(q) {
   return [...answers];
 }
 
-describe('8方向', () => {
-  it('なぞった向きを、いちばん近い8方向にする（画面の下が正）。短すぎる動きは矢印にしない', () => {
+describe('上下左右の4方向', () => {
+  it('なぞった向きを、いちばん近い上下左右にする（画面の下が正）。ななめの矢印はない。短すぎる動きは矢印にしない', () => {
+    expect(ARROW_DIRECTION_IDS).toEqual(['N', 'E', 'S', 'W']);
     expect(snapArrowDirection(10, 0)).toBe('E');
     expect(snapArrowDirection(0, -10)).toBe('N');
     expect(snapArrowDirection(-10, 0)).toBe('W');
     expect(snapArrowDirection(0, 10)).toBe('S');
-    expect(snapArrowDirection(10, 9)).toBe('SE');
-    expect(snapArrowDirection(-10, -11)).toBe('NW');
-    expect(snapArrowDirection(10, -3)).toBe('E'); // 22.5° より小さい傾きは横
-    expect(snapArrowDirection(10, -5)).toBe('NE');
+    expect(snapArrowDirection(10, 9)).toBe('E'); // ななめになぞっても、近いほうの縦か横
+    expect(snapArrowDirection(9, 10)).toBe('S');
+    expect(snapArrowDirection(-10, -11)).toBe('N');
     expect(snapArrowDirection(3, 2, 6)).toBeNull();
     expect(snapArrowDirection(0, 0)).toBeNull();
-    expect(ARROW_DIRECTION_IDS.filter(isDiagonal)).toEqual(['NE', 'SE', 'SW', 'NW']);
   });
 
   it('マスの中の向き ⇄ 3D の向き（面の上の向きで、成分は -1・0・1）。すべての展開図・マス・向きで行き来できる', () => {
@@ -124,13 +122,13 @@ describe('問題の作り方', () => {
         } else {
           expect(dot(rn, bn) === -1 || !isVisibleFace(bn)).toBe(true); // 向かい合う面か、うら側の面
         }
-        // ななめの矢印は ★★★★ だけ
-        if (difficulty <= 3) expect([q.red.dir, q.blue.dir].some(isDiagonal)).toBe(false);
+        // ななめの矢印は出さない
+        expect(['N', 'E', 'S', 'W']).toContain(q.red.dir);
+        expect(['N', 'E', 'S', 'W']).toContain(q.blue.dir);
         if (difficulty === 3) expect(isVisibleFace(rn)).toBe(true);
         if (difficulty === 4) {
           expect(isVisibleFace(bn)).toBe(false);
           expect(dot(rn, bn) === -1 || !isVisibleFace(rn)).toBe(true);
-          expect(isDiagonal(q.red.dir) && isDiagonal(q.blue.dir)).toBe(true);
         }
       }
     }

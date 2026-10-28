@@ -4,7 +4,7 @@
  * 立方体の見取図に赤・青の2本の矢印、展開図に赤い矢印だけを示し、青い矢印を展開図のどのマスに・どの向きに描くかを答える。
  *
  * 向きの扱い
- * - 矢印の向きは、展開図のマスの中での8方向（N・NE・E・SE・S・SW・W・NW。展開図の上が N、右が E）
+ * - 矢印の向きは、展開図のマスの中での上下左右の4方向（N・E・S・W。展開図の上が N、右が E。ななめは使わない）
  * - 展開図は core/cubeNetFolding の foldNet で折りたたむ。各マスの frame（U：展開図の右 → 3D、V：展開図の下 → 3D）で、
  *   マスの中の向き (dx, dy) は 3D の向き dx·U/2 + dy·V/2 になる（成分は -1・0・1 の整数なので誤差がない）
  * - 見取図は、折りたたんだ立方体をそのままの位置で描く（基準のマス rootId が上面）。基準のマスと展開図の向きを変えると、
@@ -16,26 +16,20 @@ import { distinctOrientations, getNetBounds, makeCells } from '../cubeNet.js';
 import { foldNet } from '../cubeNetFolding.js';
 import { DEFAULT_VIEW_DIRECTION } from '../cubeConstants.js';
 
-/** 8方向（展開図のマスの中で。x：右、y：下） */
+/** 4方向（展開図のマスの中で。x：右、y：下） */
 export const ARROW_DIRECTIONS = Object.freeze({
   N: Object.freeze([0, -1]),
-  NE: Object.freeze([1, -1]),
   E: Object.freeze([1, 0]),
-  SE: Object.freeze([1, 1]),
   S: Object.freeze([0, 1]),
-  SW: Object.freeze([-1, 1]),
   W: Object.freeze([-1, 0]),
-  NW: Object.freeze([-1, -1]),
 });
 export const ARROW_DIRECTION_IDS = Object.freeze(Object.keys(ARROW_DIRECTIONS));
-export const isDiagonal = (dir) => dir.length === 2;
-const ORTHOGONAL = ARROW_DIRECTION_IDS.filter((d) => !isDiagonal(d));
 
-/** なぞった向き (dx, dy)（画面の右・下が正）を、いちばん近い8方向にする（短すぎれば null） */
+/** なぞった向き (dx, dy)（画面の右・下が正）を、いちばん近い上下左右の向きにする（短すぎれば null） */
 export function snapArrowDirection(dx, dy, minLength = 0) {
   if (!Number.isFinite(dx) || !Number.isFinite(dy) || Math.hypot(dx, dy) <= minLength || (dx === 0 && dy === 0)) return null;
-  const index = ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8; // 0：E、1：SE、2：S …（y は下が正）
-  return ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'][index];
+  if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? 'E' : 'W';
+  return dy > 0 ? 'S' : 'N';
 }
 
 const add = (a, b) => a.map((v, i) => v + b[i]);
@@ -61,13 +55,12 @@ export const isVisibleFace = (outward) => dot(outward, DEFAULT_VIEW_DIRECTION) >
  * 難易度ごとの出題の条件
  * - relation：赤と青の面の関係（adjacent：となり合う、far：向かい合う または 青が見えない面）
  * - netDistance：展開図の2つのマスのはなれ方（縦と横のマスの差の和）
- * - diagonal：none（上下左右だけ）| some（どちらかがななめ）| both（両方ななめ）
  */
 export const NET_ARROW_LEVELS = Object.freeze({
-  1: Object.freeze({ relation: 'adjacent', bothVisible: true, minNetDistance: 1, maxNetDistance: 1, diagonal: 'none' }),
-  2: Object.freeze({ relation: 'adjacent', bothVisible: true, minNetDistance: 2, maxNetDistance: 9, diagonal: 'none' }),
-  3: Object.freeze({ relation: 'far', redVisible: true, minNetDistance: 2, maxNetDistance: 9, diagonal: 'none' }),
-  4: Object.freeze({ relation: 'far', blueHidden: true, hardPair: true, minNetDistance: 3, maxNetDistance: 9, diagonal: 'both' }),
+  1: Object.freeze({ relation: 'adjacent', bothVisible: true, minNetDistance: 1, maxNetDistance: 1 }),
+  2: Object.freeze({ relation: 'adjacent', bothVisible: true, minNetDistance: 2, maxNetDistance: 9 }),
+  3: Object.freeze({ relation: 'far', redVisible: true, minNetDistance: 2, maxNetDistance: 9 }),
+  4: Object.freeze({ relation: 'far', blueHidden: true, hardPair: true, minNetDistance: 3, maxNetDistance: 9 }),
 });
 
 const pick = (list, rng) => list[Math.floor(rng() * list.length)];
@@ -80,8 +73,6 @@ function randomNetCells(rng) {
   return { netId: net.id, cells: makeCells(shape.map((c) => [c.x - minX, c.y - minY])) };
 }
 
-/** 使う向き（some のときは、組み合わせであとから確かめる） */
-const dirsFor = (diagonal) => (diagonal === 'none' ? ORTHOGONAL : diagonal === 'both' ? ARROW_DIRECTION_IDS.filter(isDiagonal) : ARROW_DIRECTION_IDS);
 
 /** 赤・青の面の組が難易度の条件に合うか */
 function pairMatches(level, red, blue, frames) {
@@ -122,10 +113,8 @@ export function generateNetArrowQuestion(difficulty, rng = Math.random) {
     for (const red of cells) for (const blue of cells) if (red.id !== blue.id && pairMatches(level, red, blue, fold.frames)) pairs.push([red, blue]);
     if (pairs.length === 0) continue;
     const [red, blue] = pick(pairs, rng);
-    const redDir = pick(dirsFor(level.diagonal), rng);
-    let blueDir = pick(dirsFor(level.diagonal), rng);
-    // some：どちらか（なるべく青）をななめにする
-    if (level.diagonal === 'some' && !isDiagonal(redDir) && !isDiagonal(blueDir)) blueDir = pick(ARROW_DIRECTION_IDS.filter(isDiagonal), rng);
+    const redDir = pick(ARROW_DIRECTION_IDS, rng);
+    const blueDir = pick(ARROW_DIRECTION_IDS, rng);
     const arrow = (cell, dir) => ({ cellId: cell.id, dir, face: fold.cellToFace[cell.id], vector: arrowTo3D(fold.frames[cell.id], dir) });
     return {
       mode: 'netArrow',

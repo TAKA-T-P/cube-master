@@ -55,7 +55,7 @@ const drag = (el, dx, dy) => {
   el.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 100 + dx / 2, clientY: 100 + dy / 2 }));
   el.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 100 + dx, clientY: 100 + dy }));
 };
-const DIR_VECTORS = { N: [0, -1], NE: [1, -1], E: [1, 0], SE: [1, 1], S: [0, 1], SW: [-1, 1], W: [-1, 0], NW: [-1, -1] };
+const DIR_VECTORS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
 
 let container;
 let screens;
@@ -376,7 +376,7 @@ describe('結果画面', () => {
 });
 
 describe('入力の部品', () => {
-  it('展開図に矢印：なぞった向きの8方向に1本だけかける（かき直し・別の面でおきかえ）。かくまで「決定」は押せない。判定は面と向き', async () => {
+  it('展開図に矢印：なぞった向き（上下左右）に1本だけかける（かき直し・別の面でおきかえ）。かくまで「決定」は押せない。判定は面と向き', async () => {
     vi.useFakeTimers();
     store.startTrial('netArrow', { rng: createRng(12), now: () => Date.now() });
     mount(mountTrialPlayScreen);
@@ -392,7 +392,8 @@ describe('入力の部品', () => {
     // 短すぎる動き（タップ）は矢印にしない
     drag(cellEl(q.red.cellId), 2, 1);
     expect(container.querySelectorAll('.trial-arrow-net__blue')).toHaveLength(0);
-    drag(cellEl(q.red.cellId), 30, 28); // 右下
+    drag(cellEl(q.red.cellId), 30, 28); // ななめになぞっても、近いほうの横向き
+    expect(container.querySelector('.trial-arrow-net__blue')).not.toBeNull();
     expect(container.querySelectorAll('.trial-arrow-net__blue')).toHaveLength(1);
     expect(submit.disabled).toBe(false);
     redo.click();

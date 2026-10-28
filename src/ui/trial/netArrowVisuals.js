@@ -3,7 +3,7 @@
  *
  * - 見取図：半透明の立方体（見えない辺は点線）に、赤・青の矢印。見えない面（うら側）の矢印と面のふちは点線で、
  *   見える面の矢印は実線でかく。見る向きは core/cubeConstants の DEFAULT_VIEW_DIRECTION（ほかの見取図と同じ）
- * - 展開図：マスと赤い矢印。マスの中をなぞると、なぞった向きにいちばん近い8方向の青い矢印になる（1本だけ。かき直せる）
+ * - 展開図：マスと赤い矢印。マスの中をなぞると、なぞった向きにいちばん近い上下左右の青い矢印になる（1本だけ。かき直せる）
  */
 import { VERTICES, EDGES, FACES, DEFAULT_VIEW_DIRECTION } from '../../core/cubeConstants.js';
 import { projectBoardPoint } from '../../core/trial/diceRollTrial.js';

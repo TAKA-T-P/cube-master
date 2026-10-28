@@ -23,7 +23,7 @@ const FLAT_RADIUS = 2.4;
 
 /**
  * マスの中に矢印をかく（展開図のマスと同じ向き：キャンバスの右 = 展開図の右、下 = 展開図の下）
- * @param {{ dir: string, color: string }} arrow dir は core/trial/netArrowTrial の8方向
+ * @param {{ dir: string, color: string }} arrow dir は core/trial/netArrowTrial の4方向
  */
 function drawArrow(ctx, { dir, color }) {
   const d = ARROW_DIRECTIONS[dir];
