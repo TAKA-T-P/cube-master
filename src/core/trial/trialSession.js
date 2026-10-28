@@ -111,7 +111,9 @@ export class TrialSession {
     s.answerLocked = true;
     const detail = checkTrialAnswer(s.currentQuestion, answer);
     const before = s.level;
-    s.level = levelAfter(before, detail.isCorrect, this.mode, this.rules);
+    // 不正解は、種類ごとに決めた回数（2回。「展開図に分けろ！」は1回）ごとに LEVEL −1
+    const misses = s.history.filter((h) => !h.isCorrect).length + (detail.isCorrect ? 0 : 1);
+    s.level = levelAfter(before, detail.isCorrect, this.mode, this.rules, misses);
     s.highestLevel = Math.max(s.highestLevel, s.level);
     const result = { isCorrect: detail.isCorrect, levelBefore: before, levelAfter: s.level, highestLevel: s.highestLevel, detail };
     s.lastResult = result;

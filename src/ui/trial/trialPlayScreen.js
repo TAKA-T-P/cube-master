@@ -73,7 +73,8 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
       h('span', { class: 'badge badge--mode trial-play__mode' }, mode.name),
       h('div', { class: 'trial-play__status' }, levelEl, starsEl, timerEl),
     ),
-    h('main', { class: 'trial-play__body' }, stage, questionText, feedback, notice, inputHost),
+    // 「展開図に分けろ！」のお知らせ（「◯は6マスまでです」）は、パレット・「全消去」「決定」の下に出す
+    h('main', { class: 'trial-play__body' }, stage, questionText, feedback, ...(mode.id === 'netPartition' ? [inputHost, notice] : [notice, inputHost])),
   );
   container.append(root);
 

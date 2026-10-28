@@ -131,6 +131,15 @@ describe('タイトル・選択・ルール説明', () => {
     for (const c of cards) expect(c.querySelector('.trial-card__icon svg')).not.toBeNull();
     // 自己ベストの称号（記録がなければ出さない）
     expect(cards.map((c) => c.querySelector('[data-testid="trial-card-title"]')?.textContent ?? null)).toEqual([null, null, '🏅 回転の達人', null]);
+    // 「展開図に分けろ！」の下に「展開図を確認する」。押すと 11 種類の展開図
+    const netsButton = buttonByText(container, '展開図を確認する');
+    expect(netsButton.previousElementSibling).toBe(cards[3]);
+    netsButton.click();
+    expect(document.querySelector('.dialog__title').textContent).toBe('立方体の展開図（11種類）');
+    expect(document.querySelectorAll('.trial-nets__item svg')).toHaveLength(11);
+    expect(new Set([...document.querySelectorAll('.trial-nets__item')].map((f) => f.dataset.net)).size).toBe(11);
+    buttonByText(document.querySelector('.dialog'), '閉じる').click();
+    expect(navigate).not.toHaveBeenCalled();
     // 「挑戦する」の左に「？」
     expect([...cards[0].querySelector('.trial-card__go').children].map((b) => b.textContent)).toEqual(['？', '挑戦する']);
     buttonByText(cards[3], '挑戦する').click();
@@ -203,13 +212,13 @@ describe('プレイ画面', () => {
     expect(session.state.answerLocked).toBe(false);
     expect(session.timer.state).toBe('running');
     expect(container.querySelector('.trial-feedback').hidden).toBe(true);
-    // 不正解でも正しい答えの演出があり、LEVEL −1
+    // 不正解でも正しい答えの演出がある。LEVEL は2回目の不正解で −1（「展開図に分けろ！」は1回で −1）
     answer({ correct: false });
     await vi.advanceTimersByTimeAsync(0);
     expect(container.querySelector('.trial-feedback__title').textContent).toBe('不正解');
     expect(container.querySelector('.trial-play').classList.contains('trial-play--correct')).toBe(false);
     expect(viewer.animations.setSpeed).toHaveBeenLastCalledWith(TRIAL_RULES.revealSpeed);
-    expect(container.querySelector('[data-testid="trial-level"]').textContent).toBe(`LEVEL ${gain}`);
+    expect(container.querySelector('[data-testid="trial-level"]').textContent).toBe(`LEVEL ${mode === 'netPartition' ? gain : 1 + gain}`);
     expect(store.getTrialSession().highestLevel).toBe(1 + gain);
     expect(container.querySelector('.trial-feedback__answer').textContent).not.toBe('');
   });
@@ -424,6 +433,10 @@ describe('入力の部品', () => {
     expect(els.slice(0, 6).every((el) => el.classList.contains('trial-cell--on'))).toBe(true);
     expect(els[6].classList.contains('trial-cell--on')).toBe(false);
     expect(container.querySelector('.trial-notice').textContent).toContain('6マスまで');
+    // お知らせは「全消去」「決定」の下（入力のあと）に出す
+    const input = container.querySelector('.trial-input');
+    expect(input.nextElementSibling).toBe(container.querySelector('.trial-notice'));
+    expect(input.querySelector('.trial-grid-tools').textContent).toContain('決定');
     expect(container.querySelector('.trial-palette__color[data-color="0"] .trial-palette__count').textContent).toBe('6/6');
     container.querySelector('.trial-palette__eraser').click();
     paint(q.cells[0]);

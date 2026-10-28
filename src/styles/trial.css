@@ -61,6 +61,49 @@
   color: #b06a00;
 }
 
+/* 「展開図を確認する」と、展開図 11 種類のポップアップ */
+/* 「展開図に分けろ！」のお知らせは、「全消去」「決定」の下の中央に */
+.trial-play--netPartition .trial-notice {
+  text-align: center;
+}
+
+.trial-nets-button {
+  justify-self: center;
+  margin-top: -2px;
+}
+
+.trial-nets {
+  display: grid;
+  gap: 10px;
+}
+
+.trial-nets__title {
+  margin-bottom: 4px;
+  color: var(--color-primary-strong);
+  font-size: 14px;
+}
+
+.trial-nets__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 120px), 1fr));
+  gap: 8px;
+}
+
+.trial-nets__item {
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.trial-nets__item svg {
+  width: 100%;
+  max-height: 84px;
+}
+
 .trial-card__go {
   grid-area: go;
   justify-self: end;

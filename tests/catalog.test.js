@@ -184,5 +184,5 @@ describe('テンプレートの確認', () => {
       expect(container.querySelector('.feedback__title').textContent, t.id).toBe('正解！');
       screens.pop().unmount();
     }
-  });
+  }, 20000); // 75 問を作って開くので、ほかのテストと並んで動くときは時間がかかる
 });

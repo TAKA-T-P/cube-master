@@ -66,54 +66,77 @@ function wrongAnswer(q) {
 }
 
 describe('LEVEL と難易度', () => {
-  it('LEVEL 1 から始まり、正解 +1・不正解 −1・下限 1。「展開図に分けろ！」の正解だけ +2', () => {
+  it('LEVEL 1 から始まり、正解 +1・不正解は2回ごとに −1・下限 1。「展開図に分けろ！」は正解 +2・不正解は1回ごとに −1', () => {
     expect(TRIAL_RULES.startLevel).toBe(1);
     expect(levelAfter(1, true, 'blockCount')).toBe(2);
-    expect(levelAfter(3, false, 'blockCount')).toBe(2);
-    expect(levelAfter(1, false, 'diceRoll')).toBe(1);
+    expect(levelAfter(3, false, 'blockCount', TRIAL_RULES, 1)).toBe(3);
+    expect(levelAfter(3, false, 'blockCount', TRIAL_RULES, 2)).toBe(2);
+    expect(levelAfter(3, false, 'projectionDraw', TRIAL_RULES, 3)).toBe(3);
+    expect(levelAfter(3, false, 'projectionDraw', TRIAL_RULES, 4)).toBe(2);
+    expect(levelAfter(1, false, 'diceRoll', TRIAL_RULES, 2)).toBe(1);
     expect(levelAfter(5, true, 'netPartition')).toBe(7);
-    expect(levelAfter(5, false, 'netPartition')).toBe(4);
+    expect(levelAfter(5, false, 'netPartition', TRIAL_RULES, 1)).toBe(4);
+    expect(levelAfter(5, false, 'netPartition', TRIAL_RULES, 2)).toBe(4);
     expect(TRIAL_MODES.map((m) => m.gain)).toEqual([1, 1, 1, 2]);
+    expect(TRIAL_MODES.map((m) => m.missesPerLevelDown)).toEqual([2, 2, 2, 1]);
   });
 
-  it('LEVEL 5 ごとに難易度が変わる（1〜5 ★、6〜10 ★★、11〜15 ★★★、16 以上 ★★★★）', () => {
-    expect([1, 5, 6, 10, 11, 15, 16, 30, 100].map(difficultyForLevel)).toEqual([1, 1, 2, 2, 3, 3, 4, 4, 4]);
-  });
-
-  it('次の問題の難易度は、正解・不正解のあとの LEVEL で決める（5→6 で ★★、6→5 で ★、15→16 で ★★★★）', () => {
+  it('不正解の回数はその挑戦の通算で数える（正解をはさんでも、2回目の不正解で −1）', () => {
     const now = fakeClock();
-    const s = new TrialSession({ mode: 'diceRoll', rng: createRng(1), now });
+    const s = new TrialSession({ mode: 'diceRoll', rng: createRng(3), now });
     const play = (correct) => {
       const q = s.nextQuestion();
       s.startAnswering();
-      now.advance(1000);
-      s.submit(correct ? correctAnswer(q) : wrongAnswer(q));
+      return s.submit(correct ? correctAnswer(q) : wrongAnswer(q));
     };
-    for (let i = 0; i < 4; i++) play(true);
-    expect(s.level).toBe(5);
+    play(true);
+    play(true); // LEVEL 3
+    expect(play(false)).toMatchObject({ levelBefore: 3, levelAfter: 3 });
+    play(true); // LEVEL 4
+    expect(play(false)).toMatchObject({ levelBefore: 4, levelAfter: 3 });
+    expect(play(false)).toMatchObject({ levelAfter: 3 });
+    expect(play(false)).toMatchObject({ levelAfter: 2 });
+    const n = new TrialSession({ mode: 'netPartition', rng: createRng(3), now });
+    const q = n.nextQuestion();
+    n.startAnswering();
+    n.submit(correctAnswer(q)); // LEVEL 3
+    const q2 = n.nextQuestion();
+    n.startAnswering();
+    expect(n.submit(wrongAnswer(q2))).toMatchObject({ levelBefore: 3, levelAfter: 2 });
+  });
+
+  it('LEVEL 6 ごとに難易度が変わる（1〜6 ★、7〜12 ★★、13〜18 ★★★、19 以上 ★★★★）', () => {
+    expect([1, 6, 7, 12, 13, 18, 19, 30, 100].map(difficultyForLevel)).toEqual([1, 1, 2, 2, 3, 3, 4, 4, 4]);
+  });
+
+  it('次の問題の難易度は、正解・不正解のあとの LEVEL で決める（6→7 で ★★、7→6 で ★、18→19 で ★★★★）', () => {
+    const now = fakeClock();
+    const s = new TrialSession({ mode: 'netPartition', rng: createRng(1), now });
+    s._state.level = 6;
     expect(s.nextQuestion().difficulty).toBe(1);
+    s._state.level = 5;
     s.startAnswering();
-    s.submit(s.state.currentQuestion.answer);
-    expect(s.level).toBe(6);
+    s.submit(correctAnswer(s.state.currentQuestion)); // 5 → 7
+    expect(s.level).toBe(7);
     expect(s.nextQuestion().difficulty).toBe(2);
     s.startAnswering();
-    s.submit(wrongAnswer(s.state.currentQuestion));
-    expect(s.level).toBe(5);
+    s.submit(wrongAnswer(s.state.currentQuestion)); // 7 → 6（展開図は1回で −1）
+    expect(s.level).toBe(6);
     expect(s.nextQuestion().difficulty).toBe(1);
-    s._state.level = 15;
+    s._state.level = 17;
     s.startAnswering();
-    s.submit(correctAnswer(s.state.currentQuestion));
-    expect(s.level).toBe(16);
+    s.submit(correctAnswer(s.state.currentQuestion)); // 17 → 19
+    expect(s.level).toBe(19);
     expect(s.nextQuestion().difficulty).toBe(4);
     s.startAnswering();
-    s.submit(wrongAnswer(s.state.currentQuestion));
+    s.submit(wrongAnswer(s.state.currentQuestion)); // 19 → 18
     expect(s.nextQuestion().difficulty).toBe(3);
   });
 
   it('最高到達 LEVEL は下がらない。正式な記録は最高到達 LEVEL（終了時の LEVEL ではない）', () => {
     const now = fakeClock();
     const s = new TrialSession({ mode: 'blockCount', rng: createRng(2), now });
-    for (const correct of [true, true, true, false, false]) {
+    for (const correct of [true, true, true, false, false, false, false]) {
       const q = s.nextQuestion();
       s.startAnswering();
       s.submit(correct ? correctAnswer(q) : wrongAnswer(q));
@@ -121,7 +144,7 @@ describe('LEVEL と難易度', () => {
     expect(s.level).toBe(2);
     expect(s.highestLevel).toBe(4);
     const summary = s.finish();
-    expect(summary).toMatchObject({ mode: 'blockCount', highestLevel: 4, finalLevel: 2, correctCount: 3, incorrectCount: 2, answeredCount: 5, aborted: false });
+    expect(summary).toMatchObject({ mode: 'blockCount', highestLevel: 4, finalLevel: 2, correctCount: 3, incorrectCount: 4, answeredCount: 7, aborted: false });
     const { records, bestUpdated } = recordTrialResult(createEmptyTrialRecords(), summary);
     expect(bestUpdated).toBe(true);
     expect(records.modes.blockCount.bestLevel).toBe(4);
