@@ -14,8 +14,8 @@ import { pick } from '../../utils/random.js';
 /** 難易度ごとの大きさ（底面 横×奥行き・最大の高さ） */
 export const PROJECTION_LEVELS = Object.freeze({
   1: { bases: [[2, 2], [3, 2], [3, 3]], maxHeight: 3, minCubes: 4, maxCubes: 14 },
-  2: { bases: [[3, 3], [4, 3]], maxHeight: 4, minCubes: 7, maxCubes: 22 },
-  3: { bases: [[4, 4], [4, 3]], maxHeight: 5, minCubes: 10, maxCubes: 40, varied: true },
+  2: { bases: [[3, 3], [4, 3], [4, 4]], maxHeight: 4, minCubes: 9, maxCubes: 24 },
+  3: { bases: [[4, 4], [5, 4]], maxHeight: 5, minCubes: 12, maxCubes: 45, varied: true },
   4: { bases: [[5, 5], [5, 4]], maxHeight: 5, minCubes: 14, maxCubes: 60, varied: true },
 });
 
