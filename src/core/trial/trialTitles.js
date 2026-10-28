@@ -16,6 +16,8 @@ export const TRIAL_TITLES = Object.freeze({
   projectionDraw: Object.freeze(['観察見習い', '形の発見者', 'シルエットハンター', '形の見きわめ名人', '空間ウォッチャー', '透視の達人', '空間解析士', '空間の支配者', '三方向の覇者', '空間を見通す神眼']),
   diceRoll: Object.freeze(['サイコロ見習い', 'コロコロ探検家', 'サイコロ使い', '回転マスター', 'ダイスマスター', 'ダイスコントローラー', '回転の達人', 'ダイスウィザード', 'ダイスエンペラー', '運命を操るダイス神']),
   netPartition: Object.freeze(['展開図見習い', '色分けチャレンジャー', '展開図パズラー', '展開図職人', '展開図マスター', 'キューブクラフター', '展開図博士', 'キューブクリエイター', '展開図の覇者', 'キューブ創造神']),
+  // ⑤ は仮の称号（文言が決まったら差しかえる）
+  netArrow: Object.freeze(['矢印見習い', '向きのたんけん隊', '矢印ナビゲーター', '向きの名人', 'アローマスター', '展開図の案内人', '向きの達人', '空間アローマイスター', '矢印の覇者', '向きを司る神']),
 });
 
 const titleAt = (mode, index) => ({ rank: index + 1, level: TRIAL_TITLE_LEVELS[index], name: TRIAL_TITLES[mode][index], emoji: TRIAL_TITLE_EMOJI[index] });

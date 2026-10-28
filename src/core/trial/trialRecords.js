@@ -3,7 +3,7 @@
  *
  *   { version: 1, modes: { blockCount: { bestLevel, attempts, lastPlayedAt }, ... } }
  *
- * 4種類それぞれに自己ベスト（最高到達 LEVEL）を持つ。記録の基準は highestLevel だけで、終了時の LEVEL は使わない。
+ * 種類ごとに自己ベスト（最高到達 LEVEL）を持つ。記録の基準は highestLevel だけで、終了時の LEVEL は使わない。
  * 中断した挑戦は記録しない。トレーニング・1分チャレンジ・段位認定の記録とは別に保存する。
  */
 import { TRIAL_MODE_IDS, isTrialMode } from './trialRules.js';

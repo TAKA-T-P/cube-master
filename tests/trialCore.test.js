@@ -45,6 +45,8 @@ function correctAnswer(q) {
       return q.answer;
     case 'netPartition':
       return { ...q.solution };
+    case 'netArrow':
+      return { ...q.answer };
     default:
       throw new Error(q.mode);
   }
@@ -60,6 +62,8 @@ function wrongAnswer(q) {
       return (q.answer % 6) + 1;
     case 'netPartition':
       return Object.fromEntries(q.cells.map((c) => [c.id, 0]));
+    case 'netArrow':
+      return { cellId: q.red.cellId, dir: q.answer.dir };
     default:
       throw new Error(q.mode);
   }
@@ -77,8 +81,8 @@ describe('LEVEL と難易度', () => {
     expect(levelAfter(5, true, 'netPartition')).toBe(7);
     expect(levelAfter(5, false, 'netPartition', TRIAL_RULES, 1)).toBe(4);
     expect(levelAfter(5, false, 'netPartition', TRIAL_RULES, 2)).toBe(4);
-    expect(TRIAL_MODES.map((m) => m.gain)).toEqual([1, 1, 1, 2]);
-    expect(TRIAL_MODES.map((m) => m.missesPerLevelDown)).toEqual([2, 2, 2, 1]);
+    expect(TRIAL_MODES.map((m) => m.gain)).toEqual([1, 1, 1, 2, 1]);
+    expect(TRIAL_MODES.map((m) => m.missesPerLevelDown)).toEqual([2, 2, 2, 1, 2]);
   });
 
   it('不正解の回数はその挑戦の通算で数える（正解をはさんでも、2回目の不正解で −1）', () => {

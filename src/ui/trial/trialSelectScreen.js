@@ -1,5 +1,5 @@
 /**
- * トライアルの選択画面（4種類のカード）
+ * トライアルの選択画面（5種類のカード）
  *
  * カードには名前・説明・小さな絵・最高到達 LEVEL と、「？」（ルール・自己ベストのポップアップ）・「挑戦する」（すぐに始める）を置く。
  * 「展開図に分けろ！」のカードの下には「展開図を確認する」（立方体の展開図 11 種類のポップアップ）を置く。
@@ -102,7 +102,7 @@ export function mountTrialSelectScreen(container, { navigate }) {
       'div',
       { class: 'page page--narrow trial-select' },
       h('header', { class: 'page-header' }, h('button', { class: 'btn btn--back', type: 'button', onClick: () => navigate('home') }, '← タイトル'), h('h1', {}, 'トライアル')),
-      h('p', { class: 'page-lead' }, `4種類から1つをえらんで、${TRIAL_RULES.durationMs / 1000}秒でどこまで LEVEL を上げられるか挑戦しよう！`),
+      h('p', { class: 'page-lead' }, `${TRIAL_MODES.length}種類から1つをえらんで、${TRIAL_RULES.durationMs / 1000}秒でどこまで LEVEL を上げられるか挑戦しよう！`),
       h('div', { class: 'trial-cards' }, cards),
     ),
   );

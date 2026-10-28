@@ -49,6 +49,13 @@ const AFTER_ANSWER = TRIAL_RULES.advanceDelayMs + 800;
 const buttonByText = (root, text) => [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === text);
 const key = (k) => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
 const pointer = (el, type) => el.dispatchEvent(new MouseEvent(type, { bubbles: true }));
+/** マスの中を (dx, dy) だけなぞる */
+const drag = (el, dx, dy) => {
+  el.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100 }));
+  el.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 100 + dx / 2, clientY: 100 + dy / 2 }));
+  el.dispatchEvent(new MouseEvent('pointerup', { bubbles: true, clientX: 100 + dx, clientY: 100 + dy }));
+};
+const DIR_VECTORS = { N: [0, -1], NE: [1, -1], E: [1, 0], SE: [1, 1], S: [0, 1], SW: [-1, 1], W: [-1, 0], NW: [-1, -1] };
 
 let container;
 let screens;
@@ -101,6 +108,12 @@ function answer({ correct = true } = {}) {
       }),
     );
     buttonByText(container, '決定').click();
+  } else if (q.mode === 'netArrow') {
+    // 正解：青い矢印の面を正しい向きになぞる。まちがい：赤い矢印の面になぞる
+    const cellId = correct ? q.answer.cellId : q.red.cellId;
+    const [dx, dy] = DIR_VECTORS[q.answer.dir];
+    drag(container.querySelector(`.trial-arrow-net [data-cell="${cellId}"]`), dx * 30, dy * 30);
+    buttonByText(container, '決定').click();
   } else if (q.mode === 'netPartition') {
     for (const cell of q.cells) {
       const color = correct ? q.solution[cell.id] : 0;
@@ -121,16 +134,16 @@ describe('タイトル・選択・ルール説明', () => {
     expect(navigate).toHaveBeenCalledWith('trial');
   });
 
-  it('4種類のカード（名前・説明・絵・最高到達 LEVEL・挑戦する）。記録はモードごと', () => {
+  it('5種類のカード（名前・説明・絵・最高到達 LEVEL・挑戦する）。記録はモードごと', () => {
     backend.setItem('cubeMaster:trial', JSON.stringify({ version: 1, modes: { diceRoll: { bestLevel: 15, attempts: 8 } } }));
     store.configureTrialStorage(backend);
     const navigate = mount(mountTrialSelectScreen);
     const cards = [...container.querySelectorAll('.trial-card')];
-    expect(cards.map((c) => c.querySelector('.trial-card__name').textContent)).toEqual(['積み木の数はいくつ？', '3方向から見ると？', 'サイコロを転がすと？', '展開図に分けろ！']);
-    expect(cards.map((c) => c.querySelector('[data-testid="trial-best"]').textContent)).toEqual(['まだ記録がありません', 'まだ記録がありません', '最高到達 LEVEL 15', 'まだ記録がありません']);
+    expect(cards.map((c) => c.querySelector('.trial-card__name').textContent)).toEqual(['積み木の数はいくつ？', '3方向から見ると？', 'サイコロを転がすと？', '展開図に分けろ！', '展開図に矢印を引け！']);
+    expect(cards.map((c) => c.querySelector('[data-testid="trial-best"]').textContent)).toEqual(['まだ記録がありません', 'まだ記録がありません', '最高到達 LEVEL 15', 'まだ記録がありません', 'まだ記録がありません']);
     for (const c of cards) expect(c.querySelector('.trial-card__icon svg')).not.toBeNull();
     // 自己ベストの称号（記録がなければ出さない）
-    expect(cards.map((c) => c.querySelector('[data-testid="trial-card-title"]')?.textContent ?? null)).toEqual([null, null, '🏅 回転の達人', null]);
+    expect(cards.map((c) => c.querySelector('[data-testid="trial-card-title"]')?.textContent ?? null)).toEqual([null, null, '🏅 回転の達人', null, null]);
     // 「展開図に分けろ！」の下に「展開図を確認する」。押すと 11 種類の展開図
     const netsButton = buttonByText(container, '展開図を確認する');
     expect(netsButton.previousElementSibling).toBe(cards[3]);
@@ -171,7 +184,7 @@ describe('タイトル・選択・ルール説明', () => {
 describe('プレイ画面', () => {
   beforeEach(() => vi.useFakeTimers());
 
-  it.each(['blockCount', 'projectionDraw', 'diceRoll', 'netPartition'])('%s：カウントダウン → 回答 → ○×・LEVEL・正しい答えの演出（タイマー停止）→ 次の問題で再開', async (mode) => {
+  it.each(['blockCount', 'projectionDraw', 'diceRoll', 'netPartition', 'netArrow'])('%s：カウントダウン → 回答 → ○×・LEVEL・正しい答えの演出（タイマー停止）→ 次の問題で再開', async (mode) => {
     store.startTrial(mode, { rng: createRng(3), now: () => Date.now() });
     mount(mountTrialPlayScreen);
     const session = store.getTrialSession();
@@ -363,6 +376,62 @@ describe('結果画面', () => {
 });
 
 describe('入力の部品', () => {
+  it('展開図に矢印：なぞった向きの8方向に1本だけかける（かき直し・別の面でおきかえ）。かくまで「決定」は押せない。判定は面と向き', async () => {
+    vi.useFakeTimers();
+    store.startTrial('netArrow', { rng: createRng(12), now: () => Date.now() });
+    mount(mountTrialPlayScreen);
+    await vi.advanceTimersByTimeAsync(COUNTDOWN);
+    const q = current();
+    // 見取図：赤・青の2本。展開図：赤だけ
+    expect(container.querySelectorAll('.trial-sketch__arrow')).toHaveLength(2);
+    expect(container.querySelectorAll('.trial-arrow-net__blue')).toHaveLength(0);
+    const submit = buttonByText(container, '決定');
+    const redo = buttonByText(container, 'かき直し');
+    expect(submit.disabled).toBe(true);
+    const cellEl = (id) => container.querySelector(`.trial-arrow-net [data-cell="${id}"]`);
+    // 短すぎる動き（タップ）は矢印にしない
+    drag(cellEl(q.red.cellId), 2, 1);
+    expect(container.querySelectorAll('.trial-arrow-net__blue')).toHaveLength(0);
+    drag(cellEl(q.red.cellId), 30, 28); // 右下
+    expect(container.querySelectorAll('.trial-arrow-net__blue')).toHaveLength(1);
+    expect(submit.disabled).toBe(false);
+    redo.click();
+    expect(container.querySelectorAll('.trial-arrow-net__blue')).toHaveLength(0);
+    expect(submit.disabled).toBe(true);
+    // 別の面にかくと、前の矢印はおきかわる（いつも1本）
+    const other = q.cells.find((c) => c.id !== q.answer.cellId && c.id !== q.red.cellId).id;
+    drag(cellEl(other), 0, -30);
+    const [dx, dy] = DIR_VECTORS[q.answer.dir];
+    drag(cellEl(q.answer.cellId), dx * 30, dy * 30);
+    expect(container.querySelectorAll('.trial-arrow-net__blue')).toHaveLength(1);
+    expect(cellEl(q.answer.cellId).classList.contains('trial-arrow-net__cell--on')).toBe(true);
+    expect(cellEl(other).classList.contains('trial-arrow-net__cell--on')).toBe(false);
+    submit.click();
+    expect(store.getTrialSession().state.lastResult).toMatchObject({ isCorrect: true, levelAfter: 2 });
+    // 答え合わせ：正しい青い矢印と、赤・青をかいた展開図を見取図と同じ基準のマスで折りたたむ
+    await vi.advanceTimersByTimeAsync(TRIAL_RULES.splashMs + 10);
+    expect(viewer.setNet).toHaveBeenLastCalledWith(expect.objectContaining({ cells: q.cells, rootId: q.rootId, cellArrows: expect.objectContaining({ [q.answer.cellId]: [expect.objectContaining({ dir: q.answer.dir })] }) }));
+    expect(viewer.playQuestionReveal.mock.calls.at(-1)[0].steps.some((s) => s.type === 'fold' && s.to === 1)).toBe(true);
+    expect(container.querySelectorAll('.trial-arrow-net__answer')).toHaveLength(1);
+  });
+
+  it('展開図に矢印：面がちがう・向きがちがうと不正解で、入力した矢印を灰色で残し、正しい矢印と理由を出す', async () => {
+    vi.useFakeTimers();
+    store.startTrial('netArrow', { rng: createRng(13), now: () => Date.now() });
+    mount(mountTrialPlayScreen);
+    await vi.advanceTimersByTimeAsync(COUNTDOWN);
+    const q = current();
+    const wrongDir = Object.keys(DIR_VECTORS).find((d) => d !== q.answer.dir);
+    const [dx, dy] = DIR_VECTORS[wrongDir];
+    drag(container.querySelector(`.trial-arrow-net [data-cell="${q.answer.cellId}"]`), dx * 30, dy * 30);
+    buttonByText(container, '決定').click();
+    expect(store.getTrialSession().state.lastResult).toMatchObject({ isCorrect: false, detail: { reason: 'direction' } });
+    await vi.advanceTimersByTimeAsync(TRIAL_RULES.splashMs + 10);
+    expect(container.querySelector('.trial-feedback__answer').textContent).toContain('向きがちがいます');
+    expect(container.querySelectorAll('.trial-arrow-net__wrong')).toHaveLength(1);
+    expect(container.querySelectorAll('.trial-arrow-net__answer')).toHaveLength(1);
+  });
+
   it('テンキー：数字・1文字消す・全消去。何も入れていないと決定できない。キーボードでも入力できる', () => {
     const onSubmit = vi.fn();
     const input = createNumberInput({ unit: '個', onSubmit });

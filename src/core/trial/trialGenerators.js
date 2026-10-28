@@ -1,16 +1,18 @@
 /**
- * トライアルの問題の作り方と判定（4種類をまとめる窓口。Three.js・DOM 非依存）
+ * トライアルの問題の作り方と判定（5種類をまとめる窓口。Three.js・DOM 非依存）
  */
 import { generateBlockCountQuestion, checkBlockCountAnswer } from './blockCountTrial.js';
 import { generateProjectionQuestion, checkProjectionAnswer } from './projectionTrial.js';
 import { generateDiceRollQuestion, checkDiceRollAnswer } from './diceRollTrial.js';
 import { generateNetPartitionQuestion, checkNetPartitionAnswer } from './netPartitionTrial.js';
+import { generateNetArrowQuestion, checkNetArrowAnswer } from './netArrowTrial.js';
 
 const MODES = {
   blockCount: { generate: generateBlockCountQuestion, check: checkBlockCountAnswer },
   projectionDraw: { generate: generateProjectionQuestion, check: checkProjectionAnswer },
   diceRoll: { generate: generateDiceRollQuestion, check: checkDiceRollAnswer },
   netPartition: { generate: generateNetPartitionQuestion, check: checkNetPartitionAnswer },
+  netArrow: { generate: generateNetArrowQuestion, check: checkNetArrowAnswer },
 };
 
 /** 問題を作る（difficulty：1〜4） */

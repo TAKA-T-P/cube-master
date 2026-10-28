@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { buildFoldTree, foldNet } from '../core/cubeNetFolding.js';
 import { getNetBounds, cellCorners, pointKey } from '../core/cubeNet.js';
 import { drawDecoration } from './faceDecoration.js';
+import { ARROW_DIRECTIONS } from '../core/trial/netArrowTrial.js';
 import { easeInOutCubic } from '../utils/easing.js';
 
 const PANEL_COLOR = '#e6f0fb';
@@ -19,6 +20,35 @@ const BACK_COLOR = 0xc5d3e3;
 const EDGE_COLOR = 0x1f4e9c;
 /** 平らな展開図を画面に収める半径 */
 const FLAT_RADIUS = 2.4;
+
+/**
+ * マスの中に矢印をかく（展開図のマスと同じ向き：キャンバスの右 = 展開図の右、下 = 展開図の下）
+ * @param {{ dir: string, color: string }} arrow dir は core/trial/netArrowTrial の8方向
+ */
+function drawArrow(ctx, { dir, color }) {
+  const d = ARROW_DIRECTIONS[dir];
+  if (!d) return;
+  const len = Math.hypot(d[0], d[1]);
+  const [ux, uy] = [d[0] / len, d[1] / len];
+  const half = 82;
+  const tip = [128 + ux * half, 128 + uy * half];
+  const tail = [128 - ux * half, 128 - uy * half];
+  const base = [tip[0] - ux * 58, tip[1] - uy * 58];
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 18;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(...tail);
+  ctx.lineTo(...base);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(...tip);
+  ctx.lineTo(base[0] - uy * 40, base[1] + ux * 40);
+  ctx.lineTo(base[0] + uy * 40, base[1] - ux * 40);
+  ctx.closePath();
+  ctx.fill();
+}
 
 export function createNetModel() {
   const root = new THREE.Group();
@@ -71,6 +101,7 @@ export function createNetModel() {
           ctx.fillStyle = color;
           ctx.fillRect(0, 0, 256, 256);
         }
+        for (const arrow of spec.cellArrows?.[cellId] ?? []) drawArrow(ctx, arrow);
         if (label) {
           ctx.fillStyle = '#1b2a41';
           ctx.font = 'bold 110px sans-serif';
@@ -108,7 +139,7 @@ export function createNetModel() {
     root,
     /**
      * 展開図を置く（null で消す）
-     * @param {{ cells, rootId?, cellLabels?, cellFaces?, cellColors?, points?: {x,y,color}[], segments?: {a,b,color}[] }|null} spec
+     * @param {{ cells, rootId?, cellLabels?, cellFaces?, cellColors?, cellArrows?: Record<string, {dir,color}[]>, points?: {x,y,color}[], segments?: {a,b,color}[] }|null} spec
      */
     set(spec) {
       clear();
@@ -214,14 +245,15 @@ export function createNetModel() {
     },
     getProgress: () => progress,
 
-    /** パネルの中心と表の向き（ワールド座標。テスト用） */
+    /** パネルの中心と表の向き、マスの右・下の向き（ワールド座標。テスト用） */
     getPanelPose(cellId) {
       const panel = panels.get(cellId);
       if (!panel) return null;
       root.updateMatrixWorld(true);
       const center = panel.getWorldPosition(new THREE.Vector3());
-      const normal = new THREE.Vector3(0, 1, 0).applyQuaternion(panel.getWorldQuaternion(new THREE.Quaternion()));
-      return { center, normal };
+      const q = panel.getWorldQuaternion(new THREE.Quaternion());
+      const normal = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
+      return { center, normal, right: new THREE.Vector3(1, 0, 0).applyQuaternion(q), down: new THREE.Vector3(0, 0, 1).applyQuaternion(q) };
     },
     getMarkerPositions() {
       root.updateMatrixWorld(true);

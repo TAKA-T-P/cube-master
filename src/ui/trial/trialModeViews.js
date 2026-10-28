@@ -1,5 +1,5 @@
 /**
- * トライアルの4種類ごとの画面の中身（問題の図・回答の入力・答え合わせの演出）
+ * トライアルの5種類ごとの画面の中身（問題の図・回答の入力・答え合わせの演出）
  *
  * createModeView(question, { onSubmit, notify }) が返すもの：
  *   figure    問題の図（見取図・サイコロの道・塗り分ける図形）
@@ -18,6 +18,7 @@ import { createGridPainter } from './gridPainter.js';
 import { createDiceAnswerInput } from './diceAnswerInput.js';
 import { createColorPalette, TRIAL_COLORS, ERASER } from './colorPalette.js';
 import { renderDiceBoard } from './trialVisuals.js';
+import { renderNetArrowSketch, createNetArrowInput, ARROW_COLORS } from './netArrowVisuals.js';
 import { BLOCK_VIEW_DIRECTION } from '../../core/blockGeometry.js';
 import { INITIAL_ORIENTATION } from '../../core/cubeOrientation.js';
 import { numberFaces } from '../../core/cubeFaceLabels.js';
@@ -239,7 +240,62 @@ function netPartitionView(q, { onSubmit, notify }) {
   };
 }
 
-const VIEWS = { blockCount: blockCountView, projectionDraw: projectionView, diceRoll: diceRollView, netPartition: netPartitionView };
+// ---------------- ⑤ 展開図に矢印を引け！ ----------------
+function netArrowView(q, { onSubmit }) {
+  let disabled = false;
+  const submit = h('button', { class: 'btn btn--primary trial-grid-tools__submit', type: 'button', disabled: true, onClick: () => onSubmit(input.getValue()) }, '決定');
+  const redo = button('かき直し', () => input.clear(), 'btn--small');
+  redo.disabled = true;
+  const input = createNetArrowInput(q, {
+    onChange: (v) => {
+      submit.disabled = disabled || !v;
+      redo.disabled = disabled || !v;
+    },
+  });
+  return {
+    figure: h('figure', { class: 'trial-figure__sketch' }, renderNetArrowSketch(q)),
+    input: h('div', { class: 'trial-arrow' }, h('div', { class: 'trial-arrow__net' }, input.el), h('div', { class: 'trial-grid-tools' }, redo, submit)),
+    setDisabled(v) {
+      disabled = v;
+      input.setDisabled(v);
+      submit.disabled = v || !input.getValue();
+      redo.disabled = v || !input.getValue();
+    },
+    answerText: (result) =>
+      result?.isCorrect ? '面も向きも合っています。' : result?.detail?.reason === 'direction' ? '面は合っていますが、向きがちがいます。正しい矢印を示しました。' : '青い矢印をかく面がちがいます。正しい面と向きを示しました。',
+    reveal({ result, viewer, show3D }) {
+      // 展開図に正しい青い矢印をかき（まちがいは灰色の点線で残す）、赤・青の矢印をかいた展開図を折りたたむ。
+      // 見取図と同じ基準のマス（rootId）で折るので、組み立てた立方体は見取図と同じ向きになる
+      input.showAnswer({ isCorrect: result.isCorrect });
+      if (!viewer) return Promise.resolve();
+      show3D({ keepFigure: true });
+      viewer.animations.cancel();
+      viewer.clearHighlights?.();
+      viewer.setBlocks(null);
+      viewer.setFaceDecorations(null);
+      viewer.setLabelsVisible(false);
+      viewer.setNet({
+        cells: q.cells,
+        rootId: q.rootId,
+        cellArrows: { [q.red.cellId]: [{ dir: q.red.dir, color: ARROW_COLORS.red }], [q.answer.cellId]: [{ dir: q.answer.dir, color: ARROW_COLORS.blue }] },
+      });
+      viewer.setCameraPreset([...DEFAULT_VIEW_DIRECTION], { animate: false });
+      // 青い矢印がうら側の面なら、折りたたんだあとにその面が見える向きへ回りこむ（見えない面の軸だけ、見る向きを反対にする）
+      const normal = q.frames[q.answer.cellId].outward;
+      const hidden = normal.some((n, i) => n !== 0 && n * DEFAULT_VIEW_DIRECTION[i] < 0);
+      const turn = hidden ? [{ type: 'camera', direction: DEFAULT_VIEW_DIRECTION.map((v, i) => (normal[i] !== 0 ? -v : v)), duration: 1000 }, { type: 'pause', ms: 600 }] : [{ type: 'pause', ms: 700 }];
+      return viewer.playQuestionReveal({
+        cameraPreset: [...DEFAULT_VIEW_DIRECTION],
+        steps: [{ type: 'pause', ms: 400 }, { type: 'fold', to: 1, duration: 2200 }, ...turn],
+      });
+    },
+    destroy() {},
+    /** テスト用：入力の部品 */
+    arrowInput: input,
+  };
+}
+
+const VIEWS = { blockCount: blockCountView, projectionDraw: projectionView, diceRoll: diceRollView, netPartition: netPartitionView, netArrow: netArrowView };
 
 export function createModeView(question, handlers) {
   const make = VIEWS[question.mode];

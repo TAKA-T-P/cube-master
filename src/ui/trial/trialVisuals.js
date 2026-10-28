@@ -10,6 +10,7 @@ import { numberFaces } from '../../core/cubeFaceLabels.js';
 import { INITIAL_ORIENTATION } from '../../core/cubeOrientation.js';
 import { DEFAULT_VIEW_DIRECTION } from '../../core/cubeConstants.js';
 import { projectBoardPoint, cellCenter } from '../../core/trial/diceRollTrial.js';
+import { renderNetArrowIcon } from './netArrowVisuals.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 function svg(tag, attrs = {}, ...children) {
@@ -118,6 +119,8 @@ export function renderTrialIcon(modeId) {
         ...layout.map(([x, y, c]) => svg('rect', { x: x * 20, y: y * 20, width: 20, height: 20, fill: colors[c], stroke: '#1b2a41', 'stroke-width': 1.2 })),
       );
     }
+    case 'netArrow':
+      return renderNetArrowIcon();
     default:
       return null;
   }

@@ -62,6 +62,75 @@
 }
 
 /* 「展開図を確認する」と、展開図 11 種類のポップアップ */
+/* ----- ⑤ 展開図に矢印を引け！ ----- */
+.trial-figure__sketch {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 360px;
+  margin: 0;
+}
+
+.trial-sketch {
+  width: 100%;
+  max-height: 32vh;
+}
+
+.trial-arrow {
+  display: grid;
+  gap: 8px;
+}
+
+.trial-arrow__net {
+  display: flex;
+  justify-content: center;
+}
+
+.trial-arrow-net {
+  width: min(100%, calc(var(--cols) * 58px), calc(30vh * var(--cols) / var(--rows)));
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.trial-arrow-net__cell {
+  fill: #fff;
+  stroke: #1b2a41;
+  stroke-width: 2;
+  cursor: crosshair;
+}
+
+.trial-arrow-net__cell--on {
+  fill: #eaf2ff;
+}
+
+.trial-arrow-net__cell--answer {
+  fill: #dbe9ff;
+}
+
+.trial-arrow-net--disabled .trial-arrow-net__cell {
+  cursor: default;
+}
+
+/* 答え合わせ：見取図と 3D は、正解でも左右に並べる（下の展開図が画面に収まるように） */
+.trial-play--netArrow.trial-play--correct .trial-stage--split {
+  flex-direction: row;
+}
+
+.trial-play--netArrow .trial-stage--split .trial-figure,
+.trial-play--netArrow .trial-stage--split .trial-viewport,
+.trial-play--netArrow.trial-play--correct .trial-stage--split .trial-figure,
+.trial-play--netArrow.trial-play--correct .trial-stage--split .trial-viewport {
+  flex: 1 1 0;
+  width: auto;
+  height: min(30vh, 260px);
+}
+
+.trial-play--netArrow .trial-stage--split .trial-sketch,
+.trial-play--netArrow.trial-play--correct .trial-stage--split .trial-figure svg {
+  max-height: min(30vh, 260px);
+}
+
 /* 「展開図に分けろ！」のお知らせは、「全消去」「決定」の下の中央に */
 .trial-play--netPartition .trial-notice {
   text-align: center;
