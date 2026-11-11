@@ -1,5 +1,5 @@
 /**
- * 展開図パズルの問題テンプレート（C01〜C06）
+ * 展開図パズルの問題テンプレート（C01〜C07）
  *
  * 立方体になるかどうかは、すべて折りたたみ計算（core/cubeNetFolding）で決める。
  * 種類が同じかどうかは、回転・裏返し・平行移動をそろえたキー（getCanonicalNetKey）で比べる。
@@ -29,7 +29,7 @@ export const NET_PUZZLE_TEMPLATES = [
   // ---------------- ★1 きほん ----------------
   {
     id: 'C01',
-    difficulty: 1,
+    difficulty: 2,
     title: '立方体になる展開図',
     bases: () => [1, 2, 3].flatMap((k) => [...Array(6).keys()].map((v) => ({ key: `${k}-${v}`, refs: [], k, group: `${k}` }))),
     build(base, rng) {
@@ -56,7 +56,7 @@ export const NET_PUZZLE_TEMPLATES = [
   },
   {
     id: 'C02',
-    difficulty: 1,
+    difficulty: 2,
     title: 'あと1マスを加える',
     bases: () => netBases(2),
     build(base, rng) {
@@ -89,7 +89,7 @@ export const NET_PUZZLE_TEMPLATES = [
   // ---------------- ★2 標準 ----------------
   {
     id: 'C03',
-    difficulty: 2,
+    difficulty: 3,
     title: '不要な1マス',
     bases: () => netBases(2),
     build(base, rng) {
@@ -119,7 +119,7 @@ export const NET_PUZZLE_TEMPLATES = [
   },
   {
     id: 'C04',
-    difficulty: 2,
+    difficulty: 3,
     title: '1マスを移動する',
     bases: () => netBases(2),
     build(base, rng) {
@@ -159,7 +159,7 @@ export const NET_PUZZLE_TEMPLATES = [
   // ---------------- ★3 チャレンジ ----------------
   {
     id: 'C05',
-    difficulty: 3,
+    difficulty: 1,
     title: '同じ種類の展開図',
     bases: () => netBases(2),
     build(base, rng) {
@@ -182,7 +182,7 @@ export const NET_PUZZLE_TEMPLATES = [
   },
   {
     id: 'C06',
-    difficulty: 3,
+    difficulty: 1,
     title: '異なる種類の展開図',
     // 向きのちがう形が4つ以上ある種類だけを使う
     bases: () => netBases(2).filter((b) => distinctOrientations(CUBE_NETS.find((n) => n.id === b.netId).cells).length >= 4),
@@ -200,6 +200,32 @@ export const NET_PUZZLE_TEMPLATES = [
         correctAnswers: ['odd'],
         explanation: X.explainOddNet(),
         net: foldSpec(odd),
+      });
+    },
+  },
+  {
+    id: 'C07',
+    difficulty: 1,
+    title: '立方体になる展開図を1つ選ぶ',
+    // C01 の1つだけ答えるもの（展開図は1つ、ほかの3つは立方体にならない図）
+    bases: () => CUBE_NETS.map((n) => ({ key: n.id, refs: [], netId: n.id, group: n.group })),
+    build(base, rng) {
+      const valid = randomOrientation(CUBE_NETS.find((n) => n.id === base.netId).cells, rng);
+      const invalid = sample(NON_CUBE_HEXOMINOES, 3, rng).map((h) => randomOrientation(h.cells, rng));
+      const choices = [
+        figureChoice('net-0', netVisual(valid), '立方体の展開図'),
+        ...invalid.map((cells, i) => figureChoice(`not-${i}`, netVisual(cells, { conflicts: foldNet(cells).problemCells }), '立方体の展開図ではない')),
+      ];
+      return assembleNetQuestion(this, base, NET_PUZZLE_CATEGORY, {
+        type: 'single',
+        question: '立方体の展開図になるものを1つ選びなさい。',
+        choices,
+        correctAnswers: ['net-0'],
+        explanation: X.explainWhichAreNets(
+          ['net-0'],
+          invalid.map((_, i) => `not-${i}`),
+        ),
+        net: foldSpec(valid),
       });
     },
   },

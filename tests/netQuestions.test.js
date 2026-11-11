@@ -35,8 +35,8 @@ describe('カテゴリとテンプレート', () => {
   it('2カテゴリと N01〜N06・C01〜C06', () => {
     expect(getCategory('netMapping')).toMatchObject({ name: '展開図と頂点・辺', enabled: true });
     expect(getCategory('netPuzzle')).toMatchObject({ name: '展開図パズル', enabled: true });
-    expect(NET_MAPPING_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['N01:1', 'N02:1', 'N03:2', 'N04:2', 'N05:3', 'N06:3']);
-    expect(NET_PUZZLE_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['C01:1', 'C02:1', 'C03:2', 'C04:2', 'C05:3', 'C06:3']);
+    expect(NET_MAPPING_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['N01:2', 'N02:1', 'N03:1', 'N04:2', 'N05:3', 'N06:3']);
+    expect(NET_PUZZLE_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['C01:2', 'C02:2', 'C03:3', 'C04:3', 'C05:1', 'C06:1', 'C07:1']);
   });
 });
 
@@ -223,6 +223,21 @@ describe('出題のバランス', () => {
         const picker = new QuestionPicker({ templates, difficulty, rng: createRng(4) });
         for (let i = 0; i < 60; i++) expect(getQuestionErrors(picker.next())).toEqual([]);
       }
+    }
+  });
+});
+
+describe('C07：立方体になる展開図を1つ選ぶ', () => {
+  it('★1・1つ選ぶ問題。展開図はちょうど1つで、それが正解。11種類の展開図がすべて出る', async () => {
+    const { foldNet } = await import('../src/core/cubeNetFolding.js');
+    const t = NET_PUZZLE_TEMPLATES.find((x) => x.id === 'C07');
+    expect(t.difficulty).toBe(1);
+    expect(t.bases()).toHaveLength(11);
+    for (const [i, base] of t.bases().entries()) {
+      const q = t.build(base, createRng(i + 1));
+      expect(q.type).toBe('single');
+      const valid = q.choices.filter((c) => foldNet(c.visual.cells).valid).map((c) => c.id);
+      expect(valid).toEqual(q.correctAnswers);
     }
   });
 });

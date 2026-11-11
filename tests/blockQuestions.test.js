@@ -55,13 +55,16 @@ describe.each(PROJECTION_TEMPLATES.map((t) => [t.id]))('%s 共通', (id) => {
     }
   });
 
-  it('正解は選択肢に1つだけ含まれ、選択肢の ID・図が重ならない', () => {
+  it('正解は選択肢に含まれ（V06 だけは複数回答で2つか3つ、ほかは1つ）、選択肢の ID・図が重ならない', () => {
     for (const q of questionsOf(id)) {
       const ids = q.choices.map((c) => c.id);
       expect(ids).toHaveLength(4);
       expect(new Set(ids).size).toBe(4);
-      expect(q.correctAnswers).toHaveLength(1);
-      expect(ids).toContain(q.correctAnswers[0]);
+      if (id === 'V06') {
+        expect(q.type).toBe('multiple');
+        expect([2, 3]).toContain(q.correctAnswers.length);
+      } else expect(q.correctAnswers).toHaveLength(1);
+      for (const a of q.correctAnswers) expect(ids).toContain(a);
     }
   });
 
@@ -153,15 +156,19 @@ describe('3方向の図から立体を推理（V05）', () => {
   });
 });
 
-describe('ありえない投影図（V06）', () => {
-  it('積み木と合わない図は1つだけで、それが正解', () => {
+describe('正しい投影図をすべて選ぶ（V06）', () => {
+  it('積み木と合う図がすべて正解（2つか3つ）で、合わない図（1つか2つ）は正解に入らない', () => {
+    const wrongCounts = new Set();
     for (const q of questionsOf('V06')) {
-      const wrong = q.choices.filter((c) => getShapeKey(c.visual.projection) !== getShapeKey(getProjection(q.scene.blocks, c.id)));
-      expect(wrong.map((c) => c.id)).toEqual(q.correctAnswers);
+      const fits = q.choices.filter((c) => getShapeKey(c.visual.projection) === getShapeKey(getProjection(q.scene.blocks, c.id)));
+      expect(fits.map((c) => c.id).sort()).toEqual([...q.correctAnswers].sort());
+      wrongCounts.add(4 - fits.length);
+      expect(q.question).toContain('正しい図をすべて選びなさい');
       // 図には見た方向を書いてある
       for (const c of q.choices) expect(c.visual.caption).toMatch(/見た図$/);
-      expect(q.explanation.reveal.steps[0].direction).toEqual(STRAIGHT_VIEWS[q.correctAnswers[0]]);
+      expect(q.explanation.reveal.steps.filter((st) => st.type === 'camera')).toHaveLength(4);
     }
+    expect([...wrongCounts].sort()).toEqual([1, 2]);
   });
 });
 

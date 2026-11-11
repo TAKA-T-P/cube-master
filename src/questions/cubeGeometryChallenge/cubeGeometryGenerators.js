@@ -394,7 +394,7 @@ export const GEOMETRY_TEMPLATES = [
   // ---------------- ★3 応用 ----------------
   {
     id: 'G05',
-    difficulty: 3,
+    difficulty: 2,
     title: '立方体の中の角度',
     // 頂点だけの角は、辺どうし・辺と面の対角線・面の対角線どうしの性質で判断できる。中点・面の中心をふくむと三平方の定理が要る
     advanced: 'sometimes',

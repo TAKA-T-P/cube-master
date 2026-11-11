@@ -173,7 +173,7 @@ export const PAINTED_CUBE_TEMPLATES = [
   },
   {
     id: 'B02',
-    difficulty: 1,
+    difficulty: 2,
     title: '2面に色がつく小立方体',
     bases: () => sizes([3, 4]),
     build(base) {
@@ -201,7 +201,7 @@ export const PAINTED_CUBE_TEMPLATES = [
   },
   {
     id: 'B05',
-    difficulty: 2,
+    difficulty: 3,
     title: '一部の面だけ着色',
     bases: partialBases,
     build(base) {
@@ -252,7 +252,7 @@ export const PAINTED_CUBE_TEMPLATES = [
   },
   {
     id: 'B07',
-    difficulty: 3,
+    difficulty: 2,
     title: '小立方体を取り除く',
     bases: () => [3, 4].flatMap((n) => removalPlans(n).map((p) => ({ key: `${p.key}-n${n}`, refs: [], plan: p.key, n, group: p.key }))),
     build(base) {

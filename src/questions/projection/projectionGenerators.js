@@ -63,13 +63,13 @@ const blocksVisual = (cubes, arrows = [], caption) => ({
 const projectionVisual = (projection, caption) => ({ type: 'projection', projection, ...(caption ? { caption } : {}) });
 
 /** 問題オブジェクトを組み立てる（id はエンジンが付ける） */
-function assemble(template, base, { question, cubes, arrows, preview, visuals = [], choices, correctAnswers, explanation, steps }) {
+function assemble(template, base, { question, cubes, arrows, preview, visuals = [], choices, correctAnswers, explanation, steps, type = 'single' }) {
   return {
     templateId: template.id,
     key: `${template.id}:${base.key}`,
     category: PROJECTION_CATEGORY,
     difficulty: template.difficulty,
-    type: 'single',
+    type,
     question,
     visuals,
     scene: {
@@ -339,25 +339,27 @@ export const PROJECTION_TEMPLATES = [
   {
     id: 'V06',
     difficulty: 3,
-    title: 'ありえない投影図',
-    bases: () => [...Array(12).keys()].map((v) => ({ key: `${v}`, refs: [] })),
+    title: '正しい投影図をすべて選ぶ',
+    // まちがった図の数（1つ・2つ）でグループに分ける
+    bases: () => [1, 2].flatMap((n) => [...Array(6).keys()].map((v) => ({ key: `${n}-${v}`, refs: [], group: `${n}`, wrongCount: n }))),
     build(base, rng) {
       const { cubes } = makeBlocks(rng, 3);
       const directions = ['front', 'right', 'top', pick(['left', 'back'], rng)];
-      const wrongDir = pick(directions, rng);
-      const mistakes = wrongDir === 'top' ? topViewMistakes(cubes) : sideViewMistakesFor(cubes, wrongDir);
-      const mistake = mistakes[0];
+      const wrongDirs = shuffle(directions, rng).slice(0, base.wrongCount ?? 1);
+      const mistakes = Object.fromEntries(wrongDirs.map((d) => [d, (d === 'top' ? topViewMistakes(cubes) : sideViewMistakesFor(cubes, d))[0]]));
       const choices = directions.map((d) =>
-        figureChoice(d, projectionVisual(d === wrongDir ? mistake.projection : getProjection(cubes, d), `${VIEW_FROM[d]}見た図`), `${VIEW_FROM[d]}見た図`),
+        figureChoice(d, projectionVisual(mistakes[d] ? mistakes[d].projection : getProjection(cubes, d), `${VIEW_FROM[d]}見た図`), `${VIEW_FROM[d]}見た図`),
       );
+      const correct = directions.filter((d) => !mistakes[d]);
       return assemble(this, base, {
-        question: 'この積み木について、ありえない図はどれですか。',
+        type: 'multiple',
+        question: 'この積み木を、それぞれの方向から見た図です。正しい図をすべて選びなさい。',
         cubes,
         arrows: [],
         choices,
-        correctAnswers: [wrongDir],
-        explanation: X.explainImpossibleView(wrongDir, mistake.reason),
-        steps: [{ type: 'camera', direction: STRAIGHT_VIEWS[wrongDir] }],
+        correctAnswers: correct,
+        explanation: X.explainCorrectViews(correct, wrongDirs.map((d) => ({ direction: d, reason: mistakes[d].reason }))),
+        steps: [...directions.map((d) => ({ type: 'camera', direction: STRAIGHT_VIEWS[d] }))],
       });
     },
   },

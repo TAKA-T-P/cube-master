@@ -48,7 +48,7 @@ const askedOf = (q) => ASKED[Object.keys(ASKED).find((k) => q.question.includes(
 
 describe('D01〜D06 の生成', () => {
   it('テンプレートと難易度', () => {
-    expect(DICE_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['D01:1', 'D02:1', 'D03:2', 'D04:2', 'D05:3', 'D06:3']);
+    expect(DICE_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['D01:1', 'D02:2', 'D03:1', 'D04:2', 'D05:3', 'D06:3']);
     expect(PROJECTION_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['V01:1', 'V02:1', 'V03:2', 'V04:2', 'V05:3', 'V06:3']);
   });
 

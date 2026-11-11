@@ -44,6 +44,8 @@ const findTemplate = (id) => {
 
 /** そのテンプレートが1分チャレンジ・段位認定で出題されるか */
 function modesOf(category, template) {
+  // 問題ライブラリの見直しで出題をやめたテンプレート（図鑑では確かめられる）
+  if (template.retired) return '出題しない';
   const challenge = !CHALLENGE_RULES.excludedTemplates.includes(template.id) && isTemplateAvailable(template, false);
   const cert =
     CERTIFICATION_RULES.categories.includes(category.id) && !CERTIFICATION_RULES.excludedTemplates.includes(template.id) && isTemplateAvailable(template, false);
@@ -92,7 +94,7 @@ export function mountTemplateCatalogScreen(container, { navigate, params }) {
         { class: 'catalog-row', dataset: { template: t.id }, tabindex: '0', onClick: () => open(t.id), onKeydown: (e) => e.key === 'Enter' && open(t.id) },
         h('td', { class: 'catalog-id' }, t.id),
         h('td', {}, '★'.repeat(t.difficulty)),
-        h('td', { class: 'catalog-title' }, t.title),
+        h('td', { class: 'catalog-title' }, t.retired ? `${t.title}（出題しない）` : t.title),
         cells.type,
         h('td', {}, ADVANCED_LABELS[t.advanced] ?? '—'),
         cells.bases,

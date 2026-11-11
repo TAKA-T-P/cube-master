@@ -19,10 +19,8 @@ const EXPECTED_CORRECT_COUNT = { P01: 3, P02: 4, P03: 1, P04: 4, P05: 2, P06: 2,
 describe('位置関係テンプレート P01〜P15', () => {
   it('15種類あり、難易度の割り当てが仕様どおり', () => {
     expect(POSITION_TEMPLATES.map((t) => t.id)).toEqual(Array.from({ length: 15 }, (_, i) => `P${String(i + 1).padStart(2, '0')}`));
-    for (const t of POSITION_TEMPLATES) {
-      const n = Number(t.id.slice(1));
-      expect(t.difficulty).toBe(n <= 5 ? 1 : n <= 10 ? 2 : 3);
-    }
+    // P04・P08・P10・P15 は、問題ライブラリで難易度を見直した（P04 ★→★★・P08 ★★→★★★・P10 ★★→★・P15 ★★★→★★）
+    expect(POSITION_TEMPLATES.map((t) => t.difficulty)).toEqual([1, 1, 1, 2, 1, 2, 2, 3, 2, 1, 3, 3, 3, 3, 2]);
   });
 
   describe.each(POSITION_TEMPLATES.map((t) => [t.id, t]))('%s', (id, template) => {
@@ -94,12 +92,21 @@ describe('正解が数学的な関係と一致する', () => {
     expect([...relations].sort()).toEqual(['intersecting', 'parallel', 'skew']);
   });
 
-  it('P11：隣り合う2面に共通して垂直な辺はない・向かい合う2面には4本ある', () => {
+  it('P11：何本あるかを答える。隣り合う2面に共通して垂直な辺は0本・向かい合う2面には4本', () => {
     for (const { base, q } of allQuestions(byId.P11)) {
       const adjacent = R.areFacesPerpendicular(base.f, base.g);
-      expect(q.correctAnswers).toEqual([adjacent ? 'none' : 'exists']);
+      expect(q.question).toContain('何本ありますか');
+      expect(q.choices.map((c) => c.label)).toEqual(['0本', '1本', '2本', '4本']);
+      expect(q.correctAnswers).toEqual([adjacent ? 'n0' : 'n4']);
     }
-    expect(byId.P11.build({ key: 'x', refs: ['ABCD', 'ABFE'], f: 'ABCD', g: 'ABFE' }, rng).correctAnswers).toEqual(['none']);
+    expect(byId.P11.build({ key: 'x', refs: ['ABCD', 'ABFE'], f: 'ABCD', g: 'ABFE' }, rng).correctAnswers).toEqual(['n0']);
+  });
+
+  it('P12：答えはいつも1つなので「1つ選ぶ」問題', () => {
+    for (const { q } of allQuestions(byId.P12)) {
+      expect(q.type).toBe('single');
+      expect(q.correctAnswers).toHaveLength(1);
+    }
   });
 
   it('P12：両方の辺と平行な面（なければ「あてはまる面はない」）', () => {

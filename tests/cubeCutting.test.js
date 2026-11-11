@@ -334,3 +334,38 @@ describe('切断の 3D モデルと演出', () => {
     cutting.dispose();
   });
 });
+
+describe('問題ライブラリの見直し（K03・K05・K07）', () => {
+  it('K03：まちがいの図は、正解と明らかにちがう形（相似の判定を大きくゆるめても似ていない）。正解と同じ角の数の図は1つまで', async () => {
+    const { CUTTING_TEMPLATES, similarShapes } = await import('../src/questions/cubeCutting/cubeCuttingGenerators.js');
+    const t = CUTTING_TEMPLATES.find((x) => x.id === 'K03');
+    const bases = t.bases();
+    for (let i = 0; i < bases.length; i += 7) {
+      const q = t.build(bases[i], createRng(i + 1));
+      const correct = q.choices.find((c) => c.id === 'fig0').visual.points;
+      const wrong = q.choices.filter((c) => c.id !== 'fig0').map((c) => c.visual.points);
+      expect(wrong).toHaveLength(3);
+      for (const w of wrong) expect(similarShapes(correct, w, 0.12), q.key).toBe(false);
+      expect(wrong.filter((w) => w.length === correct.length).length, q.key).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('K05 は出題しない（テンプレートは残す）。K07：小さいほうの立体は立方体の何分の1か（★3・K06 と同じ切り口）', async () => {
+    const { CUTTING_TEMPLATES } = await import('../src/questions/cubeCutting/cubeCuttingGenerators.js');
+    const { getTemplates } = await import('../src/questions/questionRegistry.js');
+    expect(CUTTING_TEMPLATES.find((x) => x.id === 'K05').retired).toBe(true);
+    expect(getTemplates('cubeCutting').map((x) => x.id)).not.toContain('K05');
+    const t = CUTTING_TEMPLATES.find((x) => x.id === 'K07');
+    expect(t.difficulty).toBe(3);
+    const bases = t.bases();
+    expect(bases.length).toBeGreaterThan(0);
+    for (let i = 0; i < bases.length; i += 11) {
+      const q = t.build(bases[i], createRng(i + 1));
+      const { pieces } = getSplit(allCuts().find((c) => c.key === bases[i].key));
+      const small = pieces.map((p) => p.volume).sort((a, b) => a.cmp(b))[0];
+      const ratio = small.div(8);
+      expect(q.choices.find((c) => c.id === 'answer').label).toBe(`${ratio.d}分の${ratio.n}`);
+      expect(new Set(q.choices.map((c) => c.label)).size).toBe(4);
+    }
+  });
+});

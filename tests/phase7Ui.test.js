@@ -105,7 +105,7 @@ describe('問題画面', () => {
   });
 
   it('切断・最短経路の問題も、保存した形（JSON）から同じ問題を作り直せる（復習用）', () => {
-    for (const id of ['K01', 'K02', 'K03', 'K04', 'K05', 'K06', 'S01', 'S02', 'S03', 'S04', 'S05', 'S06']) {
+    for (const id of ['K01', 'K02', 'K03', 'K04', 'K06', 'K07', 'S01', 'S02', 'S03', 'S04', 'S05', 'S06']) {
       const q = sample(id, 12);
       const copy = snapshotQuestion(q);
       expect(copy).toEqual(q);
@@ -193,7 +193,7 @@ describe('1分チャレンジ・段位認定', () => {
     const session = new TimedChallengeSession({ category: 'cubeCutting', templates: getTemplates('cubeCutting'), difficulty: 1, rules, rng: createRng(1), now: () => 0 });
     for (let i = 0; i < 6; i++) {
       const q = session.nextQuestion();
-      expect(q.templateId).toBe('K02');
+      expect(q.templateId).toBe('K03');
       session.startAnswering?.();
       session.submit(q.correctAnswers);
     }

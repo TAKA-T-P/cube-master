@@ -53,9 +53,9 @@ export const CATEGORIES = Object.freeze([
     enabled: true,
     templates: [...PAINTED_CUBE_TEMPLATES, ...BLOCK_COUNT_TEMPLATES],
     levelNotes: [
-      '基本：3面・2面に色がつく小立方体・積み木は全部で何個',
-      '標準：1面だけ・色がつかない・一部の面だけ塗る・見えない積み木・段ごとの個数',
-      '応用：条件の組み合わせ・取り除く・分けた数の逆算・完成形まであと何個',
+      '基本：3面に色がつく小立方体・積み木は全部で何個',
+      '標準：2面・1面だけ・色がつかない小立方体・取り除く・見えない積み木・段ごとの個数',
+      '応用：一部の面だけ塗る・条件の組み合わせ・分けた数の逆算・完成形まであと何個',
     ],
   },
   // ② サイコロ・回転
@@ -66,7 +66,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学4年生以上',
     enabled: true,
     templates: withHints(DICE_TEMPLATES),
-    levelNotes: ['基本：1回転がしたときの上の面・向かい合う面', '標準：見えなかった面・2回転', '応用：同じサイコロ探し・3回転'],
+    levelNotes: ['基本：1回転がしたときの上の面・見えなかった面', '標準：向かい合う面・2回転', '応用：同じサイコロ探し・3回転'],
   },
   // ③ 積み木の見え方・投影図
   {
@@ -76,7 +76,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学4年生～中学2年生',
     enabled: true,
     templates: withHints(PROJECTION_TEMPLATES),
-    levelNotes: ['基本：矢印の方向・真上から見た形', '標準：正面図と右側面図・列の高さ', '応用：3方向の図から立体を推理・ありえない図'],
+    levelNotes: ['基本：矢印の方向・真上から見た形', '標準：正面図と右側面図・列の高さ', '応用：3方向の図から立体を推理・正しい投影図をすべて選ぶ'],
   },
   // ④ 展開図パズル
   {
@@ -86,7 +86,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学4年生～中学1年生',
     enabled: true,
     templates: withHints(NET_PUZZLE_TEMPLATES),
-    levelNotes: ['基本：立方体になる展開図・あと1マス', '標準：いらない1マス・1マスを動かす', '応用：同じ種類・ちがう種類の展開図'],
+    levelNotes: ['基本：立方体になる展開図を1つ選ぶ・同じ種類・ちがう種類の展開図', '標準：立方体になる展開図をすべて選ぶ・あと1マス', '応用：いらない1マス・1マスを動かす'],
   },
   // ⑤ 展開図と頂点・辺
   {
@@ -96,7 +96,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学5年生～中学1年生',
     enabled: true,
     templates: withHints(NET_MAPPING_TEMPLATES),
-    levelNotes: ['基本：重なる点・向かい合う面', '標準：重なる辺・となり合う面', '応用：完成した立方体・点と辺の組み合わせ'],
+    levelNotes: ['基本：向かい合う面・重なる辺', '標準：重なる点・となり合う面', '応用：完成した立方体・点と辺の組み合わせ'],
   },
   // ⑥ 立方体の切断
   {
@@ -106,7 +106,7 @@ export const CATEGORIES = Object.freeze([
     grades: '中学1年生～中学3年生',
     enabled: true,
     templates: CUTTING_TEMPLATES,
-    levelNotes: ['基本：切り口は何角形・切り口が通る辺', '標準：切り口の形の図・中点を通る切り口の形', '応用：切り口の面積・切り分けた立体の体積'],
+    levelNotes: ['基本：切り口は何角形・切り口の形の図', '標準：切り口が通る辺・中点を通る切り口の形', '応用：切り分けた立体の体積・切り分けた立体は立方体の何分の1'],
   },
   // ⑦ 位置関係
   {
@@ -116,7 +116,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学6年生～中学1年生',
     enabled: true,
     templates: withPrerequisites(withHints(POSITION_TEMPLATES), { P08: [PREREQUISITES.SKEW_LINES], P10: [PREREQUISITES.SKEW_LINES], P13: [PREREQUISITES.SKEW_LINES] }),
-    levelNotes: ['基本：辺と辺・面と面の平行・垂直など', '標準：辺と面の関係・ねじれの位置', '応用：2つの条件を組み合わせた問題'],
+    levelNotes: ['基本：辺と辺の平行・交わる・2本の辺の位置関係、面と面の平行など', '標準：面と垂直な面・辺と面の関係・辺と面の位置関係の説明', '応用：ねじれの位置・2つの面に垂直な辺の本数・2つの条件を組み合わせた問題'],
   },
   // ⑧ 立方体に内接する立体と体積
   {
@@ -126,7 +126,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学5年生～中学3年生',
     enabled: true,
     templates: INSCRIBED_TEMPLATES,
-    levelNotes: ['基本：点を結んでできる立体の名前・面の中心を結んだ立体', '標準：角すいの体積・正八面体と立方体の体積比', '応用：4つの頂点の四面体の体積・取り除いた残りの体積'],
+    levelNotes: ['基本：点を結んでできる立体の名前・正八面体や正四面体', '標準：角すいの体積', '応用：正八面体の体積・4つの頂点の四面体の体積・角すいは立方体の何分の1'],
   },
   // ⑨ 立方体に隠れた図形・長さ・角度
   {
@@ -136,7 +136,7 @@ export const CATEGORIES = Object.freeze([
     grades: '小学5年生～中学3年生',
     enabled: true,
     templates: GEOMETRY_TEMPLATES,
-    levelNotes: ['基本：面の対角線・立方体の対角線を探す', '標準：対角線の長さ・3つの点を結んだ三角形の形', '応用：立方体の中の角度・三角形の面積'],
+    levelNotes: ['基本：面の対角線・立方体の対角線を探す', '標準：対角線の長さ・3つの点を結んだ三角形の形・立方体の中の角度', '応用：三角形の面積'],
   },
   // ⑩ 立方体の表面の最短経路
   {
@@ -156,9 +156,13 @@ const CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', 
 /** 画面に出すカテゴリの番号（①〜⑩。並び順から決める） */
 export const categoryNumber = (id) => CIRCLED[CATEGORIES.findIndex((c) => c.id === id)] ?? '';
 
-/** 遊べるカテゴリのテンプレート（難易度で絞り込み） */
+/**
+ * 遊べるカテゴリのテンプレート（難易度で絞り込み）
+ * retired: true のテンプレート（問題ライブラリで出題をやめたもの）は、ドリルモード・1分チャレンジ・段位認定に出さない。
+ * テンプレート自体は残すので、保存してある復習の問題は解き直せ、問題テンプレート図鑑でも確かめられる
+ */
 export function getTemplates(categoryId, difficulty = 'all') {
   const category = getCategory(categoryId);
   if (!category?.enabled) return [];
-  return category.templates.filter((t) => difficulty === 'all' || t.difficulty === difficulty);
+  return category.templates.filter((t) => !t.retired && (difficulty === 'all' || t.difficulty === difficulty));
 }

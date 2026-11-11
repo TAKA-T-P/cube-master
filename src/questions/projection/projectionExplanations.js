@@ -31,6 +31,11 @@ export const explainThreeViews = () =>
   '3つの図すべてに合う積み木は1つだけです。ほかの積み木は、どれかの図が合いません。';
 
 /** ありえない図 */
+/** V06：正しい投影図をすべて選ぶ */
+export const explainCorrectViews = (correct, wrongs) =>
+  `正しいのは、${correct.map((d) => `${PROJECTION_NAMES[d]}（${VIEW_FROM[d]}見た図）`).join('・')}です。` +
+  wrongs.map((w) => `${PROJECTION_NAMES[w.direction]}（${VIEW_FROM[w.direction]}見た図）は、この積み木と合いません。${w.reason}`).join('');
+
 export const explainImpossibleView = (direction, reason) =>
   `${PROJECTION_NAMES[direction]}（${VIEW_FROM[direction]}見た図）が、この積み木とは合いません。${reason}` +
   'ほかの3つの図は、この積み木をその方向から見た形と一致します。';

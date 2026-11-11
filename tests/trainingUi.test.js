@@ -142,7 +142,7 @@ describe('カテゴリ選択・設定画面', () => {
     expect(q.parentElement.textContent).toContain('難易度');
     q.click();
     const dialog = document.querySelector('.dialog');
-    expect([...dialog.querySelectorAll('li')].map((li) => li.textContent)).toEqual(['基本：辺と辺・面と面の平行・垂直など', '標準：辺と面の関係・ねじれの位置', '応用：2つの条件を組み合わせた問題']);
+    expect([...dialog.querySelectorAll('li')].map((li) => li.textContent)).toEqual(['基本：辺と辺の平行・交わる・2本の辺の位置関係、面と面の平行など', '標準：面と垂直な面・辺と面の関係・辺と面の位置関係の説明', '応用：ねじれの位置・2つの面に垂直な辺の本数・2つの条件を組み合わせた問題']);
     buttonByText(dialog, '閉じる').click();
     expect(document.querySelector('.dialog')).toBeNull();
     const range = container.querySelector('input[type="range"]');
@@ -739,7 +739,7 @@ describe('問題画面（展開図）', () => {
   });
 
   it('展開図パズル：解説の選択肢の記号が置きかわり、立方体にならない図の重なるマスは回答後に示す', () => {
-    start({ category: 'netPuzzle', difficulty: 1 });
+    start({ category: 'netPuzzle', difficulty: 2 });
     let q = currentQuestion();
     for (let i = 0; i < 5 && q.templateId !== 'C01'; i++) {
       answer(container);
@@ -762,7 +762,7 @@ describe('問題画面（展開図）', () => {
   });
 
   it('サイコロのはじめの向きの図には「上・前・右」が書いてある', () => {
-    start({ category: 'dice', difficulty: 2 });
+    start({ category: 'dice', difficulty: 1 });
     const figure = container.querySelector('.quiz-figures svg');
     expect([...figure.querySelectorAll('[data-direction-label]')].map((t) => t.textContent).sort()).toEqual(['上', '前', '右'].sort());
   });

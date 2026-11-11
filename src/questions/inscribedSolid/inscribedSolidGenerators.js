@@ -37,6 +37,32 @@ const realVolume = (poly, s) => calculatePolyhedronVolume(poly).mul(new Q(s * s 
 /** 問題で使う立方体の1辺の長さ（cm）。計算しやすい1けたの値だけ */
 const SIDES = Object.freeze([3, 6, 9]);
 
+/** 有限の小数で表せる数（4.5 など）を、小数で書く */
+export function decimalText(q) {
+  if (q.d === 1) return `${q.n}`;
+  let d = q.d;
+  while (d % 2 === 0) d /= 2;
+  while (d % 5 === 0) d /= 5;
+  if (d !== 1) return `${q}`;
+  return String(Number((q.n / q.d).toFixed(6)));
+}
+
+/** 小数（4.5cm³ など）もふくむ体積の選択肢（正解 + まちがい3つ。正の数・有限の小数・重複なし） */
+function decimalVolumeChoices(answer, candidates, rng) {
+  const ok = (x) => x.sign() > 0 && (x.d === 1 || decimalText(x) !== `${x}`);
+  const list = [answer];
+  for (const c of candidates) if (list.length < 4 && ok(c) && !list.some((y) => y.eq(c))) list.push(c);
+  for (let k = 2; list.length < 4 && k < 20; k++) if (!list.some((y) => y.eq(answer.mul(k)))) list.push(answer.mul(k));
+  return list.map((x, i) => ({ id: i === 0 ? 'answer' : `d${i}`, label: `${decimalText(x)}cm³` }));
+}
+
+/** 何分の1かの選択肢（正解 + まちがい3つ） */
+function fractionChoices(answer, rng) {
+  const pool = [2, 3, 4, 6, 8, 12, 24].map((n) => new Q(1, n)).filter((x) => !x.eq(answer));
+  const label = (q) => `${q.d}分の${q.n}`;
+  return [answer, ...shuffle(pool, rng).slice(0, 3)].map((q, i) => ({ id: i === 0 ? 'answer' : `d${i}`, label: label(q) }));
+}
+
 function chooseSide(candidates, ok, rng) {
   const list = candidates.filter(ok);
   if (list.length === 0) return null;
@@ -221,9 +247,33 @@ export const INSCRIBED_TEMPLATES = [
   {
     id: 'I02',
     difficulty: 1,
-    title: '6つの面の中心を結んでできる立体',
-    bases: () => [0, 1, 2, 3].map((v) => ({ key: `v${v}`, refs: [], group: undefined })),
+    title: '点を結んでできる立体（正八面体・正四面体）',
+    // 6つの面の中心を結ぶ正八面体と、立方体の4つの頂点を結ぶ正四面体
+    bases: () => [
+      ...[0, 1].map((v) => ({ key: `oct-${v}`, refs: [], group: 'octahedron', solid: 'octahedron' })),
+      ...tetraCandidates()
+        .filter((c) => c.regular)
+        .map((c) => ({ key: `tet-${c.key}`, refs: c.points.map(pointKey), group: 'tetrahedron', solid: 'tetrahedron', tetraKey: c.key })),
+    ],
     build(base, rng) {
+      if (base.solid === 'tetrahedron') {
+        const c = tetraCandidates().find((x) => x.key === base.tetraKey);
+        const info = classifyPolyhedron(convexHull(c.points.map((p) => p.position)));
+        if (!info.regular) throw new Error(`正四面体ではありません: ${base.key}`);
+        const others = shuffle(['正八面体', '立方体（正六面体）', '正十二面体', '正二十面体', '四角すい', '三角柱'], rng).slice(0, 3);
+        const given = labelPoints(c.points);
+        return assemble(this, base, {
+          given,
+          question: `立方体の${joinPointTexts(given)}の4つの頂点を結んでできる立体は、何という立体ですか。`,
+          choices: ['正四面体', ...others].map((n, i) => ({ id: i === 0 ? 'answer' : `d${i}`, label: n })),
+          correct: ['answer'],
+          explanation: X.explainRegularTetraShape(),
+          outlines: [nums(c.points)],
+          solids: [{ role: 'main', points: nums(c.points) }],
+          steps: [...BUILD, { type: 'solidLift', to: 1 }],
+          prerequisites: [PRE.SOLID_TYPES, PRE.REGULAR_POLYHEDRA],
+        });
+      }
       const oct = createInscribedOctahedron();
       const info = classifyPolyhedron(oct);
       const answer = info.name === '八面体' && info.regular ? '正八面体' : info.name;
@@ -284,31 +334,33 @@ export const INSCRIBED_TEMPLATES = [
   },
   {
     id: 'I04',
-    difficulty: 2,
-    title: '正八面体と立方体の体積比',
-    bases: () => ['x', 'y', 'z'].flatMap((axis) => ['part', 'whole'].map((dir) => ({ key: `${dir}-${axis}`, refs: [], group: dir, axis, dir }))),
+    difficulty: 3,
+    title: '正八面体の体積',
+    // 1辺 3cm・6cm の立方体（正八面体を上下に分ける軸も変える）
+    bases: () => [3, 6].flatMap((s) => ['x', 'y', 'z'].map((axis) => ({ key: `${s}-${axis}`, refs: [], group: `${s}`, axis, s }))),
     build(base, rng) {
       const oct = createInscribedOctahedron();
       const ratio = calculatePolyhedronVolume(oct).div(CUBE_VOLUME); // 1/6
-      const inverse = base.dir === 'whole';
-      const answer = inverse ? Q.of(1).div(ratio) : ratio;
-      const pool = inverse ? [3, 4, 8, 2, 12].map((n) => Q.of(n)) : [3, 4, 8, 2, 12].map((n) => new Q(1, n));
-      const others = shuffle(pool.filter((x) => !x.eq(answer)), rng).slice(0, 3);
-      const label = (q) => `${q}倍`;
+      const s = base.s;
+      const cube = Q.of(s * s * s);
+      const answer = cube.mul(ratio);
+      const squareArea = new Q(s * s, 2);
+      const h = new Q(s, 2);
+      const half = squareArea.mul(h).div(3);
+      if (!half.mul(2).eq(answer)) throw new Error('正八面体の体積が合いません');
+      const choices = decimalVolumeChoices(answer, [cube.div(3), cube.div(2), half, cube.div(12), cube.div(4)], rng);
       // 正八面体を、軸の向きの2つの四角すいに分ける
       const k = { x: 0, y: 1, z: 2 }[base.axis];
       const apexes = FACE_CENTERS.filter((p) => p.position[k] !== 0);
       const ring = FACE_CENTERS.filter((p) => p.position[k] === 0);
       return assemble(this, base, {
         given: labelPoints(FACE_CENTERS, ['P', 'Q', 'R', 'S', 'T', 'U']),
-        question: inverse
-          ? '立方体の6つの面の中心を結んで正八面体を作ります。立方体の体積は、正八面体の体積の何倍ですか。'
-          : '立方体の6つの面の中心を結んで正八面体を作ります。正八面体の体積は、もとの立方体の体積の何倍ですか。',
-        choices: [answer, ...others].map((q, i) => ({ id: i === 0 ? 'answer' : `d${i}`, label: label(q) })),
+        question: `1辺${s}cmの立方体の6つの面の中心を結んで正八面体を作ります。この正八面体の体積は何cm³ですか。`,
+        choices,
         correct: ['answer'],
-        explanation: X.explainRatio({ inverse }),
+        explanation: X.explainOctahedronVolume({ s, squareArea: decimalText(squareArea), h: decimalText(h), half: decimalText(half), volume: decimalText(answer), cube: s * s * s }),
         solids: [{ role: 'main', points: nums(FACE_CENTERS) }, ...apexes.map((a) => ({ role: 'part', points: nums([a, ...ring]) }))],
-        steps: [...BUILD, { type: 'solidSplit', label: inverse ? '立方体＝正八面体×6' : '正八面体＝立方体×1/6' }],
+        steps: [...BUILD, { type: 'solidSplit', label: `${decimalText(answer)}cm³` }],
         view: 'default',
         prerequisites: [PRE.REGULAR_POLYHEDRA, PRE.PYRAMID_VOLUME],
       });
@@ -323,7 +375,8 @@ export const INSCRIBED_TEMPLATES = [
     build(base, rng) {
       const c = tetraCandidates().find((x) => x.key === base.key);
       const poly = convexHull(c.points.map((p) => p.position));
-      const s = chooseSide(SIDES, (n) => realVolume(poly, n).isInteger() && new Q(n * n * n, 6).isInteger(), rng);
+      // 1辺 3cm・6cm（3cm のときは 4.5cm³ のような小数になることもある）
+      const s = pick([3, 6], rng);
       const volume = realVolume(poly, s);
       const cube = Q.of(s * s * s);
       const ids = c.points.map((p) => p.id);
@@ -334,9 +387,9 @@ export const INSCRIBED_TEMPLATES = [
       if (c.regular) {
         const corner = new Q(s * s * s, 6);
         if (!cube.sub(corner.mul(4)).eq(volume)) throw new Error('正四面体の体積が合いません');
-        explanation = X.explainRegularTetra({ s, corner, cube, volume });
+        explanation = X.explainRegularTetra({ s, corner: decimalText(corner), cube, volume: decimalText(volume) });
         for (const t of cornerTetras(ids)) solids.push({ role: 'removed', points: nums(t) });
-        steps = [{ type: 'solidBuild' }, { type: 'solidRemove', label: `${volume}cm³` }];
+        steps = [{ type: 'solidBuild' }, { type: 'solidRemove', label: `${decimalText(volume)}cm³` }];
       } else {
         // 立方体の面の上にある三角形の面を底面にする
         const face = FACES.find((f) => ids.filter((id) => f.vertices.includes(id)).length === 3);
@@ -345,15 +398,15 @@ export const INSCRIBED_TEMPLATES = [
         const area = new Q(s * s, 2);
         const height = Q.of(s);
         if (!area.mul(height).div(3).eq(volume)) throw new Error(`四面体の体積が合いません: ${base.key}`);
-        explanation = X.explainTetra({ baseVertices: baseIds.join(''), base: area, height, volume });
-        steps = [...BUILD, { type: 'solidLift', to: 1, label: `${volume}cm³` }];
+        explanation = X.explainTetra({ baseVertices: baseIds.join(''), base: decimalText(area), height, volume: decimalText(volume) });
+        steps = [...BUILD, { type: 'solidLift', to: 1, label: `${decimalText(volume)}cm³` }];
       }
-      const choices = volumeChoices(volume, [cube.div(3), cube.div(6), cube.div(2), cube.div(4), volume.mul(3), cube.sub(volume)]);
+      const choices = decimalVolumeChoices(volume, [cube.div(3), cube.div(6), cube.div(2), cube.div(4), volume.mul(3), cube.sub(volume)], rng);
       return assemble(this, base, {
         given,
         question: `1辺${s}cmの立方体の${joinPointTexts(given)}の4つの頂点を結んで四面体を作ります。この四面体の体積は何cm³ですか。`,
-        choices: choices.map(choiceOf),
-        correct: [choices[0].id],
+        choices,
+        correct: ['answer'],
         explanation,
         outlines: [nums(c.points)],
         solids,
@@ -366,6 +419,8 @@ export const INSCRIBED_TEMPLATES = [
     id: 'I06',
     difficulty: 3,
     title: '角すいを取り除いた残りの体積',
+    // 問題ライブラリの見直しで、出題をやめた（代わりに I07）。図鑑と保存した復習の問題のために残す
+    retired: true,
     // 1けたの1辺で、取り除く立体の体積が整数になるものだけ
     bases: () => removals().filter((r) => chooseSide(SIDES, (n) => realVolume(convexHull(r.removed), n).isInteger())).map((r) => ({ key: r.key, refs: [pointKey(r.apex)], group: r.kind })),
     build(base, rng) {
@@ -408,6 +463,46 @@ export const INSCRIBED_TEMPLATES = [
         steps: [{ type: 'solidRemove', label: `残り ${remaining}cm³` }],
         prerequisites: [PRE.PYRAMID_VOLUME],
         referenceElements: r.kind === 'corner' ? [] : [r.face],
+      });
+    },
+  },
+  {
+    id: 'I07',
+    difficulty: 3,
+    title: '角すいは立方体の何分の1',
+    // I03 と同じ角すいで、体積が立方体の体積の何分の1かを答える（1辺の長さによらない）
+    bases: () => pyramids().map((p) => ({ key: p.key, refs: [p.face], group: `${p.kind}-${p.h}` })),
+    build(base, rng) {
+      const p = pyramids().find((x) => x.key === base.key);
+      const pts = [...p.base, p.apex];
+      const poly = convexHull(pts.map((x) => x.position));
+      const name = classifyPolyhedron(poly).name;
+      const ratio = calculatePolyhedronVolume(poly).div(CUBE_VOLUME);
+      // 説明は、体積が整数になる1辺の長さで
+      const s = chooseSide(SIDES, (n) => realVolume(poly, n).isInteger());
+      const volume = realVolume(poly, s);
+      const baseArea = p.kind === 'quad' ? Q.of(s * s) : new Q(s * s, 2);
+      const height = p.h.mul(Q.of(s));
+      if (!baseArea.mul(height).div(3).eq(volume) || !volume.div(Q.of(s * s * s)).eq(ratio)) throw new Error(`角すいの体積が合いません: ${base.key}`);
+      const given = labelPoints(p.kind === 'quad' ? [p.apex] : [...p.base, p.apex]);
+      const apex = given.at(-1);
+      const baseText = p.kind === 'quad' ? `面${p.face}（1辺${s}cmの正方形）` : `三角形${p.base.map((x) => x.id).join('')}（直角をはさむ2辺が${s}cmの直角三角形）`;
+      const question =
+        p.kind === 'quad'
+          ? `立方体で、面${p.face}を底面とし、${apex.text}を頂点とする四角すいを作ります。この四角すいの体積は、もとの立方体の体積の何分の1ですか。`
+          : `立方体で、頂点${p.base.map((x) => x.id).join('・頂点')}を結んだ三角形を底面とし、${apex.text}を頂点とする三角すいを作ります。この三角すいの体積は、もとの立方体の体積の何分の1ですか。`;
+      const choices = fractionChoices(ratio, rng);
+      return assemble(this, base, {
+        given,
+        question,
+        choices,
+        correct: ['answer'],
+        explanation: `1辺を${s}cmとして考えます。${X.explainPyramid({ name, baseText, base: baseArea, height, volume })}立方体の体積は${s * s * s}cm³なので、${volume}÷${s * s * s}＝${ratio}で、${ratio.d}分の${ratio.n}です（1辺の長さを変えても、割合は変わりません）。`,
+        outlines: [nums(pts)],
+        solids: [{ role: 'main', points: nums(pts) }],
+        steps: [...BUILD, { type: 'solidLift', to: 1, label: `立方体の${ratio.d}分の${ratio.n}` }],
+        referenceElements: p.kind === 'quad' ? [p.face] : [],
+        prerequisites: [PRE.PYRAMID_VOLUME],
       });
     },
   },

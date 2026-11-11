@@ -56,7 +56,7 @@ describe('QuestionPicker', () => {
   it('答えの種類（group）が偏らない', () => {
     const p11 = POSITION_TEMPLATES.filter((t) => t.id === 'P11');
     const qs = run(new QuestionPicker({ templates: p11, rng: createRng(5) }), 6);
-    const exists = qs.filter((q) => q.correctAnswers[0] === 'exists').length;
+    const exists = qs.filter((q) => q.correctAnswers[0] === 'n4').length;
     expect(exists).toBe(3);
   });
 
@@ -165,7 +165,7 @@ describe('questionRegistry', () => {
     expect(getCategory('position')).toMatchObject({ name: '位置関係', grades: '小学6年生～中学1年生' });
     expect(getCategory('dice')).toMatchObject({ name: 'サイコロ・回転', grades: '小学4年生以上' });
     expect(getCategory('projection')).toMatchObject({ name: '積み木の見え方・投影図', grades: '小学4年生～中学2年生' });
-    expect(getTemplates('position', 2).map((t) => t.id)).toEqual(['P06', 'P07', 'P08', 'P09', 'P10']);
+    expect(getTemplates('position', 2).map((t) => t.id)).toEqual(['P04', 'P06', 'P07', 'P09', 'P15']);
     expect(getTemplates('dice', 3).map((t) => t.id)).toEqual(['D05', 'D06']);
     expect(getTemplates('cutting')).toEqual([]);
   });

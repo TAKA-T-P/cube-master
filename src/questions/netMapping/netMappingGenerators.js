@@ -67,7 +67,7 @@ export const NET_MAPPING_TEMPLATES = [
   // ---------------- ★1 きほん ----------------
   {
     id: 'N01',
-    difficulty: 1,
+    difficulty: 2,
     title: '重なる頂点',
     bases: () => netBases(2),
     build(base, rng) {
@@ -124,7 +124,7 @@ export const NET_MAPPING_TEMPLATES = [
   // ---------------- ★2 標準 ----------------
   {
     id: 'N03',
-    difficulty: 2,
+    difficulty: 1,
     title: '重なる辺',
     bases: () => netBases(2),
     build(base, rng) {

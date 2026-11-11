@@ -19,7 +19,7 @@ import {
 } from '../src/core/inscribedSolids.js';
 import { tetrahedronVolume } from '../src/core/cubeCutting.js';
 import { CUBE_ROTATIONS, rotatePoint } from '../src/questions/surfacePoints.js';
-import { INSCRIBED_TEMPLATES } from '../src/questions/inscribedSolid/inscribedSolidGenerators.js';
+import { INSCRIBED_TEMPLATES, decimalText } from '../src/questions/inscribedSolid/inscribedSolidGenerators.js';
 import { getQuestionErrors } from '../src/core/questionSchema.js';
 import { QuestionPicker } from '../src/core/questionEngine.js';
 import { createRng } from '../src/utils/random.js';
@@ -124,15 +124,43 @@ describe('内接立体の問題（I01〜I06）', () => {
     expect([...seen].sort()).toEqual(['三角すい', '三角柱', '四角すい', '四角柱'].sort());
   });
 
-  it('I02・I04：正八面体（6つの面の中心）。I04 の答えは 1/6倍 か 6倍で、上下2つの四角すいに分けられる', () => {
-    for (const q of questions(byId.I02, [1, 2], 2)) expect(q.choices.find((c) => c.id === 'answer').label).toBe('正八面体');
+  it('I02：正八面体（6つの面の中心）と正四面体（立方体の4つの頂点）。I04：1辺3cm・6cm の立方体の正八面体の体積で、上下2つの四角すいに分けられる', () => {
+    const names = new Set();
+    for (const q of questions(byId.I02, [1, 2, 3, 4], 4)) {
+      const answer = q.choices.find((c) => c.id === 'answer').label;
+      names.add(answer);
+      const main = q.scene.solid.solids.find((x) => x.role === 'main');
+      const info = classifyPolyhedron(convexHull(main.points));
+      expect(info.regular).toBe(true);
+      expect(answer).toBe(main.points.length === 6 ? '正八面体' : '正四面体');
+    }
+    expect([...names].sort()).toEqual(['正八面体', '正四面体'].sort());
+    const sides = new Set();
     for (const q of questions(byId.I04, [1, 2, 3], 3)) {
       const label = q.choices.find((c) => c.id === 'answer').label;
-      expect(['1/6倍', '6倍']).toContain(label);
+      const s = sideOf(q);
+      sides.add(s);
+      expect(label).toBe(`${decimalText(new Q(s * s * s, 6))}cm³`);
       const parts = q.scene.solid.solids.filter((s) => s.role === 'part');
       expect(parts).toHaveLength(2);
       expect(parts.map((p) => vol(p.points)).reduce((s, v) => s.add(v)).eq(new Q(4, 3))).toBe(true);
       for (const p of parts) expect(classifyPolyhedron(convexHull(p.points)).name).toBe('四角すい');
+    }
+    expect([...sides].sort()).toEqual([3, 6]);
+  });
+
+  it('I05：1辺3cm・6cm の両方が出る（3cm では 4.5cm³ のような小数の答えもある）', () => {
+    const sides = new Set(questions(byId.I05, [1, 2, 3, 4, 5, 6], 6).map(sideOf));
+    expect([...sides].sort()).toEqual([3, 6]);
+  });
+
+  it('I07：角すいの体積は、もとの立方体の体積の何分の1か（I03 と同じ角すい）', () => {
+    for (const q of questions(byId.I07)) {
+      const main = q.scene.solid.solids.find((x) => x.role === 'main');
+      const ratio = vol(main.points).div(CUBE_VOLUME);
+      expect(q.choices.find((c) => c.id === 'answer').label).toBe(`${ratio.d}分の${ratio.n}`);
+      expect(q.question).toContain('何分の1');
+      expect(new Set(q.choices.map((c) => c.label)).size).toBe(4);
     }
   });
 
@@ -142,8 +170,9 @@ describe('内接立体の問題（I01〜I06）', () => {
         const s = sideOf(q);
         const main = q.scene.solid.solids.find((x) => x.role === 'main');
         const v = vol(main.points).mul(new Q(s * s * s, 8));
-        expect(q.choices.find((c) => c.id === q.correctAnswers[0]).label).toBe(`${v}cm³`);
-        expect(q.explanation.text).toContain(`${v}cm³`);
+        const text = id === 'I05' ? decimalText(v) : `${v}`;
+        expect(q.choices.find((c) => c.id === q.correctAnswers[0]).label).toBe(`${text}cm³`);
+        expect(q.explanation.text).toContain(`${text}cm³`);
       }
     }
   });
@@ -200,7 +229,7 @@ describe('内接立体の 3D モデルと演出', () => {
     await run(manager, createQuestionReveal({ state, controls, highlights, solid }, { steps: q.explanation.reveal.steps }));
     s = solid.getState();
     expect(s).toMatchObject({ build: 1, fade: 1, split: 1, cubeVisible: false });
-    expect(s.info).toMatch(/1\/6|×6/);
+    expect(s.info).toMatch(/cm³$/);
     const parts = s.solids.filter((x) => x.role === 'part');
     expect(parts.every((x) => x.visible)).toBe(true);
     // 2つの四角すいは、もとの位置のまま（はなさない）

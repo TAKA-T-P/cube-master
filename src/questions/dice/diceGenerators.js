@@ -140,7 +140,7 @@ export const DICE_TEMPLATES = [
   },
   {
     id: 'D02',
-    difficulty: 1,
+    difficulty: 2,
     title: '向かい合う面',
     bases: () => VISIBLE_DIRS.flatMap((dir) => [0, 1, 2, 3, 4, 5, 6, 7].map((v) => ({ key: `${dir}-${v}`, refs: [], dir, group: dir }))),
     build(base, rng) {
@@ -215,7 +215,7 @@ export const DICE_TEMPLATES = [
   },
   {
     id: 'D03',
-    difficulty: 2,
+    difficulty: 1,
     title: '見えなかった面',
     // 回転のあと、はじめは見えていなかった面がくる方向を問う（転がす4方向だけ。水平に回す動きは出さない）
     bases: () =>

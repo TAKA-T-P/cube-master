@@ -95,8 +95,8 @@ describe('前提知識（prerequisites）', () => {
     expect(isQuestionEligible(q, PLAY_MODES.CHALLENGE, { allowPythagoreanQuestions: true })).toBe(false);
   });
 
-  it('全75テンプレート：対象のテンプレートだけが advanced を持ち、作った問題には正しい prerequisites が付く', () => {
-    expect(ALL_TEMPLATES).toHaveLength(75);
+  it('全78テンプレート：対象のテンプレートだけが advanced を持ち、作った問題には正しい prerequisites が付く', () => {
+    expect(ALL_TEMPLATES).toHaveLength(78);
     expect(ALL_TEMPLATES.filter((t) => t.advanced === 'always').map((t) => t.id).sort()).toEqual(ADVANCED.always);
     expect(ALL_TEMPLATES.filter((t) => t.advanced === 'sometimes').map((t) => t.id).sort()).toEqual([...ADVANCED.sometimes].sort());
     for (const t of ALL_TEMPLATES) {

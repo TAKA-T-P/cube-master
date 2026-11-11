@@ -1,7 +1,7 @@
-// 全75テンプレートの総点検（乱数のシードを変えて多数の問題を作り、表示・データの品質を確かめる）
+// 全78テンプレート（出題をやめた3つもふくむ）の総点検（乱数のシードを変えて多数の問題を作り、表示・データの品質を確かめる）
 // 失敗したときは、メッセージのシードで同じ問題を作り直せる（createRng(seed) → template.build(base, rng)）
 import { describe, it, expect } from 'vitest';
-import { CATEGORIES } from '../src/questions/questionRegistry.js';
+import { CATEGORIES, getTemplates } from '../src/questions/questionRegistry.js';
 import { QuestionPicker } from '../src/core/questionEngine.js';
 import { getQuestionErrors } from '../src/core/questionSchema.js';
 import { validateAnswer } from '../src/core/answerValidator.js';
@@ -14,10 +14,15 @@ const BAD_TEXT = /undefined|NaN|null|\[object Object\]/;
 const templates = CATEGORIES.filter((c) => c.enabled).flatMap((c) => c.templates.map((t) => ({ category: c.id, t })));
 
 describe('全テンプレートの総点検', () => {
-  it('テンプレートは10カテゴリ・75種類（Phase 7 で K01〜K06・S01〜S06、Phase 8 で I01〜I06・G01〜G06 を追加）', () => {
+  it('テンプレートは10カテゴリ・78種類。出題するのは75種類（問題ライブラリの見直しで C07・K07・I07 を加え、K05・P13・I06 の出題をやめた）', () => {
     expect(new Set(templates.map((x) => x.category)).size).toBe(10);
-    expect(templates).toHaveLength(75);
-    expect(new Set(templates.map((x) => x.t.id)).size).toBe(75);
+    expect(templates).toHaveLength(78);
+    expect(new Set(templates.map((x) => x.t.id)).size).toBe(78);
+    expect(templates.filter((x) => x.t.retired).map((x) => x.t.id).sort()).toEqual(['I06', 'K05', 'P13']);
+    const served = CATEGORIES.flatMap((c) => getTemplates(c.id));
+    expect(served).toHaveLength(75);
+    for (const id of ['K05', 'P13', 'I06']) expect(served.some((t) => t.id === id)).toBe(false);
+    for (const id of ['C07', 'K07', 'I07']) expect(served.some((t) => t.id === id)).toBe(true);
   });
 
   describe.each(templates.map((x) => [x.t.id, x]))('%s', (id, { t }) => {

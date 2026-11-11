@@ -141,7 +141,7 @@ export const POSITION_TEMPLATES = [
   },
   {
     id: 'P04',
-    difficulty: 1,
+    difficulty: 2,
     title: '面と垂直な面',
     bases: faceBases,
     build(base, rng) {
@@ -205,7 +205,7 @@ export const POSITION_TEMPLATES = [
   },
   {
     id: 'P08',
-    difficulty: 2,
+    difficulty: 3,
     title: 'ねじれの位置にある辺',
     bases: edgeBases,
     build(base, rng) {
@@ -237,7 +237,7 @@ export const POSITION_TEMPLATES = [
   },
   {
     id: 'P10',
-    difficulty: 2,
+    difficulty: 1,
     title: '2本の辺の位置関係',
     // 立方体の辺の組は必ず「平行・交わる・ねじれ」のどれかになる（テストで確認）
     bases: () =>
@@ -276,10 +276,11 @@ export const POSITION_TEMPLATES = [
       const commonEdge = getCommonEdge(base.f, base.g);
       return makeQuestion(this, base, {
         type: 'single',
-        question: `${L(base.f)}と${L(base.g)}の両方に垂直な辺はありますか。`,
-        choices: [textChoice('exists', 'ある', { fixed: true }), textChoice('none', 'ない', { fixed: true })],
-        correctAnswers: [answers.length > 0 ? 'exists' : 'none'],
-        explanation: X.explainCommonPerpendicular(base.f, base.g, answers, commonEdge),
+        question: `${L(base.f)}と${L(base.g)}の両方に垂直な辺は何本ありますか。`,
+        // 本数を答える（答えは0本か4本。少ない順に並べる）
+        choices: [0, 1, 2, 4].map((n) => textChoice(`n${n}`, `${n}本`, { fixed: true })),
+        correctAnswers: [`n${answers.length}`],
+        explanation: `${X.explainCommonPerpendicular(base.f, base.g, answers, commonEdge)}答えは${answers.length}本です。`,
         highlight: answers.length > 0 ? answers : [commonEdge],
       });
     },
@@ -309,9 +310,10 @@ export const POSITION_TEMPLATES = [
         total: 4,
         rng,
       });
+      // 両方に平行な面は、いつも1つ以下（なければ「あてはまる面はない」）なので、1つ選ぶ問題にする
       return makeQuestion(this, base, {
-        type: 'multiple',
-        question: `${L(base.a)}と${L(base.b)}の両方に平行な面をすべて選びなさい。`,
+        type: 'single',
+        question: `${L(base.a)}と${L(base.b)}の両方に平行な面はどれですか。`,
         choices: [...faceChoices, textChoice('none', 'あてはまる面はない', { fixed: true })],
         correctAnswers: correct,
         explanation: X.explainFacesParallelToBothEdges(base.a, base.b, answers, parallelA, parallelB),
@@ -323,6 +325,8 @@ export const POSITION_TEMPLATES = [
     id: 'P13',
     difficulty: 3,
     title: '交わらず平行でもない辺',
+    // P08（ねじれの位置）と答えが同じ問題なので、出題をやめた。図鑑と保存した復習の問題のために残す
+    retired: true,
     bases: edgeBases,
     build(base, rng) {
       const correct = getSkewEdges(base.edge);
@@ -364,7 +368,7 @@ export const POSITION_TEMPLATES = [
   },
   {
     id: 'P15',
-    difficulty: 3,
+    difficulty: 2,
     title: '辺と面の位置関係の説明',
     bases: () =>
       EDGE_IDS.flatMap((edge) =>

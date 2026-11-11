@@ -374,27 +374,36 @@ const regularPolygon = (n) => normalizeShape([...Array(n).keys()].map((i) => [Ma
 const stretch = (poly, k) => normalizeShape(poly.map(([x, y]) => [x * k, y]));
 const shear = (poly, k) => normalizeShape(poly.map(([x, y]) => [x + k * y, y]));
 
-/** まちがいの図（相似でない形を3つ。実際の切り口でできる別の形・のばした形・正多角形など） */
+/** 明らかにちがう形か（相似の判定を、辺の比・角の大きさとも大きくゆるめて調べる） */
+const clearlyDifferent = (p, q) => !similarShapes(p, q, 0.12);
+
+/**
+ * まちがいの図（3つ）。正解と少しだけちがう形は使わず、明らかにちがう形にする
+ * - 正解と同じ角の数の形は1つまで（実際の切り口でできる形・正多角形のうち、正解とも明らかにちがうもの）
+ * - ほかは、角の数がちがう形（実際の切り口でできる形）
+ */
 function figureDistractors(record, correct, rng) {
-  const others = shuffle(
-    allCuts().filter((c) => c.shape.sides === record.shape.sides && c.shape.name !== record.shape.name),
+  const sides = record.shape.sides;
+  const sameSides = shuffle(
+    [
+      ...allCuts()
+        .filter((c) => c.shape.sides === sides && c.shape.name !== record.shape.name)
+        .map((c) => sectionShape2D(c)),
+      regularPolygon(sides),
+    ],
     rng,
-  ).slice(0, 4);
-  const pool = [
-    ...others.map((c) => ({ points: sectionShape2D(c), name: c.shape.name })),
-    { points: stretch(correct, 1.55), name: null },
-    { points: stretch(correct, 0.6), name: null },
-    { points: shear(correct, 0.5), name: null },
-    { points: regularPolygon(record.shape.sides), name: null },
-    { points: regularPolygon(record.shape.sides === 3 ? 4 : record.shape.sides - 1), name: null },
-  ];
+  ).filter((points) => clearlyDifferent(correct, points));
+  const otherCounts = shuffle([3, 4, 5, 6].filter((n) => n !== sides), rng);
   const chosen = [];
-  for (const cand of shuffle(pool.slice(0, others.length), rng).concat(shuffle(pool.slice(others.length), rng))) {
-    if (chosen.length >= 3) break;
-    if (similarShapes(correct, cand.points)) continue;
-    if (chosen.some((c) => similarShapes(c.points, cand.points))) continue;
-    chosen.push(cand);
+  const add = (points) => {
+    if (chosen.length < 3 && points && clearlyDifferent(correct, points) && chosen.every((c) => clearlyDifferent(c.points, points))) chosen.push({ points });
+  };
+  add(sameSides[0]);
+  for (const n of otherCounts) {
+    const real = shuffle(allCuts().filter((c) => c.shape.sides === n), rng).map((c) => sectionShape2D(c));
+    add(real.find((points) => chosen.every((c) => clearlyDifferent(c.points, points))) ?? regularPolygon(n));
   }
+  for (const points of sameSides.slice(1)) add(points);
   return chosen;
 }
 
@@ -435,7 +444,7 @@ export const CUTTING_TEMPLATES = [
   },
   {
     id: 'K02',
-    difficulty: 1,
+    difficulty: 2,
     title: '切り口が通る辺',
     bases: edgeBases,
     build(base, rng) {
@@ -464,7 +473,7 @@ export const CUTTING_TEMPLATES = [
   // ---------------- ★2 標準 ----------------
   {
     id: 'K03',
-    difficulty: 2,
+    difficulty: 1,
     title: '切り口の形の図を選ぶ',
     bases: () => allCuts().map((c) => baseOf(c, c.shape.name)),
     build(base, rng) {
@@ -508,6 +517,8 @@ export const CUTTING_TEMPLATES = [
     id: 'K05',
     difficulty: 3,
     title: '切り口の面積',
+    // 問題ライブラリの見直しで、出題をやめた（代わりに K07）。図鑑と保存した復習の問題のために残す
+    retired: true,
     // 三平方の定理・√ を使えるときは、√ をふくむ面積も出題する。使わないときは、立方体の面に平行な切り口だけ
     advanced: 'sometimes',
     bases: (ctx = {}) =>
@@ -566,6 +577,42 @@ export const CUTTING_TEMPLATES = [
           steps: [{ type: 'cutPlane' }, { type: 'cutSection' }, { type: 'cutSplit', to: 1, highlightSmall: true, label: V.format('cm³') }],
           prerequisites: [res.kind === 'tetrahedron' ? PRE.PYRAMID_VOLUME : PRE.PRISM_VOLUME],
         });
+    },
+  },
+  {
+    id: 'K07',
+    difficulty: 3,
+    title: '切り分けた立体は立方体の何分の1',
+    // K06 と同じ切り口で、小さいほうの立体の体積が立方体の体積の何分の1かを答える（1辺の長さによらない）
+    bases: () =>
+      allCuts()
+        .filter((c) => c.shape.sides <= 4)
+        .map((c) => ({ c, res: pieceVolumeByFormula(c, Q.of(1)) }))
+        .filter((x) => x.res)
+        .map(({ c, res }) => baseOf(c, res.kind)),
+    build(base, rng) {
+      const record = findCut(base.key);
+      const given = givenPoints(record);
+      // 1辺 2cm（座標そのまま）で考える
+      const res = pieceVolumeByFormula(record, Q.of(1));
+      const ratio = res.volume.div(8);
+      const pool = [2, 3, 4, 6, 8, 12, 16, 24, 48].map((n) => new Q(1, n));
+      const others = shuffle(
+        pool.filter((x) => !x.eq(ratio)),
+        rng,
+      ).slice(0, 3);
+      const label = (q) => `${q.d}分の${q.n}`;
+      const choices = [ratio, ...others].map((q, i) => ({ id: i === 0 ? 'answer' : `d${i}`, label: label(q) }));
+      return assemble(this, base, {
+        record,
+        given,
+        question: `立方体を、${planeText(given)}で切って、2つの立体に分けます。小さいほうの立体の体積は、もとの立方体の体積の何分の1ですか。`,
+        choices,
+        correct: ['answer'],
+        explanation: `1辺を2cmとして考えます。${res.text}立方体の体積は2×2×2＝8cm³なので、${res.volume}÷8＝${ratio}で、${label(ratio)}です（1辺の長さを変えても、割合は変わりません）。`,
+        steps: [{ type: 'cutPlane' }, { type: 'cutSection' }, { type: 'cutSplit', to: 1, highlightSmall: true, label: `立方体の${label(ratio)}` }],
+        prerequisites: [res.kind === 'tetrahedron' ? PRE.PYRAMID_VOLUME : PRE.PRISM_VOLUME],
+      });
     },
   },
 ];
