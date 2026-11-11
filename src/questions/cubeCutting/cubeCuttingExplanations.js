@@ -48,6 +48,28 @@ export function sideLengthsText(sideLengths2) {
   return sideLengths2.map((l2) => Surd.sqrt(l2).format('cm')).join('・');
 }
 
+/** 辺の長さに √ が要るか（立方体の1辺を2cmとしたとき） */
+export const lengthsNeedRoots = (sideLengths2) => sideLengths2.some((l2) => !Surd.sqrt(l2).isRational());
+
+/**
+ * 長さの数を使わずに、どの辺が等しいかを言う（三平方の定理・√ を使わない設定のときの解説）
+ * 例：「4つの辺の長さはすべて等しくなります」「向かい合う辺の長さがそれぞれ等しくなります」
+ */
+export function equalSidesText(sideLengths2) {
+  const n = sideLengths2.length;
+  const same = (i, j) => sideLengths2[i].eq(sideLengths2[j]);
+  if (sideLengths2.every((_, i) => same(i, 0))) return `${n}つの辺の長さはすべて等しくなります`;
+  if (n === 4 && same(0, 2) && same(1, 3)) return '向かい合う辺の長さがそれぞれ等しくなります';
+  const groups = [];
+  sideLengths2.forEach((l, i) => {
+    const g = groups.find((x) => sideLengths2[x[0]].eq(l));
+    if (g) g.push(i);
+    else groups.push([i]);
+  });
+  const equal = groups.filter((g) => g.length >= 2).map((g) => `${g.length}本`);
+  return equal.length === 0 ? 'どの辺も長さがちがいます' : `長さの等しい辺が${equal.join('と')}あります`;
+}
+
 /** 2乗の表し方（「4²」「(2√5)²」） */
 export const sq = (x) => (x.isRational() ? `${x}²` : `(${x})²`);
 
@@ -69,14 +91,17 @@ export function explainEdges({ names, extraEdges, givenNames }) {
   );
 }
 
-/** K03：切り口の形の図 */
-export function explainFigure({ name, lengths, choiceId }) {
-  return `切り口は${name}です。立方体の1辺を2cmとすると、切り口の辺の長さは順に${lengths}です。辺の長さと角の大きさが合っている図は〔choice:${choiceId}〕です。`;
+/** K03：切り口の形の図（equalSides があれば、長さの数の代わりに使う＝√ を出さない） */
+export function explainFigure({ name, lengths, equalSides, choiceId }) {
+  const head = equalSides ? `切り口は${name}で、${equalSides}。` : `切り口は${name}です。立方体の1辺を2cmとすると、切り口の辺の長さは順に${lengths}です。`;
+  return `${head}辺の長さと角の大きさが合っている図は〔choice:${choiceId}〕です。`;
 }
 
-/** K04：切り口の形の名前 */
-export function explainShape({ name, names, lengths }) {
-  return `切り口の頂点は${names.join('・')}です。立方体の1辺を2cmとすると、切り口の辺の長さは順に${lengths}で、${SHAPE_REASONS[name]}ので、${name}です。`;
+/** K04：切り口の形の名前（equalSides があれば、長さの数の代わりに使う＝√ を出さない） */
+export function explainShape({ name, names, lengths, equalSides }) {
+  // equalSides のときは、形の理由（辺の長さが等しいか・平行か・直角か）だけを書く
+  const sides = equalSides ? '' : `立方体の1辺を2cmとすると、切り口の辺の長さは順に${lengths}で、`;
+  return `切り口の頂点は${names.join('・')}です。${sides}${SHAPE_REASONS[name]}ので、${name}です。`;
 }
 
 // ---------- ヒント（答えそのものは書かない） ----------

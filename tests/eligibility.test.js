@@ -374,3 +374,29 @@ describe('解説の分数', () => {
     expect(plain.querySelector('.frac')).toBeNull();
   });
 });
+
+describe('三平方の定理・√ を使わない設定の解説', () => {
+  it('どのテンプレートでも、解説・ヒント・3D の文字に √ を出さない（使う設定では、切断・最短経路の解説に長さの √ が出る）', async () => {
+    const { CATEGORIES, getTemplates } = await import('../src/questions/questionRegistry.js');
+    const { QuestionPicker } = await import('../src/core/questionEngine.js');
+    const textOf = (q) => [q.explanation.text, q.hint?.text ?? '', ...(q.explanation.reveal?.steps ?? []).map((s) => s.label ?? '')].join(' ');
+    for (const c of CATEGORIES) {
+      for (const t of getTemplates(c.id)) {
+        let picker;
+        try {
+          picker = new QuestionPicker({ templates: [t], rng: createRng(11), allowAdvanced: false });
+        } catch {
+          continue; // G03・S03 のように、この設定では出題しないテンプレート
+        }
+        for (let i = 0; i < 12; i++) {
+          const q = picker.next();
+          expect(textOf(q), `${q.key}`).not.toContain('√');
+        }
+      }
+    }
+    // 使う設定では、K03 の解説に辺の長さ（√ をふくむこともある）が出る
+    const k03 = CATEGORIES.flatMap((c) => c.templates).find((t) => t.id === 'K03');
+    const p = new QuestionPicker({ templates: [k03], rng: createRng(3), allowAdvanced: true });
+    expect(Array.from({ length: 12 }, () => p.next().explanation.text).some((x) => x.includes('√'))).toBe(true);
+  }, 30000);
+});

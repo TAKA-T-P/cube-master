@@ -34,11 +34,12 @@ export function explainRoutes({ two, many, shortestIsMany, detail }) {
   );
 }
 
-/** S01：最短経路が通る辺 */
+/** S01：最短経路が通る辺（length が null のときは、長さの数を出さない＝√ を使わない設定） */
 export function explainEdge({ faces, from, to, edge, where, length, other }) {
   return (
-    `${facesText(faces)}を1つの平面に広げると、${from}と${to}を結ぶ直線は、辺${edge}の${where}を通ります。これが最短経路で、立方体の1辺を2cmとすると長さは${length}です。` +
-    (other ? `ほかの辺（たとえば辺${other.edge}）を通る道は、いちばん短いものでも${other.length}で、長くなります。` : '')
+    `${facesText(faces)}を1つの平面に広げると、${from}と${to}を結ぶ直線は、辺${edge}の${where}を通ります。` +
+    (length ? `これが最短経路で、立方体の1辺を2cmとすると長さは${length}です。` : 'これが最短経路です。') +
+    (other ? (other.length ? `ほかの辺（たとえば辺${other.edge}）を通る道は、いちばん短いものでも${other.length}で、長くなります。` : `ほかの辺（たとえば辺${other.edge}）を通る道は、どれもこれより長くなります。`) : '')
   );
 }
 

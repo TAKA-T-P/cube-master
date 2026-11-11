@@ -139,6 +139,8 @@ const midpointOf = (edgeId) => {
 
 /** 道の長さの表示（1辺を2cmとしたとき） */
 const fmtLength = (len) => len.format('cm');
+/** 解説に長さを出すか（三平方の定理・√ を使わない設定では、√ をふくむ長さを出さない） */
+const showLength = (len, ctx = {}) => ctx.allowAdvanced !== false || len.isRational();
 
 /** 3D の点（P・Q。頂点にはラベルをつけない） */
 const scenePoints = (P, Q) => [P, Q].map((x) => ({ kind: x.kind, id: x.id, label: x.label, position: [...x.position] }));
@@ -357,7 +359,7 @@ export const SURFACE_PATH_TEMPLATES = [
     title: '最短経路はどの辺を通る？',
     // 最短経路が1本に決まり、2つの面を通る（1本の辺を横切る）組だけ
     bases: () => basePairs().filter((x) => x.res.shortest.length === 1 && x.res.shortest[0].faces.length === 2).map((x) => baseOf(x)),
-    build(base, rng) {
+    build(base, rng, ctx = {}) {
       const { P, Q, res } = rotatedPair(findPair(base.key), rng);
       const path = res.shortest[0];
       const edge = sharedEdge(path.faces[0], path.faces[1]);
@@ -381,8 +383,9 @@ export const SURFACE_PATH_TEMPLATES = [
           to: Q.short,
           edge,
           where: crossing.kind === 'midpoint' ? '中点' : `${crossing.from}側から${crossing.ratio[0]}:${crossing.ratio[1]}の点`,
-          length: fmtLength(path.length),
-          other: other ? { edge: sharedEdge(other.faces[0], other.faces[1]), length: fmtLength(other.length) } : null,
+          // 三平方の定理・√ を使わない設定では、√ をふくむ長さを解説に出さない
+          length: showLength(path.length, ctx) ? fmtLength(path.length) : null,
+          other: other ? { edge: sharedEdge(other.faces[0], other.faces[1]), length: showLength(other.length, ctx) ? fmtLength(other.length) : null } : null,
         }),
         highlight: [edge],
         solution: solutionOf([path]),

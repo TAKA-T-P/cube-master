@@ -19,7 +19,7 @@ export function explainName({ count, name, faces, vertices, regular }) {
 }
 
 export const explainOctahedron = () =>
-  '6つの面の中心を結ぶと、頂点が6つ・辺が12本・面が8つの立体ができます。8つの面はどれも合同な正三角形（1辺は立方体の1辺の√2/2倍）で、' +
+  '6つの面の中心を結ぶと、頂点が6つ・辺が12本・面が8つの立体ができます。8つの面はどれも合同な正三角形（1辺は、立方体の面の対角線の半分の長さ）で、' +
   'どの頂点にも4つの面が集まるので、正八面体です。';
 
 export const explainPyramid = ({ name, baseText, base, height, volume }) =>

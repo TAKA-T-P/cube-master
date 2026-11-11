@@ -267,6 +267,12 @@ export function surdChoices(answer, candidates, unit) {
 
 const choiceOf = (c) => ({ id: c.id, label: c.label });
 
+/** 解説の辺の長さ：三平方の定理・√ を使わない設定で、長さに √ が要るときは、数を使わずにどの辺が等しいかを言う */
+const sidesForExplanation = (record, ctx = {}) =>
+  ctx.allowAdvanced === false && X.lengthsNeedRoots(record.shape.sideLengths2)
+    ? { equalSides: X.equalSidesText(record.shape.sideLengths2) }
+    : { lengths: X.sideLengthsText(record.shape.sideLengths2) };
+
 /**
  * 1辺の長さ（cm）。面積・体積が整数の係数になる長さから選ぶ（rng がなければ、いちばん小さい長さ）
  */
@@ -476,7 +482,7 @@ export const CUTTING_TEMPLATES = [
     difficulty: 1,
     title: '切り口の形の図を選ぶ',
     bases: () => allCuts().map((c) => baseOf(c, c.shape.name)),
-    build(base, rng) {
+    build(base, rng, ctx = {}) {
       const record = findCut(base.key);
       const given = givenPoints(record);
       const correct = sectionShape2D(record);
@@ -489,7 +495,7 @@ export const CUTTING_TEMPLATES = [
           question: `立方体を、${planeText(given)}で切ります。切り口を正面から見た形として正しいものはどれですか。`,
           choices: figures.map((f, i) => ({ id: f.id, label: CHOICE_MARKS[i], labelByPosition: true, visual: { type: 'section', points: f.points }, description: f.description })),
           correct: ['fig0'],
-          explanation: X.explainFigure({ name: record.shape.name, lengths: X.sideLengthsText(record.shape.sideLengths2), choiceId: 'fig0' }),
+          explanation: X.explainFigure({ name: record.shape.name, ...sidesForExplanation(record, ctx), choiceId: 'fig0' }),
         });
     },
   },
@@ -498,7 +504,7 @@ export const CUTTING_TEMPLATES = [
     difficulty: 2,
     title: '中点を通る切り口の形',
     bases: () => allCuts().filter((c) => c.points.some((p) => p.kind === 'midpoint') && NICE_SHAPES.includes(c.shape.name)).map((c) => baseOf(c, c.shape.name)),
-    build(base, rng) {
+    build(base, rng, ctx = {}) {
       const record = findCut(base.key);
       const given = givenPoints(record);
       const names = X.sectionVertexNames(record.section.polygon, given);
@@ -508,7 +514,7 @@ export const CUTTING_TEMPLATES = [
           question: `立方体を、${planeText(given)}で切ります。切り口はどんな形になりますか。`,
           choices: shapeChoices(record.shape.name, rng, { pool: NICE_SHAPES }),
           correct: [SHAPE_IDS[record.shape.name]],
-          explanation: X.explainShape({ name: record.shape.name, names, lengths: X.sideLengthsText(record.shape.sideLengths2) }),
+          explanation: X.explainShape({ name: record.shape.name, names, ...sidesForExplanation(record, ctx) }),
         });
     },
   },
