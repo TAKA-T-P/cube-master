@@ -163,7 +163,8 @@ describe('B09〜B12 の生成', () => {
   it('B13：たて・横・高さが2〜5個の直方体。答えはたて×横×高さで、解説も同じ式', () => {
     const t = BLOCK_COUNT_TEMPLATES.find((x) => x.id === 'B13');
     expect(t.difficulty).toBe(1);
-    expect(t.bases()).toHaveLength(64);
+    // 3つとも同じ個数（立方体）は出さない：4×4×4 − 4 ＝ 60通り
+    expect(t.bases()).toHaveLength(60);
     for (const base of t.bases()) {
       const q = t.build(base, createRng(1));
       const xs = new Set(q.scene.blocks.map((c) => c.x));
@@ -171,6 +172,7 @@ describe('B09〜B12 の生成', () => {
       const ys = new Set(q.scene.blocks.map((c) => c.y));
       expect([xs.size, zs.size, ys.size]).toEqual([base.w, base.d, base.h]);
       for (const n of [xs.size, zs.size, ys.size]) expect(n >= 2 && n <= 5).toBe(true);
+      expect(xs.size === zs.size && zs.size === ys.size).toBe(false);
       const total = base.w * base.d * base.h;
       expect(q.scene.blocks).toHaveLength(total);
       expect(q.correctAnswers).toEqual([String(total)]);

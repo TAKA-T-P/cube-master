@@ -204,8 +204,11 @@ export const BLOCK_COUNT_TEMPLATES = [
     id: 'B13',
     difficulty: 1,
     title: '直方体の形に積んだ積み木は何個？',
-    // たて・横・高さを、それぞれ2〜5個にした直方体（2×2×2〜5×5×5 の64通り）
-    bases: () => [2, 3, 4, 5].flatMap((w) => [2, 3, 4, 5].flatMap((d) => [2, 3, 4, 5].map((h) => ({ key: `${w}x${d}x${h}`, refs: [], w, d, h, group: `${w * d * h > 40 ? 'large' : 'small'}` })))),
+    // たて・横・高さを、それぞれ2〜5個にした直方体。3つとも同じ個数（立方体）になる4通りは出さない（60通り）
+    bases: () =>
+      [2, 3, 4, 5]
+        .flatMap((w) => [2, 3, 4, 5].flatMap((d) => [2, 3, 4, 5].map((h) => ({ key: `${w}x${d}x${h}`, refs: [], w, d, h, group: `${w * d * h > 40 ? 'large' : 'small'}` }))))
+        .filter((b) => !(b.w === b.d && b.d === b.h)),
     build(base) {
       const { w, d, h } = base;
       const heights = Array.from({ length: d }, () => Array.from({ length: w }, () => h));
