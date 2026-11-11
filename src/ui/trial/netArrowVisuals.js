@@ -220,7 +220,7 @@ export function renderNetArrowIcon() {
     'svg',
     { viewBox: '-2 -2 64 84', class: 'trial-icon', role: 'img', 'aria-hidden': 'true' },
     cells.map(([x, y]) => svg('rect', { x: x * s, y: y * s, width: s, height: s, fill: '#fff', stroke: '#1f4e9c', 'stroke-width': 1.5 })),
-    arrowSvg2D(arrowShape2D([1.5 * s, 1.5 * s], [1, -1], s * 0.36), ARROW_COLORS.red, { width: 2.5 }),
+    arrowSvg2D(arrowShape2D([1.5 * s, 1.5 * s], [0, -1], s * 0.36), ARROW_COLORS.red, { width: 2.5 }),
     arrowSvg2D(arrowShape2D([1.5 * s, 3.5 * s], [-1, 0], s * 0.36), ARROW_COLORS.blue, { width: 2.5 }),
   );
 }
