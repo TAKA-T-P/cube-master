@@ -90,9 +90,9 @@ describe('カテゴリ選択・設定画面', () => {
     const position = container.querySelector('[data-category="position"]');
     // ボタンは名前だけ（説明・対象学年は書かない）
     expect(position.querySelector('.category-card__name').textContent).toBe('位置関係');
-    expect(position.textContent).toBe('⑦位置関係');
+    expect(position.textContent).toBe('⑥位置関係');
     expect(position.textContent).not.toContain('小学6年生～中学1年生');
-    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['paintedCube', 'dice', 'projection', 'netPuzzle', 'netMapping', 'cubeCutting', 'position', 'inscribedSolid', 'cubeGeometryChallenge', 'surfacePath']);
+    expect([...cards].filter((c) => !c.disabled).map((c) => c.dataset.category)).toEqual(['paintedCube', 'dice', 'projection', 'netPuzzle', 'netMapping', 'position', 'cubeCutting', 'inscribedSolid', 'cubeGeometryChallenge', 'surfacePath']);
     expect([...cards].map((c) => c.querySelector('.category-card__num').textContent).join('')).toBe('①②③④⑤⑥⑦⑧⑨⑩');
     expect(container.querySelectorAll('.category-card .badge')).toHaveLength(0); // 「準備中」はない
     // はじめは下の説明と「次へ」を出さない
@@ -861,8 +861,9 @@ describe('問題画面（立方体の個数・着色：小立方体）', () => {
   };
 
   it('回答前は静的な見取図（分割線・着色）、回答すると 3D に切りかわり、分割 → 分離 → 強調の演出を再生する', () => {
-    start();
-    // 積み木の個数の問題（B09）が先に出たら、小立方体の問題まで進める
+    // ★1 は積み木の個数（B09・B13）だけなので、小立方体の問題が出る ★2 で始める
+    start({ difficulty: 2 });
+    // 積み木の個数の問題（B10・B11）が先に出たら、小立方体の問題まで進める
     while (currentQuestion().scene.model !== 'subcubes') {
       answer(container);
       buttonByText(container, '次の問題へ').click();

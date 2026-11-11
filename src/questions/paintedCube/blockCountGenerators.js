@@ -200,4 +200,32 @@ export const BLOCK_COUNT_TEMPLATES = [
       throw new Error('完成形の問題を作れませんでした');
     },
   },
+  {
+    id: 'B13',
+    difficulty: 1,
+    title: '直方体の形に積んだ積み木は何個？',
+    // たて・横・高さを、それぞれ2〜5個にした直方体（2×2×2〜5×5×5 の64通り）
+    bases: () => [2, 3, 4, 5].flatMap((w) => [2, 3, 4, 5].flatMap((d) => [2, 3, 4, 5].map((h) => ({ key: `${w}x${d}x${h}`, refs: [], w, d, h, group: `${w * d * h > 40 ? 'large' : 'small'}` })))),
+    build(base) {
+      const { w, d, h } = base;
+      const heights = Array.from({ length: d }, () => Array.from({ length: w }, () => h));
+      const cubes = heightsToCubes(heights);
+      const total = w * d * h;
+      if (cubes.length !== total) throw new Error(`積み木の数が合いません: ${base.key}`);
+      const { layers } = countBlocksByLayer(cubes);
+      // まちがい：見えている面の数（上・前・右）・1段分たりない・縦横高さの和・1つ多い段
+      const visibleFaces = w * d + w * h + d * h;
+      return assemble(this, base, {
+        question: `小さな立方体の積み木を、すき間なく直方体の形に積みました。積み木は全部で何個ありますか。`,
+        cubes,
+        choices: countChoices(total, [visibleFaces, total - w * d, w * d * (h + 1), w + d + h, total + w * d], { min: 1 }),
+        answer: total,
+        explanation: X.explainCuboid({ w, d, h, total, layers }),
+        steps: [
+          { type: 'camera', direction: [...COUNT_VIEW_DIRECTION], duration: 700 },
+          { type: 'countLayers', hidden: [] },
+        ],
+      });
+    },
+  },
 ];

@@ -164,7 +164,7 @@ export const PAINTED_CUBE_TEMPLATES = [
   // ---------------- ★1 基本 ----------------
   {
     id: 'B01',
-    difficulty: 1,
+    difficulty: 2,
     title: '3面に色がつく小立方体',
     bases: () => sizes([2, 3, 4]),
     build(base) {

@@ -131,7 +131,7 @@ function questionsOf(id) {
 
 describe('B09〜B12 の生成', () => {
   it('難易度：B09 基本、B10・B11 標準、B12 応用', () => {
-    expect(BLOCK_COUNT_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['B09:1', 'B10:2', 'B11:2', 'B12:3']);
+    expect(BLOCK_COUNT_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['B09:1', 'B10:2', 'B11:2', 'B12:3', 'B13:1']);
   });
 
   describe.each(BLOCK_COUNT_TEMPLATES.map((t) => [t.id]))('%s', (id) => {
@@ -144,16 +144,38 @@ describe('B09〜B12 の生成', () => {
         expect(q.choices.map((c) => c.id)).toContain(q.correctAnswers[0]);
         for (const c of q.choices) expect(Number(c.id)).toBeGreaterThanOrEqual(1);
         expect(q.hint.text.length).toBeGreaterThan(0);
-        expect(isCountDetermined(q.scene.blocks)).toBe(true);
+        // B13 は「直方体の形にすき間なく積んだ」ことを問題文で示すので、見えない積み木の数も決まる
+        if (id === 'B13') expect(q.question).toContain('すき間なく直方体の形に積みました');
+        else {
+          expect(isCountDetermined(q.scene.blocks)).toBe(true);
+          expect(q.question).toContain('床から隙間なく積んであり');
+        }
         expect(q.scene.counting).toBe(true);
         expect(q.scene.interaction.allowCameraRotationBeforeAnswer).toBe(false);
-        expect(q.question).toContain('床から隙間なく積んであり');
         // 図（回答前）と 3D は同じ配置データ
         const fig = q.scene.preview.type === 'blocksPair' ? q.scene.preview.items[1] : q.scene.preview;
         expect(fig.cubes).toEqual(q.scene.blocks);
         expect(fig.arrows).toEqual([]);
       }
     });
+  });
+
+  it('B13：たて・横・高さが2〜5個の直方体。答えはたて×横×高さで、解説も同じ式', () => {
+    const t = BLOCK_COUNT_TEMPLATES.find((x) => x.id === 'B13');
+    expect(t.difficulty).toBe(1);
+    expect(t.bases()).toHaveLength(64);
+    for (const base of t.bases()) {
+      const q = t.build(base, createRng(1));
+      const xs = new Set(q.scene.blocks.map((c) => c.x));
+      const zs = new Set(q.scene.blocks.map((c) => c.z));
+      const ys = new Set(q.scene.blocks.map((c) => c.y));
+      expect([xs.size, zs.size, ys.size]).toEqual([base.w, base.d, base.h]);
+      for (const n of [xs.size, zs.size, ys.size]) expect(n >= 2 && n <= 5).toBe(true);
+      const total = base.w * base.d * base.h;
+      expect(q.scene.blocks).toHaveLength(total);
+      expect(q.correctAnswers).toEqual([String(total)]);
+      expect(q.explanation.text).toContain(`${base.w}×${base.d}×${base.h}＝${total}個`);
+    }
   });
 
   it('B09：全部の個数（底面 2×2〜3×2・3段まで・5〜15個）。解説の式は配置から作る', () => {

@@ -44,17 +44,17 @@ export function difficultyLabel(value) {
  * levelNotes は設定画面に出す難易度の説明。
  */
 export const CATEGORIES = Object.freeze([
-  // ① 立方体の個数・着色
+  // ① 立方体の個数
   {
     id: 'paintedCube',
-    name: '立方体の個数・着色',
+    name: '立方体の個数',
     description: '積み木は全部で何個？色がついた小立方体はいくつ？立方体の数を見抜こう！',
     grades: '小学5年生～中学2年生',
     enabled: true,
     templates: [...PAINTED_CUBE_TEMPLATES, ...BLOCK_COUNT_TEMPLATES],
     levelNotes: [
-      '基本：3面に色がつく小立方体・積み木は全部で何個',
-      '標準：2面・1面だけ・色がつかない小立方体・取り除く・見えない積み木・段ごとの個数',
+      '基本：直方体の形に積んだ積み木・積み木は全部で何個',
+      '標準：3面・2面・1面だけ・色がつかない小立方体・取り除く・見えない積み木・段ごとの個数',
       '応用：一部の面だけ塗る・条件の組み合わせ・分けた数の逆算・完成形まであと何個',
     ],
   },
@@ -98,17 +98,7 @@ export const CATEGORIES = Object.freeze([
     templates: withHints(NET_MAPPING_TEMPLATES),
     levelNotes: ['基本：向かい合う面・重なる辺', '標準：重なる点・となり合う面', '応用：完成した立方体・点と辺の組み合わせ'],
   },
-  // ⑥ 立方体の切断
-  {
-    id: 'cubeCutting',
-    name: '立方体の切断',
-    description: '立方体をスパッと切ると、どんな形になる？切り口を予想しよう！',
-    grades: '中学1年生～中学3年生',
-    enabled: true,
-    templates: CUTTING_TEMPLATES,
-    levelNotes: ['基本：切り口は何角形・切り口の形の図', '標準：切り口が通る辺・中点を通る切り口の形', '応用：切り分けた立体の体積・切り分けた立体は立方体の何分の1'],
-  },
-  // ⑦ 位置関係
+  // ⑥ 位置関係
   {
     id: 'position',
     name: '位置関係',
@@ -117,6 +107,16 @@ export const CATEGORIES = Object.freeze([
     enabled: true,
     templates: withPrerequisites(withHints(POSITION_TEMPLATES), { P08: [PREREQUISITES.SKEW_LINES], P10: [PREREQUISITES.SKEW_LINES], P13: [PREREQUISITES.SKEW_LINES] }),
     levelNotes: ['基本：辺と辺の平行・交わる・2本の辺の位置関係、面と面の平行など', '標準：面と垂直な面・辺と面の関係・辺と面の位置関係の説明', '応用：ねじれの位置・2つの面に垂直な辺の本数・2つの条件を組み合わせた問題'],
+  },
+  // ⑦ 立方体の切断
+  {
+    id: 'cubeCutting',
+    name: '立方体の切断',
+    description: '立方体をスパッと切ると、どんな形になる？切り口を予想しよう！',
+    grades: '中学1年生～中学3年生',
+    enabled: true,
+    templates: CUTTING_TEMPLATES,
+    levelNotes: ['基本：切り口は何角形・切り口の形の図', '標準：切り口が通る辺・中点を通る切り口の形', '応用：切り分けた立体の体積・切り分けた立体は立方体の何分の1'],
   },
   // ⑧ 立方体に内接する立体と体積
   {

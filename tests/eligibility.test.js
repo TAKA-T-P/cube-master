@@ -95,8 +95,8 @@ describe('前提知識（prerequisites）', () => {
     expect(isQuestionEligible(q, PLAY_MODES.CHALLENGE, { allowPythagoreanQuestions: true })).toBe(false);
   });
 
-  it('全78テンプレート：対象のテンプレートだけが advanced を持ち、作った問題には正しい prerequisites が付く', () => {
-    expect(ALL_TEMPLATES).toHaveLength(78);
+  it('全79テンプレート：対象のテンプレートだけが advanced を持ち、作った問題には正しい prerequisites が付く', () => {
+    expect(ALL_TEMPLATES).toHaveLength(79);
     expect(ALL_TEMPLATES.filter((t) => t.advanced === 'always').map((t) => t.id).sort()).toEqual(ADVANCED.always);
     expect(ALL_TEMPLATES.filter((t) => t.advanced === 'sometimes').map((t) => t.id).sort()).toEqual([...ADVANCED.sometimes].sort());
     for (const t of ALL_TEMPLATES) {
@@ -250,13 +250,13 @@ describe('モードごとの出題', () => {
 describe('カテゴリの順序', () => {
   it('①〜⑩ の順に並び、内部の id・テンプレート id は変えない', () => {
     expect(CATEGORIES.map((c) => `${categoryNumber(c.id)}${c.name}`)).toEqual([
-      '①立方体の個数・着色',
+      '①立方体の個数',
       '②サイコロ・回転',
       '③積み木の見え方・投影図',
       '④展開図パズル',
       '⑤展開図と頂点・辺',
-      '⑥立方体の切断',
-      '⑦位置関係',
+      '⑥位置関係',
+      '⑦立方体の切断',
       '⑧立方体に内接する立体と体積',
       '⑨立方体に隠れた図形・長さ・角度',
       '⑩立方体の表面の最短経路',

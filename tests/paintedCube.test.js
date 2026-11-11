@@ -113,10 +113,10 @@ const divisionsIn = (text) => numberIn(text, /(\d)×\d×\d/);
 
 describe('カテゴリとテンプレート', () => {
   it('⑦ 立方体の個数・着色（B01〜B08・難易度）', () => {
-    expect(getCategory('paintedCube')).toMatchObject({ name: '立方体の個数・着色', enabled: true, grades: '小学5年生～中学2年生' });
-    expect(PAINTED_CUBE_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['B01:1', 'B02:2', 'B03:2', 'B04:2', 'B05:3', 'B06:3', 'B07:2', 'B08:3']);
-    expect(getTemplates('paintedCube', 1).map((t) => t.id)).toEqual(['B01', 'B09']);
-    expect(getTemplates('paintedCube', 2).map((t) => t.id)).toEqual(['B02', 'B03', 'B04', 'B07', 'B10', 'B11']);
+    expect(getCategory('paintedCube')).toMatchObject({ name: '立方体の個数', enabled: true, grades: '小学5年生～中学2年生' });
+    expect(PAINTED_CUBE_TEMPLATES.map((t) => `${t.id}:${t.difficulty}`)).toEqual(['B01:2', 'B02:2', 'B03:2', 'B04:2', 'B05:3', 'B06:3', 'B07:2', 'B08:3']);
+    expect(getTemplates('paintedCube', 1).map((t) => t.id)).toEqual(['B09', 'B13']);
+    expect(getTemplates('paintedCube', 2).map((t) => t.id)).toEqual(['B01', 'B02', 'B03', 'B04', 'B07', 'B10', 'B11']);
     expect(getTemplates('paintedCube', 3).map((t) => t.id)).toEqual(['B05', 'B06', 'B08', 'B12']);
   });
 
@@ -226,7 +226,7 @@ describe('正解が数学的な計算と一致する（問題文の分け方・�
       ids.push(q.templateId);
     }
     for (let i = 2; i < ids.length; i++) expect(ids[i] === ids[i - 1] && ids[i] === ids[i - 2]).toBe(false);
-    expect(new Set(ids).size).toBe(12); // B01〜B12 がかたよらずに出る
+    expect(new Set(ids).size).toBe(13); // B01〜B13 がかたよらずに出る
   });
 });
 

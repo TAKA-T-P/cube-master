@@ -150,16 +150,16 @@ describe('TrainingSession', () => {
 describe('questionRegistry', () => {
   it('10カテゴリすべて遊べる（Phase 7 で②切断・⑧最短経路、Phase 8 で⑤内接立体・⑨長さと角度を追加）', () => {
     expect(CATEGORIES).toHaveLength(10);
-    expect(CATEGORIES.filter((c) => c.enabled).map((c) => c.id)).toEqual(['paintedCube', 'dice', 'projection', 'netPuzzle', 'netMapping', 'cubeCutting', 'position', 'inscribedSolid', 'cubeGeometryChallenge', 'surfacePath']);
+    expect(CATEGORIES.filter((c) => c.enabled).map((c) => c.id)).toEqual(['paintedCube', 'dice', 'projection', 'netPuzzle', 'netMapping', 'position', 'cubeCutting', 'inscribedSolid', 'cubeGeometryChallenge', 'surfacePath']);
     // 小学生でも取り組みやすい順（内部の id は変えない）。画面の番号は並び順で①〜⑩
-    expect(CATEGORIES.map((c) => c.id)).toEqual(['paintedCube', 'dice', 'projection', 'netPuzzle', 'netMapping', 'cubeCutting', 'position', 'inscribedSolid', 'cubeGeometryChallenge', 'surfacePath']);
+    expect(CATEGORIES.map((c) => c.id)).toEqual(['paintedCube', 'dice', 'projection', 'netPuzzle', 'netMapping', 'position', 'cubeCutting', 'inscribedSolid', 'cubeGeometryChallenge', 'surfacePath']);
     expect(CATEGORIES.map((c) => categoryNumber(c.id)).join('')).toBe('①②③④⑤⑥⑦⑧⑨⑩');
     expect(CATEGORIES.filter((c) => !c.enabled)).toEqual([]);
     expect(getCategory('inscribedSolid')).toMatchObject({ name: '立方体に内接する立体と体積', description: '立方体の中に隠れた立体を見つけよう！四面体や八面体の形と体積を考えよう！', grades: '小学5年生～中学3年生' });
     expect(getCategory('cubeGeometryChallenge')).toMatchObject({ name: '立方体に隠れた図形・長さ・角度', description: '立方体の中の三角形や対角線を見つけよう！長さや角度のなぞに挑戦！', grades: '小学5年生～中学3年生' });
     expect(getCategory('cubeCutting')).toMatchObject({ name: '立方体の切断', description: '立方体をスパッと切ると、どんな形になる？切り口を予想しよう！' });
     expect(getCategory('surfacePath')).toMatchObject({ name: '立方体の表面の最短経路', description: '立方体の表面を進むとき、いちばん短い道はどれ？展開図で考えよう！' });
-    expect(getCategory('paintedCube')).toMatchObject({ name: '立方体の個数・着色', grades: '小学5年生～中学2年生' });
+    expect(getCategory('paintedCube')).toMatchObject({ name: '立方体の個数', grades: '小学5年生～中学2年生' });
     expect(getCategory('netMapping')).toMatchObject({ name: '展開図と頂点・辺', grades: '小学5年生～中学1年生' });
     expect(getCategory('netPuzzle')).toMatchObject({ name: '展開図パズル', grades: '小学4年生～中学1年生' });
     expect(getCategory('position')).toMatchObject({ name: '位置関係', grades: '小学6年生～中学1年生' });

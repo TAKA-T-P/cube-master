@@ -88,7 +88,7 @@ describe('一覧', () => {
     const rows = [...container.querySelectorAll('.catalog-row')];
     expect(rows.map((r) => r.dataset.template)).toEqual(ALL.map((t) => t.id));
     expect(container.querySelectorAll('.catalog-section')).toHaveLength(10);
-    expect(container.querySelector('.catalog-section__title').textContent).toBe('① 立方体の個数・着色（12）');
+    expect(container.querySelector('.catalog-section__title').textContent).toBe('① 立方体の個数（13）');
     const g03 = rows.find((r) => r.dataset.template === 'G03');
     expect(g03.textContent).toContain('いつも');
     // G03 は √ を使うので、1分チャレンジ・段位認定には出ない
