@@ -202,7 +202,7 @@ describe('1分チャレンジ・段位認定', () => {
 
   it('段位認定には、新しいカテゴリを自動では入れない（ルールも Phase 6 のまま）', () => {
     expect(CERTIFICATION_RULES.categories).toEqual(['netMapping', 'position', 'netPuzzle', 'dice', 'paintedCube', 'projection']);
-    expect(CERTIFICATION_RULES.rulesVersion).toBe(3);
+    expect(CERTIFICATION_RULES.rulesVersion).toBe(4);
     expect(getCategory('cubeCutting').enabled).toBe(true);
     expect(getCategory('surfacePath').enabled).toBe(true);
     expect(getCategory('inscribedSolid').enabled).toBe(true);

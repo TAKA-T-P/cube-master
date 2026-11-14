@@ -72,12 +72,12 @@ describe('段位（21段階）', () => {
       expect(getRankForScore(level, th[20])).toBe(21); // 皆伝
       expect(getRankForScore(level, 999999)).toBe(21);
     }
-    // 3レベル共通の基準で、皆伝は 2500 点
+    // 3レベル共通の基準で、皆伝は 3000 点
     expect(R.levels.standard.thresholds).toEqual(R.levels.basic.thresholds);
     expect(R.levels.expert.thresholds).toEqual(R.levels.basic.thresholds);
-    expect(R.levels.basic.thresholds[20]).toBe(2500);
-    expect(getRankForScore('expert', 2499)).toBe(20);
-    expect(getRankForScore('expert', 2500)).toBe(21);
+    expect(R.levels.basic.thresholds[20]).toBe(3000);
+    expect(getRankForScore('expert', 2999)).toBe(20);
+    expect(getRankForScore('expert', 3000)).toBe(21);
   });
 
   it('次の段位と、あと何点かがわかる（皆伝は次がない）', () => {
@@ -443,13 +443,14 @@ describe('段位認定の記録', () => {
   const summary = (level, score, extra = {}) => ({ level, score, correctCount: Math.floor(score / 100), answeredCount: 10, rankLevel: getRankForScore(level, score), aborted: false, ...extra });
 
   it('レベルごとに別々に、挑戦回数・最高得点・最高段位を記録する。低い成績で下がらない', () => {
-    let res = recordCertificationResult(createEmptyRecords(), summary('basic', 1600));
+    const th = R.levels.basic.thresholds; // 必要スコアが変わっても使えるように、基準から点数を決める
+    let res = recordCertificationResult(createEmptyRecords(), summary('basic', th[14]));
     expect(res).toMatchObject({ previousRank: 0, newRank: 15, rankUp: true, bestScoreUpdated: true, recorded: true });
-    res = recordCertificationResult(res.records, summary('basic', 300));
+    res = recordCertificationResult(res.records, summary('basic', th[2]));
     expect(res).toMatchObject({ previousRank: 15, newRank: 15, rankUp: false, bestScoreUpdated: false });
-    expect(res.records.levels.basic).toMatchObject({ attempts: 2, bestScore: 1600, bestRank: 15 });
+    expect(res.records.levels.basic).toMatchObject({ attempts: 2, bestScore: th[14], bestRank: 15 });
     // 同じ段位でも最高得点の更新は自己ベスト
-    res = recordCertificationResult(res.records, summary('basic', 1650));
+    res = recordCertificationResult(res.records, summary('basic', th[14] + 50));
     expect(res).toMatchObject({ rankUp: false, bestScoreUpdated: true });
     expect(res.records.levels.standard).toMatchObject({ attempts: 0, bestRank: 0 });
   });
@@ -468,10 +469,11 @@ describe('段位認定の記録', () => {
   it('こわれた・古い保存データでもエラーにならない。段位の基準が変わったら前の記録は分けて残す', () => {
     expect(normalizeRecords(null)).toEqual(createEmptyRecords());
     expect(normalizeRecords({ version: 9 })).toEqual(createEmptyRecords());
-    const old = recordCertificationResult(createEmptyRecords(), summary('basic', 1000)).records;
+    const score10 = R.levels.basic.thresholds[9]; // 1級（rankLevel 10）ちょうど
+    const old = recordCertificationResult(createEmptyRecords(), summary('basic', score10)).records;
     const newRules = { ...R, rulesVersion: R.rulesVersion + 1 };
     const migrated = normalizeRecords(old, newRules);
-    expect(migrated.levels.basic).toMatchObject({ attempts: 1, bestScore: 0, bestRank: 0, previous: { rulesVersion: R.rulesVersion, bestScore: 1000, bestRank: 10 } });
+    expect(migrated.levels.basic).toMatchObject({ attempts: 1, bestScore: 0, bestRank: 0, previous: { rulesVersion: R.rulesVersion, bestScore: score10, bestRank: 10 } });
     expect(migrated.rulesVersion).toBe(R.rulesVersion + 1);
   });
 });

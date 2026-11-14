@@ -231,7 +231,7 @@ describe('モードごとの出題', () => {
   it('段位認定：設定が ON でも √ の問題は出ない。カテゴリ・ルールは変えない', () => {
     settings.setPythagoreanAllowed(true);
     expect(CERTIFICATION_RULES.categories).toHaveLength(6);
-    expect(CERTIFICATION_RULES.rulesVersion).toBe(3);
+    expect(CERTIFICATION_RULES.rulesVersion).toBe(4);
     const templatesByCategory = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.templates]));
     for (const level of ['basic', 'standard', 'expert']) {
       const s = new CertificationSession({ level, templatesByCategory, rng: createRng(4), now: () => 0 });

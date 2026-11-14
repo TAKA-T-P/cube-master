@@ -21,11 +21,11 @@ describe('現行ルール（Phase 6 で維持する値）', () => {
     expect(R.streakBonus).toEqual([{ min: 5, bonus: 40 }, { min: 3, bonus: 20 }]);
   });
 
-  it('段位：21段階・3レベル共通の必要スコア・皆伝 2500点・rulesVersion 3', () => {
-    const expected = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1450, 1600, 1750, 1900, 2050, 2200, 2350, 2500];
+  it('段位：21段階・3レベル共通の必要スコア・皆伝 3000点・rulesVersion 4', () => {
+    const expected = [120, 240, 360, 480, 600, 720, 840, 960, 1080, 1200, 1320, 1440, 1560, 1720, 1880, 2040, 2200, 2400, 2600, 2800, 3000];
     expect(MAX_RANK).toBe(21);
     for (const l of LEVELS) expect([...R.levels[l].thresholds]).toEqual(expected);
-    expect(R.rulesVersion).toBe(3);
+    expect(R.rulesVersion).toBe(4);
   });
 
   it('演出の速さは設定でまとめて管理（トレーニングはふつうの速さ、時間制の2モードは同じ速さ）', () => {
@@ -165,7 +165,7 @@ describe('画面', () => {
     tabs[3].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
     expect(visible()).toEqual(['certification']);
     const cert = container.querySelector('#help-certification').textContent;
-    for (const text of ['100秒', '240点', '3秒ふえます', '2500点で皆伝', '五段★']) expect(cert).toContain(text);
+    for (const text of ['100秒', '240点', '3秒ふえます', '3000点で皆伝', '五段★']) expect(cert).toContain(text);
     tabs[8].click();
     expect(container.querySelector('[data-testid="sound-toggle"]')).not.toBeNull();
     expect([...container.querySelectorAll('button')].some((b) => b.textContent === '学習記録を消去')).toBe(true);
