@@ -138,7 +138,7 @@ function answer({ correct = true } = {}) {
 describe('タイトル・選択・ルール説明', () => {
   it('タイトルのメニューのいちばん上に「トライアル」。トレーニングは「ドリルモード」', () => {
     const navigate = mount(mountHomeScreen);
-    expect([...container.querySelectorAll('[data-menu]')].map((b) => b.textContent)).toEqual(['トライアル', 'ドリルモード', '段位認定', '3D立方体をためす', 'あそびかた']);
+    expect([...container.querySelectorAll('[data-menu]')].map((b) => b.textContent)).toEqual(['トライアル', 'ドリルモード', '段位認定', 'あそびかた']);
     container.querySelector('[data-menu="trial"]').click();
     expect(navigate).toHaveBeenCalledWith('trial');
   });

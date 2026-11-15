@@ -69,19 +69,20 @@ describe('トップ画面', () => {
     expect(container.textContent).toContain('立方体を極める！空間認識トレーニング');
     expect(container.textContent).toContain('Ver.0.2.0');
 
-    // Phase 5：トレーニング・段位認定・3D立方体をためす・あそびかたの順で、どれも選べる
-    expect([...container.querySelectorAll('[data-menu]')].map((b) => b.dataset.menu)).toEqual(['trial', 'training', 'certification', 'preview', 'help']);
+    // トライアル・ドリルモード・段位認定・あそびかたの4つ（2×2）で、どれも選べる。3D立方体をためすは、あそびかたの中
+    expect([...container.querySelectorAll('[data-menu]')].map((b) => b.dataset.menu)).toEqual(['trial', 'training', 'certification', 'help']);
+    expect(container.querySelector('.btn--menu-wide')).toBeNull();
+    expect(container.textContent).not.toContain('3D立方体をためす');
     const training = container.querySelector('[data-menu="training"]');
     const cert = container.querySelector('[data-menu="certification"]');
     expect(training.disabled).toBe(false);
     expect(cert.disabled).toBe(false);
     expect(container.textContent).not.toContain('準備中');
 
-    container.querySelector('[data-menu="preview"]').click();
     container.querySelector('[data-menu="help"]').click();
     training.click();
     cert.click();
-    expect(navigate.mock.calls).toEqual([['preview'], ['help'], ['categories'], ['certification']]);
+    expect(navigate.mock.calls).toEqual([['help'], ['categories'], ['certification']]);
   });
 });
 
@@ -92,6 +93,25 @@ describe('ヘルプ画面', () => {
     expect(container.textContent).toContain('ドラッグ');
     expect(container.textContent).toContain('ピンチ');
     expect(container.textContent).toContain('視点リセット');
+  });
+
+  it('「3D立方体をためす」のタブ：3D の立方体の画面へのボタンと操作の説明。params.tab でそのタブを開く', () => {
+    const container = document.createElement('main');
+    const navigate = vi.fn();
+    mountHelpScreen(container, { navigate, params: { tab: 'cube3d' } });
+    const tab = container.querySelector('#help-tab-cube3d');
+    expect(tab.textContent).toBe('3D立方体をためす');
+    expect(tab.getAttribute('aria-selected')).toBe('true');
+    const panel = container.querySelector('#help-cube3d');
+    expect(panel.hidden).toBe(false);
+    expect(panel.textContent).toContain('ドラッグ');
+    expect(container.querySelector('[data-tab="controls"]')).toBeNull();
+    panel.querySelector('[data-testid="open-preview"]').click();
+    expect(navigate).toHaveBeenCalledWith('preview');
+    // params がなければ、はじめのタブ
+    const other = document.createElement('main');
+    mountHelpScreen(other, { navigate: vi.fn() });
+    expect(other.querySelector('#help-trial').hidden).toBe(false);
   });
 });
 
@@ -174,8 +194,10 @@ describe('3D プレビュー画面', () => {
     const navigate = vi.fn();
     const screen = mountPreviewScreen(container, { navigate });
     expect(container.textContent).toContain('WebGL2');
-    button(container, 'ホームに戻る').click();
-    expect(navigate).toHaveBeenCalledWith('home');
+    // あそびかたの「3D立方体をためす」から開くので、そのタブへ戻る
+    button(container, 'あそびかたに戻る').click();
+    expect(navigate).toHaveBeenCalledWith('help', { tab: 'cube3d' });
+    expect(button(container, '← あそびかた')).toBeDefined();
     expect(() => screen.unmount()).not.toThrow();
     spy.mockRestore();
   });

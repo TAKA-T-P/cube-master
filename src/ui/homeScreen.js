@@ -54,11 +54,11 @@ function questionSetting() {
 }
 
 export const MENU_ITEMS = [
-  { id: 'trial', label: 'トライアル', route: 'trial', enabled: true, primary: true, wide: true },
+  // 2×2：トライアル・ドリルモード／段位認定・あそびかた（3D立方体をためすは、あそびかたの中）
+  { id: 'trial', label: 'トライアル', route: 'trial', enabled: true, primary: true },
   { id: 'training', label: 'ドリルモード', route: 'categories', enabled: true, primary: true },
   { id: 'certification', label: '段位認定', route: 'certification', enabled: true, primary: true },
-  { id: 'preview', label: '3D立方体をためす', route: 'preview', enabled: true },
-  { id: 'help', label: 'あそびかた', route: 'help', enabled: true },
+  { id: 'help', label: 'あそびかた', route: 'help', enabled: true, primary: true },
 ];
 
 /** 隠し操作：バージョン表示を続けて押す回数（問題テンプレート図鑑を開く。開発者の確認用） */

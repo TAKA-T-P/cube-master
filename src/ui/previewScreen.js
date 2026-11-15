@@ -41,7 +41,8 @@ export function mountPreviewScreen(container, { navigate }) {
       h(
         'header',
         { class: 'page-header page-header--compact' },
-        h('button', { class: 'btn btn--ghost', type: 'button', onClick: () => navigate('home') }, '← ホーム'),
+        // あそびかたの「3D立方体をためす」から開くので、そのタブへ戻る
+        h('button', { class: 'btn btn--ghost', type: 'button', onClick: () => navigate('help', { tab: 'cube3d' }) }, '← あそびかた'),
         h('h1', {}, '3D立方体をためす'),
       ),
       h('div', { class: 'preview-body' }, h('section', { class: 'viewport-wrap' }, viewport, status), panel),
@@ -60,7 +61,7 @@ export function mountPreviewScreen(container, { navigate }) {
         : '3D 表示の準備中にエラーが発生しました。ページを再読み込みしてください。';
     viewport.append(h('div', { class: 'error-panel error-panel--overlay' }, h('p', {}, message)));
     status.remove();
-    panel.append(h('button', { class: 'btn btn--primary', type: 'button', onClick: () => navigate('home') }, 'ホームに戻る'));
+    panel.append(h('button', { class: 'btn btn--primary', type: 'button', onClick: () => navigate('help', { tab: 'cube3d' }) }, 'あそびかたに戻る'));
     return { unmount() {} };
   }
   window.cubeMaster = { viewer };

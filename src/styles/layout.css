@@ -112,7 +112,7 @@
   font-weight: 700;
 }
 
-/* 2行×2列：トレーニング・段位認定／3D立方体をためす・あそびかた */
+/* 2行×2列：トライアル・ドリルモード／段位認定・あそびかた */
 .home-menu {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -129,7 +129,7 @@
   line-height: 1.3;
 }
 
-/* トレーニング・段位認定は、文字を少し大きく */
+/* メニューのボタンは、文字を少し大きく */
 .btn--menu.btn--primary {
   font-size: clamp(17px, 4.8vw, 21px);
 }
@@ -711,4 +711,10 @@
 /* トライアル：ドリルモード・段位認定の上に、横いっぱいの1行 */
 .btn--menu-wide {
   grid-column: 1 / -1;
+}
+
+/* あそびかた：「3D立方体をためす」のタブの、3D の画面を開くボタン */
+.help-open-3d {
+  justify-self: start;
+  min-width: 200px;
 }
