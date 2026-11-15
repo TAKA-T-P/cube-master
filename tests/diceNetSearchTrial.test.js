@@ -107,10 +107,10 @@ describe('判定 validateDiceNetSelection（お手本と同じでなくても、
 });
 
 describe('問題の作り方', () => {
-  it('難易度ごとのマス目：★ 3×4・★★ 3×5・★★★ 4×5・★★★★ 5×5（5×5 より大きくしない）。★★★ 以上は別解なし・ひっかけあり', () => {
+  it('難易度ごとのマス目：★ 3×4・★★ 3×5・★★★ 4×5・★★★★ 5×5（5×5 より大きくしない）。どれも別解なし。★★★ 以上はひっかけあり', () => {
     expect(DICE_NET_SEARCH_LEVELS).toEqual({
-      1: { rows: 3, cols: 4, unique: false, minTraps: 0 },
-      2: { rows: 3, cols: 5, unique: false, minTraps: 0 },
+      1: { rows: 3, cols: 4, unique: true, minTraps: 0 },
+      2: { rows: 3, cols: 5, unique: true, minTraps: 0 },
       3: { rows: 4, cols: 5, unique: true, minTraps: 3 },
       4: { rows: 5, cols: 5, unique: true, minTraps: 5 },
     });
@@ -134,7 +134,7 @@ describe('問題の作り方', () => {
     }
   });
 
-  it.each([3, 4])('★%i：正しい6マスはお手本だけ（別解なし）。ひっかけ（1〜6がそろうのに和が7でない）が決めた数以上ある', (difficulty) => {
+  it.each([1, 2, 3, 4])('★%i：正しい6マスはお手本だけ（別解なし）。ひっかけ（1〜6がそろうのに和が7でない）が決めた数以上ある', (difficulty) => {
     const { minTraps } = DICE_NET_SEARCH_LEVELS[difficulty];
     const key = (l) => l.map((x) => `${x.row},${x.col}`).sort().join('|');
     for (let seed = 1; seed <= 150; seed++) {

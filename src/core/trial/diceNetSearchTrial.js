@@ -15,9 +15,9 @@
  * （形は変えない）、向かい合う面の和が7になるように目を入れる。ほかのマスには1〜6をでたらめに入れる。
  * 最後に、お手本の6マスが判定で正解になることを確かめる。
  *
- * ★★★・★★★★ は、ほかのマスの目を入れ直して、
- *   - お手本のほかに正しい6マス（別解）ができない（答えがただ1つ）
- *   - 「展開図の形で1〜6がそろっているのに、向かい合う和が7でない」ひっかけの6マスが minTraps 個以上ある
+ * ほかのマスの目を入れ直して、
+ *   - お手本のほかに正しい6マス（別解）ができない（答えがただ1つ。すべての難易度）
+ *   - 「展開図の形で1〜6がそろっているのに、向かい合う和が7でない」ひっかけの6マスが minTraps 個以上ある（★★★ 3個・★★★★ 5個）
  * ようにする（和が7かまで確かめないと見つけられない）。
  */
 import { CUBE_NETS } from '../cubeNetCatalog.js';
@@ -33,8 +33,8 @@ export const DICE_NET_CELLS = 6;
  *   unique：別解を出さない、minTraps：ひっかけの6マスの最低の数
  */
 export const DICE_NET_SEARCH_LEVELS = Object.freeze({
-  1: Object.freeze({ rows: 3, cols: 4, unique: false, minTraps: 0 }),
-  2: Object.freeze({ rows: 3, cols: 5, unique: false, minTraps: 0 }),
+  1: Object.freeze({ rows: 3, cols: 4, unique: true, minTraps: 0 }),
+  2: Object.freeze({ rows: 3, cols: 5, unique: true, minTraps: 0 }),
   3: Object.freeze({ rows: 4, cols: 5, unique: true, minTraps: 3 }),
   4: Object.freeze({ rows: 5, cols: 5, unique: true, minTraps: 5 }),
 });
@@ -186,7 +186,7 @@ export function generateDiceNetSearchQuestion(difficulty, rng = Math.random) {
     });
     const sampleSolution = [...placed].sort((a, b) => a.row - b.row || a.col - b.col);
     const sampleKey = selectionKey(sampleSolution);
-    // ほかのマスの目を入れ、★★★ 以上は「別解なし・ひっかけ minTraps 個以上」になるまで入れ直す
+    // ほかのマスの目を入れ、「別解なし・ひっかけ minTraps 個以上」になるまで入れ直す
     for (let refill = 0; refill < (level.unique || level.minTraps > 0 ? MAX_REFILLS : 1); refill++) {
       const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 1 + Math.floor(rng() * 6)));
       placed.forEach((p, i) => {
