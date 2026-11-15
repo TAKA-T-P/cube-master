@@ -2,7 +2,7 @@
  * 立方体の個数・着色：積み木の個数の問題テンプレート（B09〜B12）
  *
  * 積み木の配置データは、積み木の見え方（⑩）と同じ core/blockGeometry の高さマップ・小立方体の一覧を使う。
- * ⑦では投影図ではなく「個数」を問う。見取図（床から隙間なく積む・浮きなし、という条件つき）だけで
+ * ⑦では投影図ではなく「個数」を問う。見取図（床からすき間なく積む・浮きなし、という条件つき）だけで
  * 個数がただ1つに決まる配置（core/blockCounting の isCountDetermined）だけを出題する。
  *
  * 回答後の 3D では、積み木を段ごとに分けて、各段の個数と合計を表示する（three/blockCountingAnimations）。
@@ -19,7 +19,7 @@ const plain = (list) => list.map(({ x, y, z }) => ({ x, y, z }));
 /** 少し回りこんで見る向き（正解演出のはじめに、積み木全体を少し回す） */
 export const COUNT_VIEW_DIRECTION = Object.freeze([6.5, 5, 3.5]);
 
-const STATEMENT = '積み木は床から隙間なく積んであり、浮いている積み木はありません。';
+const STATEMENT = '積み木は床からすき間なく積まれています。';
 
 const blocksVisual = (cubes, caption) => ({
   type: 'blocks',

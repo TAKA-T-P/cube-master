@@ -6,7 +6,7 @@
 export const layerFormula = (layers, total) => `${layers.map((l) => `${l.level}段目${l.count}個`).join('＋')}＝${total}個`;
 
 export const explainTotal = (layers, total) =>
-  `下の段から順に数えます。${layerFormula(layers, total)}です。積み木は床から隙間なく積んであるので、上に積み木がある場所には、その下にも必ず積み木があります。`;
+  `下の段から順に数えます。${layerFormula(layers, total)}です。積み木は床からすき間なく積んであるので、上に積み木がある場所には、その下にも必ず積み木があります。`;
 
 export const explainHidden = (layers, total, hidden) =>
   `この図では${hidden}個の積み木が、ほかの積み木にかくれて見えません。上に積み木がある場所には、それを支える積み木が下にもあるので、それも数えます。` +

@@ -5,7 +5,7 @@
  * 全体・段ごと・列ごとの個数、見取図の視点から見えない小立方体、取り除いた残りを数える。
  *
  * 見取図だけで個数が決まるか（isCountDetermined）
- *   1. 床から隙間なく積んであり、浮いている小立方体がない（isGrounded）
+ *   1. 床からすき間なく積んであり、浮いている小立方体がない（isGrounded）
  *   2. どのマスも、柱のいちばん上の面（空きマスは床）が見取図の視点から見える（isBlockStructureReadable）
  *   3. 見取図の中で、ちがうマス・ちがう高さの上の面が同じ位置に描かれることがない
  *      （見る向き v = (4, 5, 6) と平行な整数のずれは (4, 5, 6) の整数倍だけなので、横・奥行き・高さがどれも 4 以下なら起こらない）
@@ -123,7 +123,7 @@ export function projectedTopCenter(x, h, z, viewDirection = BLOCK_VIEW_DIRECTION
 }
 
 /**
- * 見取図（床から隙間なく積む・浮きなし、という条件つき）だけで、小立方体の個数がただ1つに決まるか
+ * 見取図（床からすき間なく積む・浮きなし、という条件つき）だけで、小立方体の個数がただ1つに決まるか
  * 決まらない配置は出題しない（冒頭の説明を参照）
  */
 export function isCountDetermined(cubes, viewDirection = BLOCK_VIEW_DIRECTION) {

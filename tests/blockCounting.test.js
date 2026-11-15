@@ -148,7 +148,8 @@ describe('B09〜B12 の生成', () => {
         if (id === 'B13') expect(q.question).toContain('すき間なく直方体の形に積みました');
         else {
           expect(isCountDetermined(q.scene.blocks)).toBe(true);
-          expect(q.question).toContain('床から隙間なく積んであり');
+          expect(q.question).toContain('積み木は床からすき間なく積まれています。');
+          expect(q.question).not.toContain('浮いている');
         }
         expect(q.scene.counting).toBe(true);
         expect(q.scene.interaction.allowCameraRotationBeforeAnswer).toBe(false);
