@@ -19,7 +19,7 @@ const { mountTrialResultScreen } = await import('../src/ui/trial/trialResultScre
 const { mountHomeScreen } = await import('../src/ui/homeScreen.js');
 const { createGridPainter } = await import('../src/ui/trial/gridPainter.js');
 const { createNumberInput } = await import('../src/ui/trial/numberInput.js');
-const { TRIAL_RULES } = await import('../src/core/trial/trialRules.js');
+const { TRIAL_RULES, getTrialMode } = await import('../src/core/trial/trialRules.js');
 const { expectedGrid } = await import('../src/core/trial/projectionTrial.js');
 const { answerSplash } = await import('../src/ui/answerSplash.js');
 const { createMemoryBackend } = await import('../src/core/storageManager.js');
@@ -123,6 +123,15 @@ function answer({ correct = true } = {}) {
       pointer(el, 'pointerup');
     }
     buttonByText(container, '決定').click();
+  } else if (q.mode === 'diceNetSearch') {
+    // 正解：お手本の6マス。まちがい：上の行から6マス（展開図にならない）
+    const cells = correct ? q.sampleSolution : Array.from({ length: 6 }, (_, i) => ({ row: Math.floor(i / q.cols), col: i % q.cols }));
+    for (const { row, col } of cells) {
+      const el = container.querySelector(`.trial-cell[data-r="${row}"][data-c="${col}"]`);
+      pointer(el, 'pointerdown');
+      pointer(el, 'pointerup');
+    }
+    buttonByText(container, '決定').click();
   }
 }
 
@@ -134,16 +143,16 @@ describe('タイトル・選択・ルール説明', () => {
     expect(navigate).toHaveBeenCalledWith('trial');
   });
 
-  it('5種類のカード（名前・説明・絵・最高到達 LEVEL・挑戦する）。記録はモードごと', () => {
+  it('6種類のカード（名前・説明・絵・最高到達 LEVEL・挑戦する）。記録はモードごと', () => {
     backend.setItem('cubeMaster:trial', JSON.stringify({ version: 1, modes: { diceRoll: { bestLevel: 15, attempts: 8 } } }));
     store.configureTrialStorage(backend);
     const navigate = mount(mountTrialSelectScreen);
     const cards = [...container.querySelectorAll('.trial-card')];
-    expect(cards.map((c) => c.querySelector('.trial-card__name').textContent)).toEqual(['積み木の数はいくつ？', '3方向から見ると？', 'サイコロを転がすと？', '展開図に分けろ！', '展開図に矢印を引け！']);
-    expect(cards.map((c) => c.querySelector('[data-testid="trial-best"]').textContent)).toEqual(['まだ記録がありません', 'まだ記録がありません', '最高到達 LEVEL 15', 'まだ記録がありません', 'まだ記録がありません']);
+    expect(cards.map((c) => c.querySelector('.trial-card__name').textContent)).toEqual(['積み木の数はいくつ？', '3方向から見ると？', 'サイコロを転がすと？', '展開図に分けろ！', '展開図に矢印を引け！', 'サイコロの展開図を探せ！']);
+    expect(cards.map((c) => c.querySelector('[data-testid="trial-best"]').textContent)).toEqual(['まだ記録がありません', 'まだ記録がありません', '最高到達 LEVEL 15', 'まだ記録がありません', 'まだ記録がありません', 'まだ記録がありません']);
     for (const c of cards) expect(c.querySelector('.trial-card__icon svg')).not.toBeNull();
     // 自己ベストの称号（記録がなければ出さない）
-    expect(cards.map((c) => c.querySelector('[data-testid="trial-card-title"]')?.textContent ?? null)).toEqual([null, null, '🏅 回転の達人', null, null]);
+    expect(cards.map((c) => c.querySelector('[data-testid="trial-card-title"]')?.textContent ?? null)).toEqual([null, null, '🏅 回転の達人', null, null, null]);
     // 「展開図に分けろ！」の下に「展開図を確認する」。押すと 11 種類の展開図
     const netsButton = buttonByText(container, '展開図を確認する');
     expect(netsButton.previousElementSibling).toBe(cards[3]);
@@ -184,7 +193,7 @@ describe('タイトル・選択・ルール説明', () => {
 describe('プレイ画面', () => {
   beforeEach(() => vi.useFakeTimers());
 
-  it.each(['blockCount', 'projectionDraw', 'diceRoll', 'netPartition', 'netArrow'])('%s：カウントダウン → 回答 → ○×・LEVEL・正しい答えの演出（タイマー停止）→ 次の問題で再開', async (mode) => {
+  it.each(['blockCount', 'projectionDraw', 'diceRoll', 'netPartition', 'netArrow', 'diceNetSearch'])('%s：カウントダウン → 回答 → ○×・LEVEL・正しい答えの演出（タイマー停止）→ 次の問題で再開', async (mode) => {
     store.startTrial(mode, { rng: createRng(3), now: () => Date.now() });
     mount(mountTrialPlayScreen);
     const session = store.getTrialSession();
@@ -203,7 +212,7 @@ describe('プレイ画面', () => {
     await vi.advanceTimersByTimeAsync(2000);
     // 正解
     answer({ correct: true });
-    const gain = mode === 'netPartition' ? 2 : 1;
+    const { gain, missesPerLevelDown } = getTrialMode(mode);
     expect(session.timer.state).toBe('paused');
     const remaining = session.timer.getRemainingMs();
     expect(remaining).toBe(98000);
@@ -231,7 +240,7 @@ describe('プレイ画面', () => {
     expect(container.querySelector('.trial-feedback__title').textContent).toBe('不正解');
     expect(container.querySelector('.trial-play').classList.contains('trial-play--correct')).toBe(false);
     expect(viewer.animations.setSpeed).toHaveBeenLastCalledWith(TRIAL_RULES.revealSpeed);
-    expect(container.querySelector('[data-testid="trial-level"]').textContent).toBe(`LEVEL ${mode === 'netPartition' ? gain : 1 + gain}`);
+    expect(container.querySelector('[data-testid="trial-level"]').textContent).toBe(`LEVEL ${missesPerLevelDown === 1 ? gain : 1 + gain}`);
     expect(store.getTrialSession().highestLevel).toBe(1 + gain);
     expect(container.querySelector('.trial-feedback__answer').textContent).not.toBe('');
   });

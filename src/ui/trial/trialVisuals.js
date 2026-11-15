@@ -4,9 +4,9 @@
  * - サイコロの道：マス目（点線）・道の線・到着のマス（赤）と、出発のマスに立てたサイコロ（ui/visualChoices の見取図と同じ向き・同じ縮尺）
  * - 選択画面のカードの小さな絵
  */
-import { renderCubeSvg } from '../visualChoices.js';
+import { renderCubeSvg, renderFaceSvg } from '../visualChoices.js';
 import { renderBlocksSvg } from '../blockVisuals.js';
-import { numberFaces } from '../../core/cubeFaceLabels.js';
+import { numberFaces, numberFace } from '../../core/cubeFaceLabels.js';
 import { INITIAL_ORIENTATION } from '../../core/cubeOrientation.js';
 import { DEFAULT_VIEW_DIRECTION } from '../../core/cubeConstants.js';
 import { projectBoardPoint, cellCenter } from '../../core/trial/diceRollTrial.js';
@@ -121,6 +121,29 @@ export function renderTrialIcon(modeId) {
     }
     case 'netArrow':
       return renderNetArrowIcon();
+    case 'diceNetSearch': {
+      // サイコロの目のマス目（3×4）。黄色の6マスが、正しいサイコロの展開図
+      const grid = [
+        [4, 2, 6, 5],
+        [3, 1, 4, 6],
+        [2, 5, 3, 1],
+      ];
+      const chosen = new Set(['0,1', '1,0', '1,1', '1,2', '1,3', '2,1']);
+      const answer = [[0, 1, 2], [1, 0, 3], [1, 1, 1], [1, 2, 4], [1, 3, 6], [2, 1, 5]];
+      for (const [r, c, n] of answer) grid[r][c] = n;
+      return svg(
+        'svg',
+        { viewBox: '-1 -1 82 62', class: 'trial-icon', role: 'img', 'aria-hidden': 'true' },
+        ...grid.flatMap((row, r) =>
+          row.map((n, c) => {
+            const face = renderFaceSvg({ face: numberFace(n, { color: chosen.has(`${r},${c}`) ? '#ffe27a' : '#ffffff' }) });
+            for (const [k, v] of Object.entries({ x: c * 20, y: r * 20, width: 20, height: 20 })) face.setAttribute(k, String(v));
+            face.removeAttribute('class');
+            return face;
+          }),
+        ),
+      );
+    }
     default:
       return null;
   }

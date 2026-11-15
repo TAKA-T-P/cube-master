@@ -2,7 +2,7 @@
  * トライアルのプレイ画面（100秒・LEVEL アップ）
  *
  * カウントダウン（3・2・1・START!）・タイマー・ロスタイム（最終問題・時間切れ）・中断の扱いは、段位認定・1分チャレンジ（ui/timedPlayScreen）と同じ。
- * 問題の図と入力は ui/trial/trialModeViews（5種類）。
+ * 問題の図と入力は ui/trial/trialModeViews（6種類）。
  *
  * タイマー（core/certificationTimer）が進むのは、問題を表示して回答できる間だけ。
  * 「決定」で止まり、○×・正しい答えの演出（正解でも不正解でも）・次の問題を作る間は止まったまま。次の問題を表示したら再開する。
@@ -18,6 +18,9 @@ import { createModeView } from './trialModeViews.js';
 import { formatSeconds, TIME_UP_MS } from '../timedPlayScreen.js';
 import { showAnswerSplash } from '../answerSplash.js';
 import { playAnswerSound, playTimeUpSound, playCountdownSound } from '../answerSound.js';
+
+/** お知らせを入力の下に出す種類 */
+const NOTICE_BELOW = new Set(['netPartition', 'diceNetSearch']);
 
 const TICK_MS = 100;
 
@@ -73,8 +76,8 @@ export function mountTrialPlayScreen(container, { navigate, rules = TRIAL_RULES 
       h('span', { class: 'badge badge--mode trial-play__mode' }, mode.name),
       h('div', { class: 'trial-play__status' }, levelEl, starsEl, timerEl),
     ),
-    // 「展開図に分けろ！」のお知らせ（「◯は6マスまでです」）は、パレット・「全消去」「決定」の下に出す
-    h('main', { class: 'trial-play__body' }, stage, questionText, feedback, ...(mode.id === 'netPartition' ? [inputHost, notice] : [notice, inputHost])),
+    // 「展開図に分けろ！」「サイコロの展開図を探せ！」のお知らせ（「◯は6マスまでです」など）は、「全消去」「決定」の下に出す
+    h('main', { class: 'trial-play__body' }, stage, questionText, feedback, ...(NOTICE_BELOW.has(mode.id) ? [inputHost, notice] : [notice, inputHost])),
   );
   container.append(root);
 

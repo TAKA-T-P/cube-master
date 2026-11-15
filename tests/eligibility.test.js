@@ -108,7 +108,7 @@ describe('前提知識（prerequisites）', () => {
         if (!t.advanced) expect(requiresAdvancedMath(q), t.id).toBe(false);
       }
     }
-  });
+  }, 20000); // 全テンプレートの問題を作るので、ほかのテストと並んで動くときは時間がかかる
 
   it('いつも三平方の定理・√ を使うテンプレート（G03・S03）は、出題する設定のときだけ出る', () => {
     for (const id of ADVANCED.always) {

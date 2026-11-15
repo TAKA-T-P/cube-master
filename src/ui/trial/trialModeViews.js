@@ -1,5 +1,5 @@
 /**
- * トライアルの5種類ごとの画面の中身（問題の図・回答の入力・答え合わせの演出）
+ * トライアルの6種類ごとの画面の中身（問題の図・回答の入力・答え合わせの演出）
  *
  * createModeView(question, { onSubmit, notify }) が返すもの：
  *   figure    問題の図（見取図・サイコロの道・塗り分ける図形）
@@ -19,12 +19,14 @@ import { createDiceAnswerInput } from './diceAnswerInput.js';
 import { createColorPalette, TRIAL_COLORS, ERASER } from './colorPalette.js';
 import { renderDiceBoard } from './trialVisuals.js';
 import { renderNetArrowSketch, createNetArrowInput, ARROW_COLORS } from './netArrowVisuals.js';
+import { renderFaceSvg } from '../visualChoices.js';
 import { BLOCK_VIEW_DIRECTION } from '../../core/blockGeometry.js';
 import { INITIAL_ORIENTATION } from '../../core/cubeOrientation.js';
-import { numberFaces } from '../../core/cubeFaceLabels.js';
+import { numberFaces, numberFace } from '../../core/cubeFaceLabels.js';
 import { DEFAULT_VIEW_DIRECTION } from '../../core/cubeConstants.js';
 import { expectedGrid } from '../../core/trial/projectionTrial.js';
 import { canPaintColor, solutionColoring, MAX_CELLS_PER_COLOR } from '../../core/trial/netPartitionTrial.js';
+import { validateDiceNetSelection, DICE_NET_CELLS, DICE_NET_REASONS } from '../../core/trial/diceNetSearchTrial.js';
 
 /** 積み木の個数を数える演出のカメラ（トレーニングの B09・B10 と同じ） */
 export const COUNT_VIEW = Object.freeze([6.5, 5, 3.5]);
@@ -295,7 +297,159 @@ function netArrowView(q, { onSubmit }) {
   };
 }
 
-const VIEWS = { blockCount: blockCountView, projectionDraw: projectionView, diceRoll: diceRollView, netPartition: netPartitionView, netArrow: netArrowView };
+// ---------------- ⑥ サイコロの展開図を探せ！ ----------------
+/** 選んだマスの色 */
+export const DICE_NET_SELECTED_COLOR = '#ffe27a';
+/** 答え合わせで、向かい合う面の組（1と6・2と5・3と4）を同じ色にする */
+export const DICE_NET_PAIR_COLORS = Object.freeze({ 1: '#ffc9c9', 6: '#ffc9c9', 2: '#c6e3ff', 5: '#c6e3ff', 3: '#cdeec0', 4: '#cdeec0' });
+
+function diceNetSearchView(q, { onSubmit, notify }) {
+  let disabled = false;
+  let submitted = false;
+  const selectedList = () => {
+    const values = painter.getValues();
+    const list = [];
+    for (let r = 0; r < q.rows; r++) for (let c = 0; c < q.cols; c++) if (values[r][c]) list.push({ row: r, col: c });
+    return list;
+  };
+  const count = h('span', { class: 'trial-dicenet__count', 'aria-live': 'polite' });
+  const submit = h(
+    'button',
+    {
+      class: 'btn btn--primary trial-grid-tools__submit',
+      type: 'button',
+      disabled: true,
+      onClick: () => {
+        // 二重に送らない（押したらすぐに止める）
+        if (disabled || submitted || selectedList().length !== DICE_NET_CELLS) return;
+        submitted = true;
+        submit.disabled = true;
+        onSubmit(selectedList());
+      },
+    },
+    '決定',
+  );
+  const clear = button('全消去', () => painter.setAll(false), 'btn--small');
+  const update = () => {
+    const n = selectedList().length;
+    count.textContent = `選択中：${n} / ${DICE_NET_CELLS}マス`;
+    count.classList.toggle('trial-dicenet__count--full', n === DICE_NET_CELLS);
+    submit.disabled = disabled || submitted || n !== DICE_NET_CELLS;
+    clear.disabled = disabled || n === 0;
+  };
+  const face = (el, pip, color) => {
+    el.replaceChildren(renderFaceSvg({ face: numberFace(pip, { color }) }, 'trial-dicenet__face'));
+  };
+  const painter = createGridPainter({
+    rows: q.rows,
+    cols: q.cols,
+    initial: () => false,
+    // 押した最初のマスで「選ぶ」か「とりけす」かを決め、なぞっている間はそれを続ける
+    resolve: (value) => !value,
+    canApply: (r, c, target, values) => {
+      if (!target) return true;
+      const n = values.reduce((sum, row) => sum + row.filter(Boolean).length, 0);
+      if (n < DICE_NET_CELLS) return true;
+      notify(`${DICE_NET_CELLS}マスまで選べます`);
+      return false;
+    },
+    render: (el, value, r, c) => {
+      face(el, q.grid[r][c], value ? DICE_NET_SELECTED_COLOR : '#ffffff');
+      el.classList.toggle('trial-cell--on', Boolean(value));
+      el.setAttribute('aria-label', `${r + 1}行${c + 1}列：${q.grid[r][c]}の目${value ? '（選択中）' : ''}`);
+    },
+    onChange: () => {
+      notify('');
+      update();
+    },
+    label: 'サイコロの目のマス目',
+  });
+  const caption = h('p', { class: 'trial-dicenet__caption', hidden: true });
+  const figure = h('div', { class: 'trial-figure__net trial-dicenet' }, painter.el, caption);
+  figure.style.setProperty('--cols', String(q.cols));
+  figure.style.setProperty('--rows', String(q.rows));
+  update();
+
+  /** 6マスを示す（pairColors：向かい合う面の組を同じ色に。ほかのマスはうすくする） */
+  const showCells = (cells, { mark = null, pairColors = false } = {}) => {
+    const on = new Set(cells.map((s) => `${s.row},${s.col}`));
+    painter.decorate((el, r, c) => {
+      const inside = on.has(`${r},${c}`);
+      face(el, q.grid[r][c], inside ? (pairColors ? DICE_NET_PAIR_COLORS[q.grid[r][c]] : DICE_NET_SELECTED_COLOR) : '#ffffff');
+      el.classList.toggle('trial-cell--on', inside);
+      el.classList.toggle('trial-cell--dim', !inside);
+      el.classList.toggle('trial-cell--wrong', inside && mark === 'wrong');
+      el.classList.toggle('trial-cell--answer', inside && mark === 'answer');
+    });
+  };
+  const pairText = (pairs, cells) => {
+    const pip = new Map(cells.map((c) => [c.id, c.pip]));
+    return pairs
+      .map((p) => [pip.get(p.a), pip.get(p.b)].sort((a, b) => a - b))
+      .sort((a, b) => a[0] - b[0])
+      .map(([a, b]) => `${a}+${b}=${a + b}`)
+      .join('・');
+  };
+
+  return {
+    figure,
+    input: h('div', { class: 'trial-dicenet-tools' }, count, h('div', { class: 'trial-grid-tools' }, clear, submit)),
+    setDisabled(v) {
+      disabled = v;
+      painter.setDisabled(v);
+      update();
+    },
+    answerText: (result) => {
+      if (result?.isCorrect) return '正しいサイコロの展開図です。';
+      const reason = DICE_NET_REASONS[result?.detail?.reason] ?? '正しい展開図ではありません';
+      return `${reason}。正しい展開図の例を示しました。`;
+    },
+    async reveal({ result, viewer, speed = 1, show3D }) {
+      // 正解ならプレイヤーの6マス、不正解ならお手本の6マスを折りたたむ
+      let target = result.detail;
+      if (!result.isCorrect) {
+        // 選んだマスを少し見せてから、お手本に切りかえる
+        showCells(selectedList(), { mark: 'wrong' });
+        await new Promise((r) => setTimeout(r, 700 / speed));
+        target = validateDiceNetSelection(q.grid, q.sampleSolution);
+      }
+      showCells(target.netCells, { mark: result.isCorrect ? null : 'answer', pairColors: true });
+      caption.textContent = `向かい合う目の和：${pairText(target.oppositePairs, target.netCells)}`;
+      caption.hidden = false;
+      if (!viewer) return;
+      show3D({ keepFigure: true });
+      viewer.animations.cancel();
+      viewer.clearHighlights?.();
+      viewer.setBlocks(null);
+      viewer.setFaceDecorations(null);
+      viewer.setLabelsVisible(false);
+      viewer.setNet({
+        cells: target.netCells.map(({ id, x, y }) => ({ id, x, y })),
+        rootId: target.rootId,
+        cellFaces: Object.fromEntries(target.netCells.map((c) => [c.id, numberFace(c.pip)])),
+        cellColors: Object.fromEntries(target.netCells.map((c) => [c.id, DICE_NET_PAIR_COLORS[c.pip]])),
+      });
+      viewer.setCameraPreset([...DEFAULT_VIEW_DIRECTION], { animate: false });
+      // 折りたたんだあと、反対側へ回りこんで、うら側の3つの面（向かい合う面）も見せる
+      await viewer.playQuestionReveal({
+        cameraPreset: [...DEFAULT_VIEW_DIRECTION],
+        steps: [
+          { type: 'pause', ms: 400 },
+          { type: 'fold', to: 1, duration: 2200 },
+          { type: 'pause', ms: 500 },
+          { type: 'camera', direction: DEFAULT_VIEW_DIRECTION.map((v) => -v), duration: 1200 },
+          { type: 'pause', ms: 500 },
+        ],
+      });
+    },
+    destroy() {},
+    /** テスト用：選んでいるマス */
+    getSelection: selectedList,
+  };
+}
+
+const VIEWS = { blockCount: blockCountView, projectionDraw: projectionView, diceRoll: diceRollView, netPartition: netPartitionView, netArrow: netArrowView, diceNetSearch: diceNetSearchView };
+
 
 export function createModeView(question, handlers) {
   const make = VIEWS[question.mode];

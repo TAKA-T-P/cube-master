@@ -47,6 +47,8 @@ function correctAnswer(q) {
       return { ...q.solution };
     case 'netArrow':
       return { ...q.answer };
+    case 'diceNetSearch':
+      return q.sampleSolution.map((s) => ({ ...s }));
     default:
       throw new Error(q.mode);
   }
@@ -64,6 +66,9 @@ function wrongAnswer(q) {
       return Object.fromEntries(q.cells.map((c) => [c.id, 0]));
     case 'netArrow':
       return { cellId: q.red.cellId, dir: q.answer.dir };
+    case 'diceNetSearch':
+      // 上の行から6マス（2×2 の正方形か、5つ以上の一列をふくむので、展開図にならない）
+      return Array.from({ length: q.rows * q.cols }, (_, i) => ({ row: Math.floor(i / q.cols), col: i % q.cols })).slice(0, 6);
     default:
       throw new Error(q.mode);
   }
@@ -81,8 +86,11 @@ describe('LEVEL と難易度', () => {
     expect(levelAfter(5, true, 'netPartition')).toBe(7);
     expect(levelAfter(5, false, 'netPartition', TRIAL_RULES, 1)).toBe(4);
     expect(levelAfter(5, false, 'netPartition', TRIAL_RULES, 2)).toBe(4);
-    expect(TRIAL_MODES.map((m) => m.gain)).toEqual([1, 1, 1, 2, 1]);
-    expect(TRIAL_MODES.map((m) => m.missesPerLevelDown)).toEqual([2, 2, 2, 1, 2]);
+    expect(levelAfter(5, true, 'diceNetSearch')).toBe(7);
+    expect(levelAfter(5, false, 'diceNetSearch', TRIAL_RULES, 1)).toBe(4);
+    expect(levelAfter(1, false, 'diceNetSearch', TRIAL_RULES, 1)).toBe(1);
+    expect(TRIAL_MODES.map((m) => m.gain)).toEqual([1, 1, 1, 2, 1, 2]);
+    expect(TRIAL_MODES.map((m) => m.missesPerLevelDown)).toEqual([2, 2, 2, 1, 2, 1]);
   });
 
   it('不正解の回数はその挑戦の通算で数える（正解をはさんでも、2回目の不正解で −1）', () => {

@@ -88,7 +88,7 @@ describe('上下左右の4方向', () => {
 
 describe('問題の作り方', () => {
   it('5つ目のトライアル（LEVEL のルールは共通：正解 +1・不正解は2回ごとに −1）', () => {
-    expect(TRIAL_MODES.map((m) => m.id)).toEqual(['blockCount', 'projectionDraw', 'diceRoll', 'netPartition', 'netArrow']);
+    expect(TRIAL_MODES.map((m) => m.id)).toEqual(['blockCount', 'projectionDraw', 'diceRoll', 'netPartition', 'netArrow', 'diceNetSearch']);
     expect(TRIAL_MODES[4]).toMatchObject({ name: '展開図に矢印を引け！', gain: 1, missesPerLevelDown: 2 });
   });
 

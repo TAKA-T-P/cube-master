@@ -930,3 +930,76 @@
     font-size: 15px;
   }
 }
+
+/* ----- ⑥ サイコロの展開図を探せ！ ----- */
+.trial-dicenet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.trial-dicenet .trial-grid {
+  width: min(100%, calc(var(--cols) * 72px), calc(38vh * var(--cols) / var(--rows)));
+  gap: 3px;
+  /* マスの絵（SVG）の大きさで画面が横に広がらないように、列の最小幅を 0 にする */
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr)) !important;
+  aspect-ratio: auto !important; /* マスの間をあけるので、高さはマスの絵に合わせる */
+}
+
+.trial-dicenet .trial-cell {
+  border: none;
+  background: transparent;
+}
+
+.trial-dicenet__face {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+}
+
+.trial-dicenet .trial-cell--on {
+  outline: 3px solid #d99a00;
+  outline-offset: -2px;
+  border-radius: 3px;
+}
+
+.trial-dicenet .trial-cell--dim {
+  opacity: 0.3;
+}
+
+.trial-dicenet .trial-cell--wrong {
+  outline: 3px solid var(--color-danger);
+}
+
+.trial-dicenet .trial-cell--answer {
+  outline: 3px solid var(--color-success);
+}
+
+.trial-dicenet__caption {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.trial-play--correct .trial-stage--split .trial-dicenet .trial-grid {
+  width: min(100%, calc(var(--cols) * 48px), calc(24vh * var(--cols) / var(--rows)));
+}
+
+.trial-dicenet-tools {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  width: 100%;
+}
+
+.trial-dicenet__count {
+  color: var(--color-text-sub);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.trial-dicenet__count--full {
+  color: var(--color-primary-strong);
+}
