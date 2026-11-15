@@ -27,7 +27,7 @@ export const TRIAL_MODES = Object.freeze([
     id: 'blockCount',
     name: '積み木の数はいくつ？',
     description: '見取図から、積み木の数を数字で答えよう。',
-    rules: ['積み木は床からすき間なく積んであり、浮いている積み木はありません。', '見えない積み木も数えて、全部で何個かを数字で入力します。'],
+    rules: ['積み木は床からすき間なく積まれています。', '見えない積み木も数えて、全部で何個かを数字で入力します。'],
     gain: 1,
     missesPerLevelDown: 2,
   }),

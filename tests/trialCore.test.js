@@ -1,7 +1,7 @@
 // トライアル（100秒・LEVEL アップ）：LEVEL・難易度・タイマー・記録・4種類の問題と判定・3D との一致
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { TRIAL_RULES, TRIAL_MODES, difficultyForLevel, levelAfter } from '../src/core/trial/trialRules.js';
+import { TRIAL_RULES, TRIAL_MODES, difficultyForLevel, levelAfter, getTrialMode } from '../src/core/trial/trialRules.js';
 import { TrialSession } from '../src/core/trial/trialSession.js';
 import { TRIAL_TITLES, TRIAL_TITLE_LEVELS, TRIAL_TITLE_EMOJI, trialTitleFor, nextTrialTitle } from '../src/core/trial/trialTitles.js';
 import { createEmptyTrialRecords, normalizeTrialRecords, recordTrialResult } from '../src/core/trial/trialRecords.js';
@@ -290,6 +290,10 @@ describe('記録', () => {
 });
 
 describe('① 積み木の数はいくつ？', () => {
+  it('「？」のルール説明も、問題文と同じ「積み木は床からすき間なく積まれています。」', () => {
+    expect(getTrialMode('blockCount').rules[0]).toBe('積み木は床からすき間なく積まれています。');
+  });
+
   it.each([1, 2, 3, 4])('★%i：浮いた積み木がなく、見取図から個数がただ1つに決まり、大きさ・個数の制限を守る。答えは個数', (d) => {
     const level = BLOCK_COUNT_LEVELS[d];
     const rng = createRng(10 + d);
@@ -297,6 +301,7 @@ describe('① 積み木の数はいくつ？', () => {
       const q = generateTrialQuestion('blockCount', d, rng);
       expect(isGrounded(q.cubes)).toBe(true);
       expect(isCountDeterminedLarge(q.cubes)).toBe(true);
+      expect(q.text).toBe('積み木は全部で何個ありますか。積み木は床からすき間なく積まれています。');
       const { width, height, depth } = getBlockBounds(q.cubes);
       expect(height).toBeLessThanOrEqual(level.maxHeight);
       expect(height).toBeGreaterThanOrEqual(level.minLayers);

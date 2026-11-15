@@ -16,7 +16,7 @@ export const BLOCK_COUNT_LEVELS = Object.freeze({
   4: { bases: [[4, 3], [4, 4]], maxHeight: 6, minCubes: 20, maxCubes: 35, minLayers: 4, hidden: true },
 });
 
-export const BLOCK_COUNT_STATEMENT = '積み木は床からすき間なく積んであり、浮いている積み木はありません。';
+export const BLOCK_COUNT_STATEMENT = '積み木は床からすき間なく積まれています。';
 
 export function generateBlockCountQuestion(difficulty, rng) {
   const level = BLOCK_COUNT_LEVELS[difficulty] ?? BLOCK_COUNT_LEVELS[4];
