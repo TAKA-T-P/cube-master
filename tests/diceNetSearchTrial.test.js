@@ -7,6 +7,8 @@ import {
   generateDiceNetSearchQuestion,
   validateDiceNetSelection,
   checkDiceNetSearchAnswer,
+  findDiceNets,
+  listNetPlacements,
 } from '../src/core/trial/diceNetSearchTrial.js';
 import { foldNet } from '../src/core/cubeNetFolding.js';
 import { identifyCubeNet } from '../src/core/cubeNetCatalog.js';
@@ -105,8 +107,42 @@ describe('判定 validateDiceNetSelection（お手本と同じでなくても、
 });
 
 describe('問題の作り方', () => {
-  it('難易度ごとのマス目：★ 3×4・★★ 3×5・★★★ 4×5・★★★★ 5×5（5×5 より大きくしない）', () => {
-    expect(DICE_NET_SEARCH_LEVELS).toEqual({ 1: { rows: 3, cols: 4 }, 2: { rows: 3, cols: 5 }, 3: { rows: 4, cols: 5 }, 4: { rows: 5, cols: 5 } });
+  it('難易度ごとのマス目：★ 3×4・★★ 3×5・★★★ 4×5・★★★★ 5×5（5×5 より大きくしない）。★★★ 以上は別解なし・ひっかけあり', () => {
+    expect(DICE_NET_SEARCH_LEVELS).toEqual({
+      1: { rows: 3, cols: 4, unique: false, minTraps: 0 },
+      2: { rows: 3, cols: 5, unique: false, minTraps: 0 },
+      3: { rows: 4, cols: 5, unique: true, minTraps: 3 },
+      4: { rows: 5, cols: 5, unique: true, minTraps: 5 },
+    });
+  });
+
+  it('置き方の一覧と findDiceNets は、判定 validateDiceNetSelection と同じ結果になる', () => {
+    // 3×4 には 10種類の展開図が、回す・裏返す・ずらして 30 通り入る
+    expect(listNetPlacements(3, 4)).toHaveLength(30);
+    expect(listNetPlacements(5, 5)).toHaveLength(376);
+    for (let seed = 1; seed <= 40; seed++) {
+      const q = generateDiceNetSearchQuestion(1 + (seed % 4), createRng(seed));
+      const { solutions, traps } = findDiceNets(q.grid);
+      for (const cells of solutions) expect(validateDiceNetSelection(q.grid, cells).correct).toBe(true);
+      for (const cells of traps) expect(validateDiceNetSelection(q.grid, cells).reason).toBe('oppositeFacesMismatch');
+      const key = (l) => l.map((x) => `${x.row},${x.col}`).sort().join('|');
+      // 正しい展開図になる6マスは、置き方の一覧から見つかるものだけ（ほかの6マスは判定で不正解）
+      const found = new Set(solutions.map(key));
+      for (const p of listNetPlacements(q.rows, q.cols)) {
+        if (validateDiceNetSelection(q.grid, p.cells).correct) expect(found.has(key(p.cells))).toBe(true);
+      }
+    }
+  });
+
+  it.each([3, 4])('★%i：正しい6マスはお手本だけ（別解なし）。ひっかけ（1〜6がそろうのに和が7でない）が決めた数以上ある', (difficulty) => {
+    const { minTraps } = DICE_NET_SEARCH_LEVELS[difficulty];
+    const key = (l) => l.map((x) => `${x.row},${x.col}`).sort().join('|');
+    for (let seed = 1; seed <= 150; seed++) {
+      const q = generateDiceNetSearchQuestion(difficulty, createRng(seed * 7 + difficulty));
+      const { solutions, traps } = findDiceNets(q.grid);
+      expect(solutions.map(key)).toEqual([key(q.sampleSolution)]);
+      expect(traps.length).toBeGreaterThanOrEqual(minTraps);
+    }
   });
 
   it.each([1, 2, 3, 4])('★%i：どのマスにも1〜6の目。お手本の6マスは11種類の展開図のどれかで、マス目に入り、判定で正解になる', (difficulty) => {

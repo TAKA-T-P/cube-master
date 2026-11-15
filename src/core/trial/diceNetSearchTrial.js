@@ -14,6 +14,11 @@
  * 問題の作り方：11種類の展開図（回す・裏返す）から、マス目に入る向きを選んで置き
  * （形は変えない）、向かい合う面の和が7になるように目を入れる。ほかのマスには1〜6をでたらめに入れる。
  * 最後に、お手本の6マスが判定で正解になることを確かめる。
+ *
+ * ★★★・★★★★ は、ほかのマスの目を入れ直して、
+ *   - お手本のほかに正しい6マス（別解）ができない（答えがただ1つ）
+ *   - 「展開図の形で1〜6がそろっているのに、向かい合う和が7でない」ひっかけの6マスが minTraps 個以上ある
+ * ようにする（和が7かまで確かめないと見つけられない）。
  */
 import { CUBE_NETS } from '../cubeNetCatalog.js';
 import { distinctOrientations, getNetBounds } from '../cubeNet.js';
@@ -23,13 +28,19 @@ import { pick, shuffle } from '../../utils/random.js';
 /** 選ぶマスの数 */
 export const DICE_NET_CELLS = 6;
 
-/** 難易度ごとのマス目の大きさ（たて×横。5×5 より大きくしない） */
+/**
+ * 難易度ごとのマス目の大きさ（たて×横。5×5 より大きくしない）
+ *   unique：別解を出さない、minTraps：ひっかけの6マスの最低の数
+ */
 export const DICE_NET_SEARCH_LEVELS = Object.freeze({
-  1: Object.freeze({ rows: 3, cols: 4 }),
-  2: Object.freeze({ rows: 3, cols: 5 }),
-  3: Object.freeze({ rows: 4, cols: 5 }),
-  4: Object.freeze({ rows: 5, cols: 5 }),
+  1: Object.freeze({ rows: 3, cols: 4, unique: false, minTraps: 0 }),
+  2: Object.freeze({ rows: 3, cols: 5, unique: false, minTraps: 0 }),
+  3: Object.freeze({ rows: 4, cols: 5, unique: true, minTraps: 3 }),
+  4: Object.freeze({ rows: 5, cols: 5, unique: true, minTraps: 5 }),
 });
+
+/** ほかのマスの目を入れ直す回数の上限（1つの置き方につき） */
+const MAX_REFILLS = 60;
 
 /** 判定の理由と、プレイヤーに見せる文 */
 export const DICE_NET_REASONS = Object.freeze({
@@ -45,6 +56,56 @@ const MAX_ATTEMPTS = 200;
 
 /** 11種類の展開図の、向きのちがう形（何度も使うので先に作る） */
 const ORIENTATIONS = CUBE_NETS.map((net) => distinctOrientations(net.cells).map((shape) => ({ shape, bounds: getNetBounds(shape) })));
+
+const placementCache = new Map();
+/**
+ * マス目に置ける展開図の6マスの置き方すべて（11種類・すべての向き・すべての位置）と、それぞれの向かい合うマスの組
+ * @returns {{ cells: {row,col}[], key: string, opposite: [number, number][] }[]}
+ */
+export function listNetPlacements(rows, cols) {
+  const k = `${rows}x${cols}`;
+  if (placementCache.has(k)) return placementCache.get(k);
+  const list = [];
+  for (const orientations of ORIENTATIONS) {
+    for (const { shape, bounds } of orientations) {
+      for (let dy = 0; dy + bounds.height <= rows; dy++) {
+        for (let dx = 0; dx + bounds.width <= cols; dx++) {
+          const cells = shape.map((c) => ({ row: c.y - bounds.minY + dy, col: c.x - bounds.minX + dx }));
+          const fold = foldNet(cells.map((p, i) => ({ id: `f${i}`, x: p.col, y: p.row })));
+          const opposite = [];
+          for (let i = 0; i < 6; i++) {
+            for (let j = i + 1; j < 6; j++) {
+              const a = fold.frames[`f${i}`].outward;
+              const b = fold.frames[`f${j}`].outward;
+              if (a.every((n, t) => n === -b[t])) opposite.push([i, j]);
+            }
+          }
+          list.push({ cells, key: selectionKey(cells), opposite });
+        }
+      }
+    }
+  }
+  placementCache.set(k, list);
+  return list;
+}
+
+const selectionKey = (cells) => cells.map((s) => `${s.row},${s.col}`).sort().join('|');
+
+/**
+ * マス目の中の、正しいサイコロの展開図（solutions）と、ひっかけ（traps：1〜6がそろうのに向かい合う和が7でない）の6マス
+ * @returns {{ solutions: {row,col}[][], traps: {row,col}[][] }}
+ */
+export function findDiceNets(grid) {
+  const solutions = [];
+  const traps = [];
+  for (const p of listNetPlacements(grid.length, grid[0].length)) {
+    const pips = p.cells.map((c) => grid[c.row][c.col]);
+    if (new Set(pips).size !== 6) continue;
+    if (p.opposite.every(([i, j]) => pips[i] + pips[j] === 7)) solutions.push(p.cells);
+    else traps.push(p.cells);
+  }
+  return { solutions, traps };
+}
 
 /** 外向きの向きの軸（0：x、1：y、2：z）と向き（+1／−1） */
 function axisOf(outward) {
@@ -118,15 +179,25 @@ export function generateDiceNetSearchQuestion(difficulty, rng = Math.random) {
     // 3つの軸に、(1,6)(2,5)(3,4) の組をでたらめに割り当てる。どちら向きの面に小さい目を置くかもでたらめ
     const pairs = shuffle([[1, 6], [2, 5], [3, 4]], rng);
     const flips = pairs.map(() => rng() < 0.5);
-    const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 1 + Math.floor(rng() * 6)));
-    placed.forEach((p, i) => {
+    const answerPips = placed.map((p, i) => {
       const { axis, sign } = axisOf(fold.frames[`f${i}`].outward);
       const [small, large] = pairs[axis];
-      grid[p.row][p.col] = (sign > 0) !== flips[axis] ? small : large;
+      return (sign > 0) !== flips[axis] ? small : large;
     });
     const sampleSolution = [...placed].sort((a, b) => a.row - b.row || a.col - b.col);
-    if (!validateDiceNetSelection(grid, sampleSolution).correct) continue;
-    return { mode: 'diceNetSearch', difficulty, text: QUESTION_TEXT, rows, cols, grid, sampleSolution, netId };
+    const sampleKey = selectionKey(sampleSolution);
+    // ほかのマスの目を入れ、★★★ 以上は「別解なし・ひっかけ minTraps 個以上」になるまで入れ直す
+    for (let refill = 0; refill < (level.unique || level.minTraps > 0 ? MAX_REFILLS : 1); refill++) {
+      const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 1 + Math.floor(rng() * 6)));
+      placed.forEach((p, i) => {
+        grid[p.row][p.col] = answerPips[i];
+      });
+      if (!validateDiceNetSelection(grid, sampleSolution).correct) break;
+      const { solutions, traps } = findDiceNets(grid);
+      if (level.unique && solutions.some((cells) => selectionKey(cells) !== sampleKey)) continue;
+      if (traps.length < level.minTraps) continue;
+      return { mode: 'diceNetSearch', difficulty, text: QUESTION_TEXT, rows, cols, grid, sampleSolution, netId };
+    }
   }
   throw new Error('サイコロの展開図を探す問題を作れませんでした');
 }
