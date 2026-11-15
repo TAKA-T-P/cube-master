@@ -1,15 +1,14 @@
 /**
  * ヘルプ（あそびかた）画面
  *
- * 説明が多いので、7つのタブに分けて、短いまとまりで切りかえて読めるようにする。
- *   1. トライアル 2. ドリルモード（ヒント・復習・学習記録もふくむ） 3. 1分チャレンジ 4. 段位認定 5. 3D立方体をためす 6. 学習ヘルプ 7. 記録と設定
+ * 説明が多いので、6つのタブに分けて、短いまとまりで切りかえて読めるようにする。
+ *   1. トライアル 2. ドリルモード（ヒント・復習・学習記録もふくむ） 3. 1分チャレンジ 4. 段位認定 5. 3D立方体をためす 6. 学習ヘルプ
+ * 効果音と記録の消去は、タイトル画面の歯車のアイコンから開く設定画面（ui/settingsScreen.js）。
  * 3D立方体をためすは、3D の立方体を自由に動かせる画面（#/preview）へのボタンと、使っている端末に合った操作の説明を先に表示する。
  * params.tab（例：cube3d）で、はじめに開くタブを選べる（3D立方体をためすから戻ったとき）。
  */
-import { h, isTouchPrimary, showToast } from '../utils/dom.js';
+import { h, isTouchPrimary } from '../utils/dom.js';
 import { confirmDialog } from './components.js';
-import { clearLearningData, isLearningStorageAvailable } from './learningStore.js';
-import { soundSettingsPanel } from './soundControls.js';
 import { HELP_TOPICS } from '../core/learningHelp.js';
 import { renderHelpTopic } from './learningHelpVisuals.js';
 import { CERTIFICATION_RULES } from '../core/certificationRules.js';
@@ -56,7 +55,7 @@ const TRIAL = [
   ['答え合わせ', '正解でも不正解でも、正しい答えを3Dで確かめられます。答え合わせのあいだは、時間は減りません。'],
   ['ロスタイム', `残り0秒になってもすぐには終わらず、そのとき解いている問題が「最終問題」になります。答えたら（正解でも不正解でも）その場で終了です。答えないまま${sec(TRIAL_RULES.overtimeMs)}秒たつと「時間切れ」で終了です。`],
   ['ゆるされること', '「3方向から見ると？」は、形が合っていれば左右にずれていても正解です。「展開図に分けろ！」は、お手本とちがう分け方でも、どの色も展開図になっていれば正解です。'],
-  ['称号', '最高到達LEVELが 2・4・6…18・20以上 になると、種類ごとに10段階の称号がもらえます（例：「積み木の数はいくつ？」は「かぞえる見習い」から「万物を数える者」まで）。結果画面とトライアルの選択画面に表示されます。'],
+  ['称号', '最高到達LEVELが 2・4・6…18・20以上 になると、種類ごとに10段階の称号がもらえます。結果画面とトライアルの選択画面に表示されます。'],
   ['記録', 'その回でいちばん高かったLEVEL（最高到達LEVEL）が記録になり、種類ごとに自己ベストが残ります。とちゅうでやめたり、ほかのタブに切りかえたりすると中断になり、記録に残りません。'],
 ];
 
@@ -93,34 +92,6 @@ const CERTIFICATION = [
   ['中断', 'とちゅうでやめたり、ほかのタブに切りかえたりすると中断になり、記録に残りません。'],
 ];
 
-function recordSection() {
-  async function confirmClear() {
-    const dialog = confirmDialog({
-      title: '学習記録を消去しますか？',
-      message: 'この端末に保存した CUBE MASTER の学習記録・復習待ちの問題・1分チャレンジと段位認定とトライアルの記録・設定を、すべて消します。もとに戻せません。',
-      okLabel: '消去する',
-      cancelLabel: 'やめる',
-    });
-    if (!(await dialog.result)) return;
-    clearLearningData();
-    showToast('学習記録を消去しました。');
-  }
-  return [
-    h('h3', {}, '効果音'),
-    soundSettingsPanel(),
-    h('p', { class: 'setup-note' }, '効果音をオフにしても、○△×や色で正解・不正解がわかります。設定はこの端末に保存されます。'),
-    h('h3', {}, '記録の保存'),
-    h(
-      'p',
-      {},
-      isLearningStorageAvailable()
-        ? '記録は、この端末のブラウザの中だけに保存されます（名前などの個人情報は保存しません）。ブラウザのデータを消すと、記録も消えます。'
-        : 'この端末では記録を保存できません（練習はできます）。',
-    ),
-    h('button', { class: 'btn btn--ghost btn--danger-text', type: 'button', onClick: () => confirmClear() }, '学習記録を消去'),
-  ];
-}
-
 /** 「KEC数学科ラボへ」：確かめてから移動する */
 async function goToMathLab() {
   const dialog = confirmDialog({ title: 'KEC数学科ラボへ移動しますか？', okLabel: 'はい', cancelLabel: 'いいえ' });
@@ -156,7 +127,6 @@ export function mountHelpScreen(container, { navigate, params = {} }) {
         ...HELP_TOPICS.map((t) => h('section', { class: 'help-section', dataset: { topic: t.id } }, h('h3', {}, t.title), renderHelpTopic(t.id))),
       ],
     },
-    { id: 'records', label: '記録と設定', body: () => recordSection() },
   ];
 
   const tabButtons = [];

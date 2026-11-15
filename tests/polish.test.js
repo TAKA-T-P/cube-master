@@ -147,11 +147,11 @@ describe('画面', () => {
     document.body.replaceChildren();
   });
 
-  it('あそびかた：7つのタブで切りかえて読める（「CUBE MASTERとは？」「ヒント・復習・学習記録」はない。ヒント・復習・学習記録はドリルモードの説明の中）（矢印キーでも移れる）。効果音の設定と記録の消去がある', async () => {
+  it('あそびかた：6つのタブで切りかえて読める（「CUBE MASTERとは？」「ヒント・復習・学習記録」「記録と設定」はない。ヒント・復習・学習記録はドリルモードの説明の中）（矢印キーでも移れる）', async () => {
     const { mountHelpScreen } = await import('../src/ui/helpScreen.js');
     mountHelpScreen(container, { navigate: vi.fn() });
     const tabs = [...container.querySelectorAll('[role="tab"]')];
-    expect(tabs.map((t) => t.textContent)).toEqual(['トライアル', 'ドリルモード', '1分チャレンジ', '段位認定', '3D立方体をためす', '学習ヘルプ', '記録と設定']);
+    expect(tabs.map((t) => t.textContent)).toEqual(['トライアル', 'ドリルモード', '1分チャレンジ', '段位認定', '3D立方体をためす', '学習ヘルプ']);
     const training = container.querySelector('#help-training').textContent;
     for (const text of ['ヒントを見る', 'ヒントを見ても正解・不正解は変わりません', '間違えた問題を復習', '学習記録']) expect(training).toContain(text);
     expect(container.textContent).not.toContain('CUBE MASTERとは？');
@@ -168,9 +168,12 @@ describe('画面', () => {
     expect(visible()).toEqual(['certification']);
     const cert = container.querySelector('#help-certification').textContent;
     for (const text of ['100秒', '240点', '3秒ふえます', '3000点で皆伝', '五段★']) expect(cert).toContain(text);
-    tabs[6].click();
-    expect(container.querySelector('[data-testid="sound-toggle"]')).not.toBeNull();
-    expect([...container.querySelectorAll('button')].some((b) => b.textContent === '学習記録を消去')).toBe(true);
+    // 称号の説明に、称号の名前の例は出さない
+    expect(trial).toContain('10段階の称号');
+    expect(trial).not.toContain('万物を数える者');
+    // 効果音と記録の消去は、あそびかたにはない（タイトル画面の歯車から開く設定画面）
+    expect(container.querySelector('[data-testid="sound-toggle"]')).toBeNull();
+    expect([...container.querySelectorAll('button')].some((b) => b.textContent === '学習記録を消去')).toBe(false);
   });
 
   it('あそびかたの下は「タイトルに戻る」「KEC数学科ラボへ」。ラボへは確かめてから移動する', async () => {
@@ -202,20 +205,50 @@ describe('画面', () => {
     }
   });
 
-  it('トップ画面に効果音のオン／オフ（押すと切りかわる）', async () => {
-    const settings = await import('../src/ui/soundSettings.js');
-    settings.configureSoundSettingsStorage(createMemoryBackend());
+  it('トップ画面の右上は歯車のアイコン。押すと設定の画面を開く（スピーカーのアイコンはない）', async () => {
     const { mountHomeScreen } = await import('../src/ui/homeScreen.js');
-    mountHomeScreen(container, { navigate: vi.fn(), version: '0.7.0' });
-    const toggle = container.querySelector('[data-testid="sound-toggle"]');
+    const navigate = vi.fn();
+    mountHomeScreen(container, { navigate, version: '0.7.0' });
     expect([...container.querySelectorAll('.home-menu button')].map((b) => b.textContent)).toEqual(['トライアル', 'ドリルモード', '段位認定', 'あそびかた']);
     expect(container.querySelector('[data-testid="copyright"]').textContent).toBe('©2026 T.TAKEMOTO / KEC Glows');
-    expect(toggle.closest('.home-corner')).not.toBeNull();
-    expect(toggle.querySelector('svg')).not.toBeNull();
-    expect(toggle.getAttribute('aria-label')).toBe('効果音：オン');
+    expect(container.querySelector('[data-testid="sound-toggle"]')).toBeNull();
+    const gear = container.querySelector('[data-testid="settings-button"]');
+    expect(gear.closest('.home-corner')).not.toBeNull();
+    expect(gear.querySelector('svg circle')).not.toBeNull();
+    expect(gear.getAttribute('aria-label')).toBe('設定');
+    gear.click();
+    expect(navigate).toHaveBeenCalledWith('settings');
+  });
+
+  it('設定の画面：効果音のオン／オフ・音量と、確かめてから「学習記録を消去」。「← タイトル」で戻る', async () => {
+    const settings = await import('../src/ui/soundSettings.js');
+    settings.configureSoundSettingsStorage(createMemoryBackend());
+    const learning = await import('../src/ui/learningStore.js');
+    const backend = createMemoryBackend();
+    learning.configureLearningStorage(backend);
+    backend.setItem('otherApp:keep', '1');
+    const { mountSettingsScreen } = await import('../src/ui/settingsScreen.js');
+    const navigate = vi.fn();
+    mountSettingsScreen(container, { navigate });
+    expect(container.querySelector('h1').textContent).toBe('設定');
+    const toggle = container.querySelector('[data-testid="sound-toggle"]');
+    expect(toggle.textContent).toBe('効果音：オン');
     toggle.click();
-    expect(toggle.getAttribute('aria-label')).toBe('効果音：オフ');
-    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(toggle.textContent).toBe('効果音：オフ');
     expect(settings.isSoundEnabled()).toBe(false);
+    const volume = container.querySelector('input[type="range"]');
+    volume.value = '3';
+    volume.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(settings.getSoundVolume()).toBeCloseTo(0.3);
+    const clear = [...container.querySelectorAll('button')].find((b) => b.textContent === '学習記録を消去');
+    clear.click();
+    const dialog = document.querySelector('.dialog-backdrop');
+    expect(dialog.textContent).toContain('学習記録を消去しますか？');
+    [...dialog.querySelectorAll('button')].find((b) => b.textContent === 'やめる').click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(document.querySelector('.dialog-backdrop')).toBeNull();
+    [...container.querySelectorAll('button')].find((b) => b.textContent === '← タイトル').click();
+    expect(navigate).toHaveBeenCalledWith('home');
+    expect(backend.getItem('otherApp:keep')).toBe('1');
   });
 });

@@ -4,7 +4,6 @@
  * メニューは MENU_ITEMS で定義する。後続 Phase では enabled を true にして route を設定するだけで有効化できる。
  */
 import { h } from '../utils/dom.js';
-import { soundToggleButton } from './soundControls.js';
 import { createHomeCube } from './homeCube.js';
 import { isPythagoreanAllowed, setPythagoreanAllowed } from './soundSettings.js';
 import { infoDialog, helpButton } from './components.js';
@@ -51,6 +50,17 @@ function questionSetting() {
     ),
     h('div', { class: 'home-setting__options', role: 'radiogroup', 'aria-label': '三平方の定理・√を使う問題' }, buttons),
   );
+}
+
+/** 歯車のアイコン */
+function gearIcon() {
+  const el = h('span', { class: 'settings-icon', 'aria-hidden': 'true' });
+  el.innerHTML =
+    '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<circle cx="12" cy="12" r="3"/>' +
+    '<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>' +
+    '</svg>';
+  return el;
 }
 
 export const MENU_ITEMS = [
@@ -100,7 +110,8 @@ export function mountHomeScreen(container, { navigate, version }) {
     h(
       'div',
       { class: 'home' },
-      h('div', { class: 'home-corner' }, soundToggleButton({ icon: true })),
+      // 右上の歯車：設定（効果音・記録の消去）の画面を開く
+      h('div', { class: 'home-corner' }, h('button', { class: 'settings-icon-btn', type: 'button', 'aria-label': '設定', title: '設定', 'data-testid': 'settings-button', onClick: () => navigate('settings') }, gearIcon())),
       h(
         'header',
         { class: 'home-hero' },

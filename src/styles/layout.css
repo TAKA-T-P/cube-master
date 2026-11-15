@@ -134,14 +134,14 @@
   font-size: clamp(17px, 4.8vw, 21px);
 }
 
-/* 右上：効果音のオン／オフ（小さなスピーカーのアイコン） */
+/* 右上：設定の画面を開く（小さな歯車のアイコン） */
 .home-corner {
   position: absolute;
   top: 12px;
   right: 12px;
 }
 
-.sound-icon-btn {
+.settings-icon-btn {
   display: grid;
   place-items: center;
   width: 40px;
@@ -154,11 +154,7 @@
   cursor: pointer;
 }
 
-.sound-icon-btn[aria-pressed='false'] {
-  color: var(--color-text-sub);
-}
-
-.sound-icon-btn:focus-visible {
+.settings-icon-btn:focus-visible {
   outline: 3px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -717,4 +713,24 @@
 .help-open-3d {
   justify-self: start;
   min-width: 200px;
+}
+
+/* ===== 設定画面 ===== */
+.settings-icon {
+  display: grid;
+  place-items: center;
+}
+
+.settings-section {
+  display: grid;
+  gap: 10px;
+  margin: 0 var(--gutter) 12px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-section h2 {
+  font-size: 17px;
 }

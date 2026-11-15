@@ -12,6 +12,7 @@ import './styles/trial.css';
 import { mountHomeScreen } from './ui/homeScreen.js';
 import { mountPreviewScreen } from './ui/previewScreen.js';
 import { mountHelpScreen } from './ui/helpScreen.js';
+import { mountSettingsScreen } from './ui/settingsScreen.js';
 import { mountCategoryScreen } from './ui/categoryScreen.js';
 import { mountTrainingSetupScreen } from './ui/trainingSetupScreen.js';
 import { mountQuestionScreen } from './ui/questionScreen.js';
@@ -35,6 +36,7 @@ const ROUTES = {
   home: mountHomeScreen,
   preview: mountPreviewScreen,
   help: mountHelpScreen,
+  settings: mountSettingsScreen,
   categories: mountCategoryScreen,
   setup: mountTrainingSetupScreen,
   question: mountQuestionScreen,
