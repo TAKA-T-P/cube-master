@@ -176,9 +176,65 @@
   text-align: center;
 }
 
-.trial-nets-button {
-  justify-self: center;
-  margin-top: -2px;
+/* いちばん下の「称号一覧を確認する」「展開図を確認する」 */
+.trial-select__extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.trial-titles {
+  display: grid;
+  gap: 14px;
+}
+
+.trial-titles__name {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+  color: var(--color-primary-strong);
+  font-size: 14px;
+}
+
+.trial-titles__count {
+  color: var(--color-text-sub);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.trial-titles__list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trial-titles__item {
+  display: grid;
+  grid-template-columns: 96px 24px 1fr;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+
+.trial-titles__item--got {
+  background: #fff6d6;
+  font-weight: 700;
+}
+
+.trial-titles__item--locked {
+  background: var(--color-bg);
+  color: var(--color-text-sub);
+}
+
+.trial-titles__level {
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .trial-nets {

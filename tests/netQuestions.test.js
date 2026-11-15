@@ -194,14 +194,15 @@ describe('展開図パズル：正解が成立判定と一致する', () => {
     }
   });
 
-  it('C06：5つのうち種類がちがうのは1つだけ。ほかの4つは同じ種類で向きがすべてちがう', () => {
+  it('C06：4つのうち種類がちがうのは1つだけ。ほかの3つは同じ種類で向きがすべてちがう', () => {
     for (const q of questionsOf('C06')) {
-      expect(q.choices).toHaveLength(5);
+      expect(q.choices).toHaveLength(4);
+      expect(q.question).toBe('次の4つの展開図のうち、ほかの3つと種類がちがうものはどれですか。');
       const keys = q.choices.map((c) => getCanonicalNetKey(cellsOfVisual(c.visual)));
       const odd = q.choices.filter((c, i) => keys.filter((k) => k === keys[i]).length === 1);
       expect(odd.map((c) => c.id)).toEqual(['odd']);
       const same = q.choices.filter((c) => c.id !== 'odd').map((c) => getShapeKey(cellsOfVisual(c.visual)));
-      expect(new Set(same).size).toBe(4);
+      expect(new Set(same).size).toBe(3);
     }
   });
 });

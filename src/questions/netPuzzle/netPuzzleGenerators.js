@@ -184,19 +184,19 @@ export const NET_PUZZLE_TEMPLATES = [
     id: 'C06',
     difficulty: 1,
     title: '異なる種類の展開図',
-    // 向きのちがう形が4つ以上ある種類だけを使う
-    bases: () => netBases(2).filter((b) => distinctOrientations(CUBE_NETS.find((n) => n.id === b.netId).cells).length >= 4),
+    // 4択（同じ種類3つ＋ちがう種類1つ）。向きのちがう形が3つ以上ある種類だけを使う
+    bases: () => netBases(2).filter((b) => distinctOrientations(CUBE_NETS.find((n) => n.id === b.netId).cells).length >= 3),
     build(base, rng) {
       const net = CUBE_NETS.find((n) => n.id === base.netId);
-      const four = sample(distinctOrientations(net.cells), 4, rng).map((o) => makeCells(coordsOf(o)));
+      const three = sample(distinctOrientations(net.cells), 3, rng).map((o) => makeCells(coordsOf(o)));
       const oddNet = pick(
         CUBE_NETS.filter((n) => n.id !== net.id && n.group === net.group).length ? CUBE_NETS.filter((n) => n.id !== net.id && n.group === net.group) : CUBE_NETS.filter((n) => n.id !== net.id),
         rng,
       );
       const odd = randomOrientation(oddNet.cells, rng);
       return assembleNetQuestion(this, base, NET_PUZZLE_CATEGORY, {
-        question: '次の5つの展開図のうち、ほかの4つと種類がちがうものはどれですか。',
-        choices: [...four.map((cells, i) => figureChoice(`same-${i}`, netVisual(cells), '同じ種類')), figureChoice('odd', netVisual(odd), 'ちがう種類')],
+        question: '次の4つの展開図のうち、ほかの3つと種類がちがうものはどれですか。',
+        choices: [...three.map((cells, i) => figureChoice(`same-${i}`, netVisual(cells), '同じ種類')), figureChoice('odd', netVisual(odd), 'ちがう種類')],
         correctAnswers: ['odd'],
         explanation: X.explainOddNet(),
         net: foldSpec(odd),

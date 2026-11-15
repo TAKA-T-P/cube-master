@@ -153,9 +153,13 @@ describe('タイトル・選択・ルール説明', () => {
     for (const c of cards) expect(c.querySelector('.trial-card__icon svg')).not.toBeNull();
     // 自己ベストの称号（記録がなければ出さない）
     expect(cards.map((c) => c.querySelector('[data-testid="trial-card-title"]')?.textContent ?? null)).toEqual([null, null, '🏅 回転の達人', null, null, null]);
-    // 「展開図に分けろ！」の下に「展開図を確認する」。押すと 11 種類の展開図
+    // いちばん下（「サイコロの展開図を探せ！」のカードの下）に「称号一覧を確認する」「展開図を確認する」。展開図は押すと 11 種類
     const netsButton = buttonByText(container, '展開図を確認する');
-    expect(netsButton.previousElementSibling).toBe(cards[3]);
+    const extras = netsButton.parentElement;
+    expect(extras.previousElementSibling).toBe(cards[5]);
+    expect(cards[5].dataset.mode).toBe('diceNetSearch');
+    expect(extras.nextElementSibling).toBeNull();
+    expect([...extras.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['称号一覧を確認する', '展開図を確認する']);
     netsButton.click();
     expect(document.querySelector('.dialog__title').textContent).toBe('立方体の展開図（11種類）');
     expect(document.querySelectorAll('.trial-nets__item svg')).toHaveLength(11);
@@ -167,6 +171,28 @@ describe('タイトル・選択・ルール説明', () => {
     buttonByText(cards[3], '挑戦する').click();
     expect(navigate).toHaveBeenCalledWith('trial-play');
     expect(store.getTrialSession()).toMatchObject({ mode: 'netPartition' });
+  });
+
+  it('「称号一覧を確認する」：種類ごとに10段階。到達した称号（自己ベスト以下）だけ名前を出し、まだの称号は「？？」', () => {
+    backend.setItem('cubeMaster:trial', JSON.stringify({ version: 1, modes: { diceRoll: { bestLevel: 15, attempts: 8 }, diceNetSearch: { bestLevel: 2, attempts: 1 } } }));
+    store.configureTrialStorage(backend);
+    mount(mountTrialSelectScreen);
+    buttonByText(container, '称号一覧を確認する').click();
+    const dialog = document.querySelector('.dialog');
+    expect(dialog.querySelector('.dialog__title').textContent).toBe('称号一覧');
+    const sections = [...dialog.querySelectorAll('.trial-titles__mode')];
+    expect(sections.map((x) => x.dataset.mode)).toEqual(['blockCount', 'projectionDraw', 'diceRoll', 'netPartition', 'netArrow', 'diceNetSearch']);
+    const names = (mode) => [...dialog.querySelectorAll(`.trial-titles__mode[data-mode="${mode}"] .trial-titles__title`)].map((x) => x.textContent);
+    // LEVEL 15：LEVEL 14 の「回転の達人」まで（7段階）
+    expect(names('diceRoll')).toEqual(['サイコロ見習い', 'コロコロ探検家', 'サイコロ使い', '回転マスター', 'ダイスマスター', 'ダイスコントローラー', '回転の達人', '？？', '？？', '？？']);
+    expect(names('diceNetSearch')).toEqual(['サイコロ探し見習い', ...Array(9).fill('？？')]);
+    expect(names('blockCount')).toEqual(Array(10).fill('？？'));
+    // まだの称号の名前はどこにも出さない
+    expect(dialog.textContent).not.toContain('ダイスウィザード');
+    expect(dialog.textContent).not.toContain('かぞえる見習い');
+    expect(dialog.querySelector('.trial-titles__mode[data-mode="diceRoll"] .trial-titles__count').textContent).toBe('7 / 10');
+    buttonByText(dialog, '閉じる').click();
+    expect(document.querySelector('.dialog')).toBeNull();
   });
 
   it('「？」で種類ごとのルール説明と自己ベストをポップアップで出す（4種類に共通の LEVEL の説明は出さない）。「挑戦する」ですぐ始まる（まだタイマーは動かない）', () => {
